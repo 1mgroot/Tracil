@@ -60,36 +60,35 @@ Note: Free tiers/quotas change; verify before demos or releases and adjust defau
 
 ---
 
-#### 6) Pages and UX flow
-- Welcome (initial screen)
-- Upload Files (empty state awaiting uploads)
-  - Grouped upload (SDTM, ADaM, TLF, Protocol/SAP/CRF)
-  - Progress + validation badges (✔ / ❌ / Missing)
-  - "Start Analysis" enabled when the minimal set is present
-- Select File (grouped view: SDTM, ADaM, TLF)
-  - Expand SDTM group to see dataset list (e.g., LB)
-- Browse Variables (variables list + filters)
-  - Filters (e.g., gap-only variables)
-  - Variable detail modal with mini lineage
-  - "View full lineage" opens Lineage Graph
-- Lineage Graph
-  - Expand upstream/downstream (Protocol/SAP ↔ CRF ↔ SDTM ↔ ADaM ↔ TLF)
-  - Highlight gaps; click to see reasons; fit-to-view, search, focus
+#### 6) Pages and UX flow (single-page workspace)
+- One workspace route: `app/page.tsx` contains the entire tool; no hard navigations.
+- In-workspace views (toggled via local state/URL query):
+  - Upload Files: grouped upload (SDTM, ADaM, TLF, Protocol/SAP/CRF); progress + validation badges (✔ / ❌ / Missing); enable Start Analysis when minimal set present
+  - Select File: grouped datasets; expand SDTM to list domains (e.g., LB)
+  - Browse Variables: list + filters (gap-only); detail modal with mini lineage
+  - Lineage Graph: expand upstream/downstream (Protocol/SAP ↔ CRF ↔ SDTM ↔ ADaM ↔ TLF); highlight gaps; fit-to-view, search, focus
+
+#### 6.1) SEO strategy (optional, non-workspace routes)
+- Keep the workspace as a single page (no SEO need).
+- Add indexable marketing/docs routes when needed using static generation or ISR:
+  - `app/(marketing)/page.tsx`, `app/(marketing)/features/page.tsx`, `app/(marketing)/docs/page.tsx`, etc.
+- For SEO pages:
+  - Use `generateMetadata` for title/description/OG/Twitter.
+  - Provide `app/sitemap.ts` and `app/robots.txt`.
+  - Prefer SSG/ISR (`export const dynamic = 'force-static'` where applicable).
+  - Add canonical URLs and JSON-LD if relevant.
 
 ---
 
-#### 7) Project structure and team responsibilities (simplified, AI-first)
+#### 7) Project structure and team responsibilities (single-page, AI-first)
 ```
 / (repo root)
 ├─ .cursorrules
 ├─ .env.example
 ├─ app/
 │  ├─ layout.tsx
-│  ├─ page.tsx                       # Welcome
-│  ├─ upload/
-│  ├─ select/
-│  ├─ variables/
-│  ├─ lineage/
+│  └─ page.tsx                       # Workspace (all views inside one page)
+│  └─ (marketing)/                   # FUTURE: SEO pages (features, docs, blog)
 │  └─ (api/)                         # FUTURE: optional serverless routes
 ├─ components/                       # Shared UI primitives
 ├─ features/                         # UI-only vertical slices (optional)
