@@ -6,14 +6,14 @@ import { SearchBar } from '@/components/search/SearchBar'
 import { mockFiles } from '@/features/datasets/mocks'
 import { groupFilesByKind } from '@/types/files'
 
-export function MainScreen(): React.JSX.Element {
+export function MainScreenClient(): React.JSX.Element {
 	const grouped = React.useMemo(() => groupFilesByKind(mockFiles), [])
 	const [selectedId, setSelectedId] = React.useState<string | null>(null)
 
 	const toneFor = React.useCallback((index: number, total: number): number => {
-		const maxTone = 22 // darker at top (stronger accent)
-		const minTone = 8 // lighter at bottom
-		if (total <= 1) return Math.round(maxTone)
+		const maxTone = 22
+		const minTone = 8
+		if (total <= 1) return Math.round((maxTone + minTone) / 2)
 		return Math.round(maxTone - ((maxTone - minTone) * index) / (total - 1))
 	}, [])
 

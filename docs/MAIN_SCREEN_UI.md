@@ -270,7 +270,7 @@ No blocking conflicts were found.
 
 ## 18) Current status (implemented in this branch)
 - Sidebar and search UI built and wired with mock data
-  - `features/datasets/MainScreen.tsx` (client component) composes the page UI; `app/page.tsx` renders `<MainScreen />`.
+  - `app/(workspace)/_components/MainScreenClient.tsx` (client component) composes the page UI; `app/page.tsx` renders `<MainScreenClient />`. The previous `features/datasets/MainScreen.tsx` has been removed to avoid cross-slice ownership confusion.
   - Left pane: sticky column with fixed width 260px on md+ (`md:grid-cols-[260px_1fr]`).
   - Search bar skeleton centered; no logic yet.
 - Color system
@@ -289,10 +289,10 @@ No blocking conflicts were found.
 
 ## 19) Differences from original plan/design
 - Page composition
-  - Originally: all logic in `app/page.tsx`. Now: interactive UI moved to a dedicated client component `features/datasets/MainScreen.tsx` to follow Next.js App Router best practices (hooks in client components). `app/page.tsx` stays server and renders the client entry.
+  - Originally: all logic in `app/page.tsx`. Now: interactive UI moved to a dedicated client component `app/(workspace)/_components/MainScreenClient.tsx` to follow Next.js App Router best practices (hooks in client components). `app/page.tsx` stays server and renders the client entry.
 - Layout width
-  - Originally: suggested using Tailwind scale widths or a 12-col grid. Now: left pane uses an explicit fixed width of 260px via `md:grid-cols-[260px_1fr]` to exactly match the visual spec. This is an intentional, contained use of an arbitrary grid template value.
+  - Originally: suggested using Tailwind scale widths or a 12-col grid. Now: left pane uses an explicit fixed width of 260px via `md:grid-cols-[260px_1fr]` to exactly match the visual spec. This is an intentional, contained use of an arbitrary grid template value and is documented as a constraint for the main screen.
 - Color application
-  - Originally: consistent group colors. Now: in addition, each group’s items render a gradient of tones from darker (top) to lighter (bottom) using `color-mix`, keeping a Notion-like understated palette.
+  - Originally: consistent group colors. Now: in addition, each group’s items render a gradient of tones from darker (top) to lighter (bottom) using `color-mix`, keeping a Notion-like understated palette. Tailwind v4 arbitrary value syntax uses `bg-[var(--token)]` for consuming CSS variables.
 
 

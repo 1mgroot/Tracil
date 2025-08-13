@@ -68,6 +68,9 @@ Note: Free tiers/quotas change; verify before demos or releases and adjust defau
   - Browse Variables: list + filters (gap-only); detail modal with mini lineage
   - Lineage Graph: expand upstream/downstream (Protocol/SAP ↔ CRF ↔ SDTM ↔ ADaM ↔ TLF); highlight gaps; fit-to-view, search, focus
 
+Note (implementation detail as of current branch):
+- For App Router best practices, interactive workspace UI is implemented as a Client Component (`app/(workspace)/_components/MainScreenClient.tsx`) and rendered by `app/page.tsx`. This keeps hooks and interactivity out of the server component while preserving the single-page route.
+
 #### 6.1) SEO strategy (optional, non-workspace routes)
 - Keep the workspace as a single page (no SEO need).
 - Add indexable marketing/docs routes when needed using static generation or ISR:
@@ -87,7 +90,10 @@ Note: Free tiers/quotas change; verify before demos or releases and adjust defau
 ├─ .env.example
 ├─ app/
 │  ├─ layout.tsx
-│  └─ page.tsx                       # Workspace (all views inside one page)
+│  ├─ page.tsx                       # Workspace (renders client entry)
+│  └─ (workspace)/
+│     └─ _components/
+│        └─ MainScreenClient.tsx     # Interactive workspace (client component)
 │  └─ (marketing)/                   # FUTURE: SEO pages (features, docs, blog)
 │  └─ (api/)                         # FUTURE: optional serverless routes
 ├─ components/                       # Shared UI primitives
@@ -117,6 +123,12 @@ Path aliases (to configure in `tsconfig.json`)
 - `@ai/*` → `lib/ai/*`
 - `@types/*` → `types/*`
 - `@state/*` → `state/*`
+
+Additional UI tokens and theming
+- Global OKLCH tokens for surfaces and group accents are defined in `app/globals.css`. Tailwind v4 consumes these via CSS variable utilities (e.g., `bg-[var(--token)]`).
+
+Layout constraint (main screen)
+- Left pane is fixed to 260px on md+ via `md:grid-cols-[260px_1fr]` to match the visual spec.
 
 Team focus
 - Web developer: `app/`, `components/`, `features/`, `hooks/`, `styles/`
