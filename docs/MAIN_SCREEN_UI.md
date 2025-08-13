@@ -1,0 +1,298 @@
+### Main Screen UI — Design (Branch: 5-implement-main-screen-ui-with-mock-file-data-and-search-bar-skeleton)
+
+This document specifies the UI design, data contracts, and implementation guidance for the main screen after files have been uploaded. No backend or AI integration is required in this branch; use mock data only.
+
+---
+
+## 1) Goals
+- Present uploaded files in a left pane, grouped by type (ADaM, SDTM, aCRF, TLFs) with consistent group colors.
+- Provide a centered search bar skeleton for variables (no search logic yet).
+- Match the provided mock design and feel Notion-like: clean, airy spacing, subtle borders, and minimal chrome.
+- Ensure responsive behavior for common breakpoints and dark mode.
+
+## 2) Non-goals
+- No file upload flow work here (assume files are already uploaded).
+- No search functionality or AI calls.
+- No server routes; data is local mock state.
+
+---
+
+## 3) Page layout
+- Single route: `app/page.tsx` continues hosting the workspace.
+- Structure
+  - Left: File list (sticky) ~ 256–288px on desktop; collapsible on small screens.
+  - Center: Hero prompt + search input skeleton.
+  - Optional top note text block for the prototype (non-interactive).
+
+- Behavior
+  - Left pane scrolls independently when content exceeds viewport height.
+  - Center area uses vertical centering on first load; on shorter viewports, the search bar should remain visible without overflow.
+  - Support dark mode via Tailwind/`class` strategy.
+
+---
+
+## 4) Components
+
+### 4.1) File list (left pane)
+- Groups: ADaM, SDTM, aCRF, TLFs. Groups separated by 8–12px vertical gap for clarity.
+- Each item shows filename (domain code or name) and optional metadata chip (later).
+- Hover and selected states use subtle tonal surfaces.
+- Long names should truncate with ellipsis.
+
+Suggested primitives (shadcn/ui + Tailwind):
+- `Sidebar` wrapper
+- `SidebarGroup` with label and color token
+- `SidebarItem` with active and hover states
+
+### 4.2) Search bar (center)
+- Large prompt headline: “What can I help with ?”
+- Below: an input with rounded corners, subtle border, left-side filter icon placeholder, right-side action icon placeholder.
+- No functionality; only appearance and focus styles. Pressing Enter should do nothing.
+
+---
+
+## 5) Mock data shape (TypeScript)
+
+The UI should consume a small, typed mock dataset. Create it colocated with UI for now (later can move to `tests/fixtures/`).
+
+Interfaces:
+- `FileGroupKind = 'ADaM' | 'SDTM' | 'aCRF' | 'TLF'`
+- `MockFile`:
+  - `id: string` (stable key)
+  - `name: string` (display name, e.g., "LB", "ADSL")
+  - `group: FileGroupKind`
+  - `metadata?: { sizeKB?: number; records?: number; updatedAt?: string }`
+
+Example seed (feel free to expand slightly):
+- ADaM: `ADSL`, `ADAE`, `ADLB`
+- SDTM: `DM`, `LB`, `AE`, `VS`, `MH`, `SC`, `SV`
+- aCRF: `aCRF_v1.0.pdf`
+- TLFs: `base0characteristics.rtf`, `F-14-3-01.rtf`
+
+---
+
+## 6) Color system (Notion-like, 2025 best practice)
+
+Principles:
+- Semantic-first tokens layered over a perceptually uniform base (OKLCH) to preserve contrast in both themes.
+- Keep hues consistent per file group. Use tokens, not hard-coded colors in components.
+
+Stack support check:
+- Our stack uses Next 15 and Tailwind CSS v4 with the `@tailwindcss/postcss` pipeline, which supports modern CSS color functions, including `oklch()`.
+- Therefore, we can define CSS variables using OKLCH directly and consume them via Tailwind utilities (e.g., `bg-[--accent-sdtm-bg]` in v4 or apply via `style` prop). For portability and consistency, prefer referencing tokens through CSS variables on elements and using Tailwind utilities for layout/spacing/typography.
+- Fallback plan: if a specific target browser requires it later, we can mirror each OKLCH token with an HSL fallback variable (e.g., `--accent-sdtm-hsl`) and apply it behind a `@supports not(color: oklch(1 0 0)) { ... }` block. No fallback is necessary for current targets.
+
+Define CSS variables in `app/globals.css` (light/dark):
+- Base surfaces and text:
+  - `--surface`, `--surface-muted`, `--border`, `--text`, `--text-muted`
+- Focus ring:
+  - `--focus`
+- Group accents (foregrounds and soft backgrounds):
+  - `--accent-sdtm`, `--accent-sdtm-bg`
+  - `--accent-adam`, `--accent-adam-bg`
+  - `--accent-acrf`, `--accent-acrf-bg`
+  - `--accent-tlf`, `--accent-tlf-bg`
+
+Implementation guidance:
+- Use OKLCH values with matching chroma to keep perceived brightness consistent across themes. If OKLCH is unavailable in the stack, use HSL with calibrated lightness steps.
+- Apply group accent to small elements only (labels, left-edge border, tiny dots) to avoid a noisy UI.
+
+Example tokens (illustrative only; fine-tune during implementation):
+- Light theme
+  - `--surface: oklch(0.98 0.01 260);`
+  - `--border: oklch(0.90 0.01 260);`
+  - `--text: oklch(0.20 0.02 260);`
+  - `--focus: oklch(0.68 0.12 265);`
+  - `--accent-sdtm: oklch(0.60 0.16 260);` / `--accent-sdtm-bg: oklch(0.96 0.03 260);`
+  - `--accent-adam: oklch(0.60 0.16 160);` / `--accent-adam-bg: oklch(0.96 0.03 160);`
+  - `--accent-acrf: oklch(0.60 0.16 30);` / `--accent-acrf-bg: oklch(0.96 0.03 30);`
+  - `--accent-tlf: oklch(0.60 0.16 320);` / `--accent-tlf-bg: oklch(0.96 0.03 320);`
+- Dark theme mirrors with lower lightness but similar chroma to preserve perception.
+
+---
+
+## 7) Responsiveness (2025 approach)
+
+Use modern CSS features with Tailwind utilities:
+- Container queries for component-level responsiveness (enable `@container` and wrap sidebar + content in container contexts).
+- Fluid typography and spacing using `clamp()` for headline and input padding.
+- Reduce motion with `@media (prefers-reduced-motion)` for focus/hover transitions.
+- Pointer-coarse targets ≥ 44px height; ensure tap-safe spacing on mobile.
+
+Tailwind-first guidance (avoid custom hardcoded CSS):
+- Use built-in breakpoints: `sm`, `md`, `lg`, `xl`, `2xl` for layout shifts.
+- Sidebar width uses Tailwind scales rather than arbitrary values: `w-64` (256px) on `md+`, `w-72` (288px) on `xl+`. Collapse to `w-0` and overlay panel for `< md` if needed.
+- Page layout with utilities only: `grid`, `grid-cols-1 lg:grid-cols-[auto_1fr]` avoided if possible; prefer `lg:grid-cols-12`, with `lg:col-span-3` for sidebar and `lg:col-span-9` for content to keep classes standard.
+- Positioning: `sticky top-0` for the sidebar inside its column; `overflow-y-auto` to enable independent scrolling.
+- Typography/spacing: use Tailwind scales and `text-balance` if available; headline size via `text-[clamp(20px,3vw,28px)]` only if strictly necessary, otherwise `text-2xl md:text-3xl` to stay within utility presets.
+
+Layout guidance:
+- ≥ 1280px: fixed left pane 272–288px; generous center width with max `~960px`.
+- 768–1279px: left pane 232–256px; center fits; headline may reduce using `clamp()`.
+- < 768px: left pane collapsible (toggle button top-left), or stacks above with horizontal rule; search input stays visible.
+
+Performance:
+- Avoid heavy box-shadows; prefer borders with 1px or `outline`.
+- Virtualize long file lists later; current mock is small.
+
+Accessibility:
+- Minimum 4.5:1 contrast for text on surfaces; focus ring always visible via `outline` using `--focus`.
+- Full keyboard navigation: Tab into list, Arrow navigate items, Enter reserved for later.
+
+---
+
+## 8) States and interactions
+- Sidebar item states: default, hover, active/selected, disabled (not used now).
+- Search input states: default, hover, focus, disabled (not used now), invalid (not used now).
+
+Focus management:
+- On first load, focus should be inside the search input for quick typing (optional in this branch; add if trivial).
+
+---
+
+## 9) File structure and ownership
+- UI work in `app/page.tsx` and possibly small primitives in `components/ui/` if reused.
+- Mock data can live in `features/upload/mocks.ts` or `features/datasets/mocks.ts` (choose one; prefer `features/datasets/` for this branch since we render a list).
+- Keep domain-agnostic logic out of UI; only display mock data.
+
+New files to be created (aligned with `DESIGN.md` structure):
+- `types/files.ts`
+  - Exports `FileGroupKind` and `MockFile` interfaces used by UI and tests.
+- `features/datasets/mocks.ts`
+  - Exports `mockFiles: MockFile[]` grouped by `FileGroupKind`.
+- `components/ui/sidebar/Sidebar.tsx`
+  - Simple layout wrapper for the left pane with `sticky` and scroll handling.
+- `components/ui/sidebar/SidebarGroup.tsx`
+  - Renders a group header (with color token) and its children list container.
+- `components/ui/sidebar/SidebarItem.tsx`
+  - Single file row with hover/active styles and truncation.
+- `components/search/SearchBar.tsx`
+  - Centered search input skeleton with left/right icon placeholders.
+- `app/page.tsx`
+  - Compose the sidebar (fed by `mockFiles`) and the centered search section.
+- `app/globals.css`
+  - Add CSS variables for surfaces, text, border, focus, and group accents in both light and dark themes.
+
+---
+
+## 10) Implementation checklist (for this branch)
+1) Create mock dataset and types.
+2) Render left sidebar with grouped files using the mock dataset.
+3) Build centered search bar skeleton (headline + input with icons).
+4) Add CSS variables for group colors and base surfaces in `app/globals.css` (light and dark); map groups to tokens.
+5) Ensure responsive layout and dark mode styles.
+
+Done criteria:
+- Sidebar shows all groups with small gap between them; items truncate gracefully.
+- Colors are consistent per group and work in dark/light.
+- Search bar appears centered with placeholder icons and focus styles.
+- No runtime errors, typecheck and lint pass.
+
+---
+
+## 11) Visual details
+- Corner radius: 8px on inputs and interactive containers.
+- Border: 1px neutral (`--border`), use subtle `:hover` background.
+- Spacing scale: 4px base; sidebar item height ~ 36–40px.
+- Typography: System font stack, headline uses `clamp(20px, 3vw, 28px)`.
+
+---
+
+## 12) Acceptance criteria
+- Left pane populated from mock data, grouped, with consistent accent colors per group.
+- Search bar skeleton rendered, visually matches the provided mock (icons may be placeholders, e.g., shadcn `Icons` or Heroicons).
+- Responsive and accessible (focus ring, truncation, contrast) with dark mode supported.
+- No API keys or server calls; entirely client-side.
+
+---
+
+## 13) Future follow-ups (later branches)
+- Hook up real upload flow → populates the same shape as `MockFile`.
+- Search logic and filtering across variables → connects to `@ai/entrypoints/parseFile` and then lineage.
+- Performance: virtualized lists; lazy group toggles; keyboard shortcuts.
+
+---
+
+## 14) Commit plan (conventional commits)
+- chore(docs): finalize main screen UI spec and file map
+- feat(types): add `types/files.ts` with `FileGroupKind` and `MockFile`
+- feat(mocks): seed `features/datasets/mocks.ts` with grouped sample data
+- style(theme): define OKLCH tokens and dark/light variables in `app/globals.css`
+- feat(components): add sidebar primitives (`Sidebar`, `SidebarGroup`, `SidebarItem`)
+- feat(components): add `components/search/SearchBar.tsx` skeleton
+- feat(app): render sidebar from mocks and centered search in `app/page.tsx`
+- refactor(ui): adjust spacing/semantics after visual QA (optional)
+
+Notes on commit cadence:
+- Keep each commit independently buildable. After adding types and mocks, run typecheck before moving to components.
+- Introduce theme tokens before components so UI can consume variables without churn.
+- Land the page composition only after primitives are in place to avoid breaking `app/page.tsx`.
+
+---
+
+## 15) shadcn/ui and Tailwind best practices (this branch)
+- Use shadcn/ui primitives where they exist and compose for the rest:
+  - `ScrollArea` for the sidebar scroll container
+  - `Separator` to visually separate groups if needed (or a spacing gap)
+  - `Input` for the search field
+  - `Button` (ghost/secondary) to host icon-only actions if needed later
+  - Icons from `lucide-react`
+- Compose missing primitives (Sidebar wrappers) with Tailwind utilities; avoid bespoke CSS files.
+- Prefer Tailwind utility classes over arbitrary CSS values; use predefined scales for spacing, borders, widths, and typography. Only use arbitrary values when utilities cannot express the requirement.
+- Dark mode: rely on the `class` strategy and the CSS variables defined in `app/globals.css`.
+- Accessibility: ensure focus-visible styles on interactive controls and maintain ≥ 4.5:1 contrast for text.
+
+---
+
+## 16) Conflict review against DESIGN.md and .cursorrules
+
+Findings:
+- Architecture and ownership: This doc keeps UI in `app/`, shared UI in `components/`, mocks in `features/`, and types in `types/` — consistent with both docs.
+- shadcn/ui + Tailwind: Required by `.cursorrules`; this doc explicitly uses them and avoids custom CSS beyond tokens in `app/globals.css`.
+- LLM and serverless: Non-goal in this branch; consistent with both documents.
+- Accessibility and responsiveness: Requirements in `.cursorrules` are reflected here (keyboard, contrast, responsive).
+
+Clarifications (minor adjustments to avoid drift):
+- CSS location: Use `app/globals.css` for tokens and theme variables. The `styles/` directory is not required for this branch. This keeps the theming minimal and centralized as per App Router conventions.
+- State management: `state/` (Zustand) is not needed for this static mock view. We will keep data local in the page and pass via props. When real upload/search flows arrive, use `state/` per `.cursorrules`.
+- Component scope: New UI primitives under `components/ui/sidebar/*` are small compositions, not a separate design system layer; this aligns with the shared UI guidance.
+
+No blocking conflicts were found.
+
+---
+
+## 17) Use of `state/` and `styles/` in this task
+- `state/`: Not used in this branch. Mock data is read-only and can be held in local variables; introducing a store now would add unnecessary complexity.
+- `styles/`: Not used in this branch. All styling is via Tailwind utilities and CSS variables in `app/globals.css`. If token files grow, we can migrate variables to `styles/tokens.css` later without changing component APIs.
+
+
+---
+
+## 18) Current status (implemented in this branch)
+- Sidebar and search UI built and wired with mock data
+  - `features/datasets/MainScreen.tsx` (client component) composes the page UI; `app/page.tsx` renders `<MainScreen />`.
+  - Left pane: sticky column with fixed width 260px on md+ (`md:grid-cols-[260px_1fr]`).
+  - Search bar skeleton centered; no logic yet.
+- Color system
+  - OKLCH tokens defined in `app/globals.css` for base surfaces and group accents.
+  - Group-aware button tones implemented with `color-mix(in oklab, ...)` using `--accent-color` + per-item `--tone` to create top→bottom gradients per group.
+  - Active item colors remain stable on hover; non-active items are darker than the pane and lighten slightly on hover.
+- Components
+  - `components/ui/sidebar/Sidebar.tsx`: `Sidebar`, `SidebarGroup`, `SidebarItem` with focus-visible and truncation.
+  - `components/search/SearchBar.tsx`: visual-only input with icons.
+- Data and types
+  - `types/files.ts`, `features/datasets/mocks.ts` seeded (TLF names updated as per doc).
+- Accessibility and responsiveness
+  - Keyboard focus ring (`focus-visible`) enabled; responsive grid; dark mode supported.
+
+---
+
+## 19) Differences from original plan/design
+- Page composition
+  - Originally: all logic in `app/page.tsx`. Now: interactive UI moved to a dedicated client component `features/datasets/MainScreen.tsx` to follow Next.js App Router best practices (hooks in client components). `app/page.tsx` stays server and renders the client entry.
+- Layout width
+  - Originally: suggested using Tailwind scale widths or a 12-col grid. Now: left pane uses an explicit fixed width of 260px via `md:grid-cols-[260px_1fr]` to exactly match the visual spec. This is an intentional, contained use of an arbitrary grid template value.
+- Color application
+  - Originally: consistent group colors. Now: in addition, each group’s items render a gradient of tones from darker (top) to lighter (bottom) using `color-mix`, keeping a Notion-like understated palette.
+
+

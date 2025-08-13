@@ -47,6 +47,19 @@
   --radius: 0.625rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
+  /* Surface system for Notion-like subtle chrome */
+  --surface: oklch(0.985 0.01 260);
+  --surface-muted: oklch(0.97 0.01 260);
+  --text: oklch(0.20 0.02 260);
+  --text-muted: oklch(0.45 0.02 260);
+  --focus: oklch(0.68 0.12 265);
+  /* Sidebar tokens (light) */
+  --sidebar-pane-bg: oklch(0.965 0 0);
+  /* Default item should be darker than pane */
+  --sidebar-item-bg: oklch(0.95 0 0);
+  --sidebar-item-hover-bg: oklch(0.92 0 0);
+  --sidebar-item-active-bg: oklch(0.42 0 0);
+  --sidebar-item-active-text: oklch(0.98 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
@@ -76,11 +89,32 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /* Group accents (foreground + soft bg) */
+  --accent-sdtm: oklch(0.60 0.16 260);
+  --accent-sdtm-bg: oklch(0.96 0.03 260);
+  --accent-adam: oklch(0.60 0.16 160);
+  --accent-adam-bg: oklch(0.96 0.03 160);
+  --accent-acrf: oklch(0.60 0.16 30);
+  --accent-acrf-bg: oklch(0.96 0.03 30);
+  --accent-tlf: oklch(0.60 0.16 320);
+  --accent-tlf-bg: oklch(0.96 0.03 320);
 }
 
 .dark {
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
+  --surface: oklch(0.18 0.01 260);
+  --surface-muted: oklch(0.22 0.01 260);
+  --text: oklch(0.92 0.02 260);
+  --text-muted: oklch(0.70 0.02 260);
+  --focus: oklch(0.72 0.12 265);
+  /* Sidebar tokens (dark) */
+  --sidebar-pane-bg: oklch(0.19 0 0);
+  --sidebar-item-bg: oklch(0.23 0 0);
+  --sidebar-item-hover-bg: oklch(0.27 0 0);
+  --sidebar-item-active-bg: oklch(0.80 0 0);
+  --sidebar-item-active-text: oklch(0.12 0 0);
   --card: oklch(0.205 0 0);
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
@@ -110,6 +144,16 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+
+  /* Group accents tuned for dark */
+  --accent-sdtm: oklch(0.80 0.16 260);
+  --accent-sdtm-bg: oklch(0.30 0.03 260);
+  --accent-adam: oklch(0.80 0.16 160);
+  --accent-adam-bg: oklch(0.30 0.03 160);
+  --accent-acrf: oklch(0.80 0.16 30);
+  --accent-acrf-bg: oklch(0.30 0.03 30);
+  --accent-tlf: oklch(0.80 0.16 320);
+  --accent-tlf-bg: oklch(0.30 0.03 320);
 }
 
 @layer base {
@@ -119,4 +163,22 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Sidebar item theming using color-mix with group accent
+   Each SidebarGroup sets --accent-color. SidebarItem can set --tone (0-100%).
+   Idle: mix accent with pane/item bg; Active: solid accent bg with light text. */
+.sidebar-item.is-idle {
+  background: color-mix(in oklab, var(--accent-color, var(--sidebar-item-bg)) var(--tone, 10%), var(--sidebar-item-bg));
+}
+.sidebar-item.is-idle:hover {
+  background: color-mix(in oklab, var(--accent-color, var(--sidebar-item-hover-bg)) var(--tone, 18%), var(--sidebar-item-hover-bg));
+}
+.sidebar-item.is-active {
+  background: color-mix(in oklab, var(--accent-color, var(--sidebar-item-active-bg)) 85%, var(--sidebar-item-active-bg));
+  color: var(--sidebar-item-active-text);
+  border-color: transparent;
+}
+.sidebar-item.is-active:hover {
+  background: color-mix(in oklab, var(--accent-color, var(--sidebar-item-active-bg)) 85%, var(--sidebar-item-active-bg));
 }
