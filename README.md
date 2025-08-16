@@ -1,49 +1,84 @@
-### Tracil — Developer Quickstart
+### Tracil — Developer Quickstart (Monorepo)
 
-Single-page Next.js workspace with mock-first AI integration. See `DESIGN.md` and `AI_DEV_GUIDE.md` for details.
+Next.js frontend + Python AI backend in a single repository. See `DESIGN.md` and `backend/AI_DEV_GUIDE.md` for details.
 
 ### Prerequisites
-- Node 18+ and npm
-- Optional: Vercel CLI for deploys
+- Node 18+ and npm (for frontend)
+- Python 3.9+ and pip (for backend)
+- Optional: Vercel CLI for frontend deploys
 
-### Install
+### Quick Start
+
+**Frontend Development:**
 ```bash
+# Install and run frontend
 npm install
-```
-
-### Run (mock mode by default)
-```bash
-export AI_MODE=mock
-npm run dev
+npm run frontend:dev
 # open http://localhost:3000
 ```
 
-### Folder map (essentials)
-- `app/page.tsx`: single-page workspace container
-- `components/`: shared UI primitives
-- `features/`: UI-only vertical modules (upload, datasets, variables, lineage)
-- `lib/ai/`: AI workspace (no UI deps)
-  - `entrypoints/`: stable contracts used by UI (do not change signatures)
-  - `lineage/`, `parsers/`, `provider/`: minimal MVP internals
-- `types/`, `state/`, `hooks/`, `styles/`, `tests/`, `docs/`
-
-### Configure providers (optional for live)
+**Backend Development (AI Developer):**
 ```bash
-# .env.local
-LLM_PROVIDER=gemini
-GOOGLE_API_KEY=...    # or OPENAI_API_KEY / ANTHROPIC_API_KEY
-AI_MODE=live          # mock|live|auto
+# Set up Python backend
+cd backend
+# Follow backend/AI_DEV_GUIDE.md for setup
+# AI Developer has complete freedom over backend implementation
 ```
 
-### Roles
-- Web UI dev: build views in `app/page.tsx` using `components/` + `features/`.
-- AI dev: implement internals under `lib/ai/` and expose only `@ai/entrypoints/*`.
-
-### Commit and lint
-```bash
-npm run lint
-npm run build
+### Monorepo Structure
+```
+/
+├── frontend/           # Next.js Application
+│   ├── app/           # App Router pages
+│   ├── components/    # Shared UI primitives  
+│   ├── features/      # UI-only vertical modules
+│   └── ...
+├── backend/           # Python AI Backend (AI Developer's Domain)
+│   ├── AI_DEV_GUIDE.md # Complete guide for AI developer
+│   └── .env.example   # Backend environment template
+├── .env.example       # Root environment template
+└── DESIGN.md         # Complete architecture documentation
 ```
 
-### Deploy (later)
-- Use Vercel. Keep keys in project settings; no client-side keys.
+### Environment Setup
+
+**Copy environment templates:**
+```bash
+# Frontend environment
+cp frontend/.env.example frontend/.env.local
+
+# Backend environment (AI Developer)
+cp backend/.env.example backend/.env
+```
+
+### Team Roles
+
+**Frontend Developer:**
+- Owns `frontend/` folder completely
+- Builds UI with mock API responses initially
+- Later connects to Python backend via API calls
+
+**AI Developer:**
+- Owns `backend/` folder completely
+- Complete freedom over Python code organization
+- Only requirement: expose 2 API endpoints (see `backend/AI_DEV_GUIDE.md`)
+
+### Development Scripts
+```bash
+# Frontend
+npm run frontend:dev    # Start Next.js dev server
+npm run frontend:build  # Build frontend
+npm run frontend:test   # Run frontend tests
+
+# Backend (AI Developer sets up their own scripts)
+npm run backend:dev     # Placeholder - AI Developer implements
+```
+
+### Integration
+- Phase 1: Both teams develop independently
+- Phase 2: Connect via HTTP API calls (no Docker needed)
+- Phase 3: Optional Docker setup for production
+
+### Deploy
+- Frontend: Vercel (environment variables in project settings)
+- Backend: AI Developer's choice of Python deployment platform

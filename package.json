@@ -1,50 +1,25 @@
 {
-  "name": "tracil",
+  "name": "tracil-monorepo",
   "version": "0.1.0",
   "private": true,
+  "description": "AI-powered clinical data lineage platform",
+  "workspaces": [
+    "frontend"
+  ],
   "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
-    "test:a11y": "jest --testPathPattern=accessibility",
-    "type-check": "tsc --noEmit"
+    "dev": "npm run dev --workspace=frontend",
+    "build": "npm run build --workspace=frontend",
+    "start": "npm run start --workspace=frontend",
+    "lint": "npm run lint --workspace=frontend",
+    "test": "npm run test --workspace=frontend",
+    "frontend:dev": "npm run dev --workspace=frontend",
+    "frontend:build": "npm run build --workspace=frontend",
+    "frontend:test": "npm run test --workspace=frontend",
+    "backend:dev": "cd backend && echo 'AI Developer: Set up your Python environment and run your FastAPI server'",
+    "backend:install": "cd backend && echo 'AI Developer: Install your Python dependencies (pip install -r requirements.txt)'"
   },
-  "dependencies": {
-    "@vercel/analytics": "^1.5.0",
-    "@vercel/speed-insights": "^1.2.0",
-    "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
-    "lucide-react": "^0.539.0",
-    "next": "15.4.6",
-    "react": "19.1.0",
-    "react-dom": "19.1.0",
-    "tailwind-merge": "^3.3.1"
-  },
-  "devDependencies": {
-    "@axe-core/react": "^4.10.2",
-    "@eslint/eslintrc": "^3",
-    "@tailwindcss/container-queries": "^0.1.1",
-    "@tailwindcss/postcss": "^4",
-    "@testing-library/jest-dom": "^6.7.0",
-    "@testing-library/react": "^16.3.0",
-    "@types/jest": "^30.0.0",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "@typescript-eslint/eslint-plugin": "^8.39.1",
-    "eslint": "^9",
-    "eslint-config-next": "15.4.6",
-    "eslint-plugin-jsx-a11y": "^6.10.2",
-    "jest": "^30.0.5",
-    "jest-axe": "^10.0.0",
-    "jest-environment-jsdom": "^30.0.5",
-    "tailwindcss": "^4",
-    "tw-animate-css": "^1.3.6",
-    "typescript": "^5",
-    "web-vitals": "^5.1.0"
+  "devDependencies": {},
+  "engines": {
+    "node": ">=18.0.0"
   }
 }

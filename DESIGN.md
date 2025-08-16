@@ -54,51 +54,160 @@ Note: Free tiers/quotas change; verify before demos or releases and adjust defau
 - **Framework**: Next.js 15+ with React 19+, TypeScript ES2022+
 - **Styling**: Tailwind CSS v4 + shadcn/ui, OKLCH colors, container queries
 - **State Management**: Zustand (global), React Context (component trees)
-- **Performance**: Mandatory React.memo/useMemo/useCallback, Web Workers for heavy tasks
+- **Performance**: Mandatory React.memo/useMemo/useCallback, streaming for large data
 - **Accessibility**: WCAG 2.2 AA compliance, full keyboard navigation, screen reader support
 - **Error Handling**: Error boundaries at route and component levels
 - **Monitoring**: Core Web Vitals, user interactions, accessibility violations
 
-**Data Processing**
-- **File Parsing**: In-browser (XPT, SAS7BDAT, XLSX, DOCX, PDF, RTF) via Web Workers
-- **Validation**: Real-time CDISC compliance checking
-- **Privacy**: No server-side file persistence, ephemeral processing only
+**Next.js API Layer (Proxy/Gateway)**
+- **Purpose**: Secure proxy between frontend and Python AI backend
+- **Endpoints**: `/api/ai/process-files`, `/api/ai/analyze-variable`
+- **Features**: Request validation, error handling, streaming responses, timeout management
+- **Security**: API key management, request sanitization, CORS configuration
+- **Privacy**: PII/PHI redaction before forwarding to AI backend
 
-**AI Integration**
-- **Architecture**: Provider abstraction layer in `lib/ai/`
-- **Providers**: OpenAI GPT, Anthropic Claude, Google Gemini
-- **Privacy**: Metadata-only prompts, PII/PHI redaction
-- **Modes**: `mock` (development), `live` (production), `auto` (conditional)
+**Python AI Backend (FastAPI)**
+- **Framework**: FastAPI with async/await for high-performance AI processing
+- **Core Services**: 
+  - File parsing (XPT, SAS7BDAT, XLSX, DOCX, PDF, RTF)
+  - LLM integration (OpenAI GPT, Anthropic Claude, Google Gemini)
+  - Lineage analysis and gap detection
+  - CDISC compliance validation
+- **Features**: Streaming responses, async processing, automatic API documentation
+- **Privacy**: Ephemeral processing, no file persistence, metadata-only LLM calls
+- **Deployment**: Docker containers, scalable serverless deployment
 
-**Serverless Backend (Optional)**
-- **Purpose**: Heavy processing offload, API rate limiting
-- **Implementation**: Stateless proxies calling `@ai/entrypoints/*`
-- **Constraints**: Strict timeouts, no persistence, ephemeral processing
-
----
-
-#### 4) File formats and ingestion
-- SDTM/ADaM: SAS XPT (v5) and SAS7BDAT
-- TLF: RTF (primary)
-- Protocol/SAP/CRF: PDF, DOCX, XLSX
-- Indicative libraries
-  - XPT: xport-js or xport-parser
-  - SAS7BDAT: WASM-based parsers
-  - XLSX: `xlsx` (SheetJS)
-  - DOCX: `mammoth`
-  - PDF: `pdfjs-dist`
-  - RTF: lightweight RTF-to-text parser
-- Validation
-  - Light CDISC checks: required domains, variable roles, presence; badges: ✔ valid, ❌ invalid, “缺失” missing
+**Data Processing Pipeline**
+- **File Upload**: Frontend → Next.js API → Python backend (streaming)
+- **AI Analysis**: Python backend with provider abstraction and fallback
+- **Response**: Streaming JSON responses for real-time progress updates
+- **Privacy**: All processing ephemeral, files discarded immediately after processing
 
 ---
 
-#### 5) LLM analysis pipeline
-- Provider abstraction with adapters (OpenAI/Anthropic/Gemini), selected via `LLM_PROVIDER`
-- Preprocess: extract metadata, normalize tables, chunk large docs, redact sample values
-- Prompting: instruct model to infer lineage links and detect gaps with reasons
-- Output: normalized edges to Lineage IR with confidence + gap flags
-- Privacy: analyze metadata by default; strip PII/PHI (identifiers/health-linked data) before LLM calls; provide a “metadata-only” toggle
+#### 4) File formats and ingestion (Python Backend)
+- **Supported Formats**: SAS XPT (v5), SAS7BDAT, XLSX, DOCX, PDF, RTF
+- **File Types**: 
+  - SDTM/ADaM: SAS XPT (v5) and SAS7BDAT
+  - TLF: RTF (primary)
+  - Protocol/SAP/CRF: PDF, DOCX, XLSX
+- **Python Libraries (AI Developer's Choice)**:
+  - XPT: python-xport, pandas, or custom parsers
+  - SAS7BDAT: sas7bdat, pandas, or custom parsers
+  - XLSX: openpyxl, pandas, or xlsxwriter
+  - DOCX: python-docx or custom parsers
+  - PDF: PyPDF2, pdfplumber, or custom parsers
+  - RTF: striprtf or custom RTF parsers
+- **Validation (Python Backend)**:
+  - Light CDISC checks: required domains, variable roles, presence
+  - Return validation badges: ✔ valid, ❌ invalid, Missing
+
+---
+
+#### 5) Core AI Workflows (Python Backend)
+
+**Workflow A: File Processing & Dataset Discovery**
+```
+Input: Frontend receives files from user
+├─ aCRF files
+├─ SDTM metadata (SDTM spec or define.xml)
+└─ ADaM metadata (ADaM spec or define.xml)
+
+Python Backend Processing:
+├─ Parse all uploaded files
+├─ Extract metadata and structure
+├─ Identify datasets within each metadata file
+└─ Extract variables under each dataset
+
+Output JSON Structure:
+{
+  "files": [
+    {
+      "filename": "define.xml",
+      "type": "adam_metadata",
+      "datasets": [
+        {
+          "name": "ADSL", 
+          "variables": [
+            {
+              "name": "USUBJID",
+              "label": "Unique Subject Identifier", 
+              "type": "character",
+              "length": 20,
+              "role": "identifier"
+            },
+            {
+              "name": "AGE",
+              "label": "Age at Baseline",
+              "type": "numeric", 
+              "role": "covariate"
+            }
+          ],
+          "metadata": {...}
+        },
+        {
+          "name": "ADAE",
+          "variables": [
+            {
+              "name": "USUBJID", 
+              "label": "Unique Subject Identifier",
+              "type": "character",
+              "role": "identifier"
+            },
+            {
+              "name": "AEDECOD",
+              "label": "Standardized MedDRA Term",
+              "type": "character",
+              "role": "topic"
+            }
+          ],
+          "metadata": {...}
+        }
+      ]
+    }
+  ]
+}
+
+Frontend Usage:
+└─ Generate left pane file and dataset list (ADSL, ADAE, DM, LB, aCRF)
+└─ Future: Click dataset → display variables on main screen
+```
+
+**Workflow B: Variable Lineage Analysis**
+```
+Input: User requests lineage for specific variable
+├─ Variable name (e.g., "AEDECOD")
+├─ Dataset context (e.g., "ADAE")
+└─ Available metadata files
+
+Python Backend Processing:
+├─ Analyze variable across all available files
+├─ Use AI/LLM to trace lineage connections
+├─ Identify source → transformation → target relationships
+└─ Generate confidence scores and gap detection
+
+Output JSON Structure:
+{
+  "variable": "AEDECOD",
+  "dataset": "ADAE", 
+  "lineage": {
+    "nodes": [
+      {"id": "aCRF.AE_TERM", "type": "source", "file": "aCRF"},
+      {"id": "SDTM.AE.AETERM", "type": "intermediate", "file": "ae.xpt"},
+      {"id": "ADaM.ADAE.AEDECOD", "type": "target", "file": "adae.xpt"}
+    ],
+    "edges": [
+      {"from": "aCRF.AE_TERM", "to": "SDTM.AE.AETERM", "confidence": 0.95},
+      {"from": "SDTM.AE.AETERM", "to": "ADaM.ADAE.AEDECOD", "confidence": 0.87}
+    ],
+    "gaps": ["Missing transformation logic documentation"]
+  }
+}
+
+Frontend Usage:
+└─ Display interactive lineage visualization
+└─ Show confidence scores and highlight gaps
+```
 
 ---
 
@@ -125,48 +234,88 @@ Note (implementation detail as of current branch):
 
 ---
 
-#### 4) Project Structure & Ownership
+#### 4) Project Structure & Ownership (Monorepo)
+
+**Unified Repository Structure (2025 Best Practices):**
 ```
-/ (repo root)
+/ (monorepo root - Tracil)
 ├─ .cursorrules
-├─ .env.example
-├─ app/
-│  ├─ layout.tsx
-│  ├─ page.tsx                       # Workspace (renders client entry)
-│  └─ (workspace)/
-│     └─ _components/
-│        └─ MainScreenClient.tsx     # Interactive workspace (client component)
-│  └─ (marketing)/                   # FUTURE: SEO pages (features, docs, blog)
-│  └─ (api/)                         # FUTURE: optional serverless routes
-├─ components/                       # Shared UI primitives
-├─ features/                         # UI-only vertical slices (optional)
-├─ lib/
-│  └─ ai/                            # Independent AI workspace (no UI deps)
-│     ├─ entrypoints/                # Stable facades used by UI (contracts only)
-│     │  ├─ analyzeLineage.ts        # (files/meta) → LineageIR
-│     │  └─ parseFile.ts             # (blob, type) → ParsedArtifact
-│     ├─ lineage/                    # Minimal IR types and helpers (MVP)
-│     ├─ parsers/                    # Minimal parsers (start with xpt, xlsx)
-│     └─ provider/                   # Single provider implementation (e.g., gemini or gpt)
-├─ hooks/
-├─ state/                            # Zustand stores (client-only)
-├─ styles/
-├─ types/                            # Shared TS types (CDISC, IR, DTOs)
-├─ tests/                            # Unit tests (focus on lib/ai)
-└─ docs/
+├─ .env.example                     # Template for all environment variables
+├─ .gitignore
+├─ README.md
+├─ package.json                     # Root workspace configuration
+│
+├─ frontend/                        # Next.js Application
+│  ├─ .env.local                    # Frontend-specific environment (not committed)
+│  ├─ .env.example                  # Frontend environment template
+│  ├─ package.json                  # Frontend dependencies
+│  ├─ next.config.ts
+│  ├─ tailwind.config.ts
+│  ├─ tsconfig.json
+│  ├─ app/
+│  │  ├─ layout.tsx
+│  │  ├─ page.tsx                   # Workspace (renders client entry)
+│  │  └─ (workspace)/
+│  │     └─ _components/
+│  │        └─ MainScreenClient.tsx # Interactive workspace (client component)
+│  │  └─ (marketing)/               # FUTURE: SEO pages
+│  │  └─ (api)/                     # Next.js API routes (proxy to Python backend)
+│  │     └─ ai/
+│  │        ├─ process-files/
+│  │        │  └─ route.ts          # POST /api/ai/process-files → Python POST /process-files
+│  │        └─ analyze-variable/
+│  │           └─ route.ts          # POST /api/ai/analyze-variable → Python POST /analyze-variable
+│  ├─ components/                   # Shared UI primitives
+│  ├─ features/                     # UI-only vertical slices
+│  ├─ lib/
+│  │  ├─ api-client.ts              # HTTP client for Python backend
+│  │  └─ types.ts                   # Shared TypeScript types
+│  ├─ hooks/
+│  ├─ state/                        # Zustand stores (client-only)
+│  ├─ styles/
+│  └─ tests/                        # Frontend unit tests
+│
+├─ backend/                         # Python AI Backend (AI Developer's Domain)
+│  ├─ .env                          # Backend environment (not committed)
+│  ├─ .env.example                  # Backend environment template
+│  ├─ requirements.txt              # Python dependencies
+│  ├─ pyproject.toml                # Python project configuration
+│  ├─ main.py                       # FastAPI application entry point
+│  │
+│  └─ [AI DEVELOPER HAS COMPLETE FREEDOM HERE]
+│     # AI Developer can organize this however they want:
+│     # - Any folder structure
+│     # - Any Python libraries/frameworks
+│     # - Any design patterns
+│     # - Only constraint: expose the required API endpoints
+│
+├─ docs/                            # Documentation
+├─ tests/                           # Integration tests
+│
+└─ (deployment/)                      # (Low Priority - Later)
+   ├─ docker-compose.yml            # Full-stack local development
+   ├─ Dockerfile.frontend           # Next.js container
+   └─ Dockerfile.backend            # Python container
 ```
 
 **Architecture Principles:**
-- **Domain Separation**: AI logic (`lib/ai/`) completely decoupled from UI
-- **Stable Contracts**: UI only imports `@ai/entrypoints/*`, never internals
-- **2025 Standards**: All code follows modern React/TypeScript patterns
+- **Monorepo Benefits**: Single repository for easier coordination and shared tooling
+- **AI Developer Autonomy**: Complete freedom in `backend/` folder structure and design
+- **API-First Integration**: Only constraint is exposing required API endpoints
+- **2025 Standards**: Modern React/TypeScript frontend, Python backend with full ecosystem access
 - **Accessibility-First**: WCAG 2.2 AA compliance built into every component
-- **Performance-First**: Monitoring and optimization built into architecture
-- **Error Resilience**: Graceful degradation at all levels
-- **Developer Experience**: Comprehensive tooling, testing, and documentation
+- **Performance-First**: Streaming responses, async processing, monitoring built-in
+- **Privacy-First**: Ephemeral processing, no persistence, PII/PHI protection
+- **Developer Experience**: Unified development environment with Docker Compose
+
+**Development Environment Setup:**
+- **Frontend**: Standard Next.js development server (`npm run dev`)
+- **Backend**: FastAPI with hot reload (`uvicorn app.main:app --reload`)
+- **Integration**: Docker Compose for local full-stack development
+- **API Documentation**: Auto-generated OpenAPI docs at `/docs` endpoint
 
 Path aliases (to configure in `tsconfig.json`)
-- `@ai/*` → `lib/ai/*`
+- `@api/*` → `lib/api-client/*`
 - `@types/*` → `types/*`
 - `@state/*` → `state/*`
 
@@ -176,34 +325,71 @@ Additional UI tokens and theming
 Layout constraint (main screen)
 - Left pane is fixed to 260px on md+ via `md:grid-cols-[260px_1fr]` to match the visual spec.
 
-Team focus
-- Web developer: `app/`, `components/`, `features/`, `hooks/`, `styles/`
-- AI developer: `lib/ai/` (all subfolders), `types/`, unit tests in `tests/`, and the thin logic inside `app/api/*` to connect HTTP → `@ai/entrypoints/*`
+**Team Focus & Responsibilities:**
+- **Frontend Developer**: 
+  - `frontend/` folder: `app/`, `components/`, `features/`, `hooks/`, `styles/`
+  - Next.js API routes in `frontend/app/(api)/ai/*` (proxy logic only)
+  - Frontend testing and accessibility compliance
+- **AI Developer**: 
+  - **Complete autonomy over `backend/` folder**
+  - Can organize Python code however they prefer
+  - Choose any libraries, frameworks, design patterns
+  - Only requirement: expose these API endpoints:
+    - `POST /process-files` - Process uploaded files and return dataset/variable structure
+    - `POST /analyze-variable` - Generate lineage for a specific variable
+- **Shared Responsibilities**:
+  - API contract agreement (initially just documentation/verbal)
+  - Integration testing coordination
 
 ---
 
-#### 5) Development Methodology
-- Web developer builds all pages and interactions using mock data and fixtures.
-- The Upload UI may accept real files for UX testing, but no AI calls occur; only local validation and previews.
-- During mock phase:
-  - UI calls a thin client module that delegates directly to `@ai/entrypoints/*` (no serverless yet).
-  - `@ai/entrypoints/analyzeLineage` returns deterministic sample IR from `tests/fixtures/` or `docs/mocks/`.
-  - `@ai/entrypoints/parseFile` can either run lightweight local parsers or return summarized metadata stubs without LLM.
-- Contracts remain stable: the UI consumes `@ai/entrypoints/*` outputs and shared types so swapping mocks → real AI is seamless.
- - AI integration starts only after the designated milestone (see Milestones). Set `AI_MODE=live` (or `AI_MODE=auto`).
+#### 5) Development Methodology & Priorities
 
-#### 8.1) Parallel workstreams (non-blocking)
-- Start both roles immediately once the skeleton exists:
-  - Web UI developer:
-    - Build all pages/components and wire a thin client to `@ai/entrypoints/*` (direct import) using mocks.
-    - Later, swap the thin client to call `/api/*` without changing UI components.
-  - AI developer:
-    - Implement `lib/ai/*` internals freely; expose only stable functions in `lib/ai/entrypoints/*`.
-    - Provide mock implementations first that match the final return shapes, then switch to real logic without changing signatures.
-- Contract to stay unblocked:
-  - Keep `entrypoints` function signatures and return types stable.
-  - UI/API never import from `lib/ai/providers/*` or other internals.
-  - Any changes to shared types live in `types/` and are versioned with clear diffs.
+**High Priority (Immediate Development):**
+
+**Frontend Developer:**
+- Build UI with mock JSON responses (hardcoded in Next.js API routes)
+- Focus on core UI components and user interactions
+- Use static mock data that matches the expected API contract
+
+**AI Developer:**
+- Build Python backend with the two required endpoints
+- Can run Python backend locally (simple `python main.py` or `uvicorn`)
+- Focus on core file processing and lineage analysis logic
+
+**API Contract (This is for communication between frontend and Python backend):**
+- The JSON structure defines what data the Python backend sends to frontend
+- Frontend needs variable details (name, label, type, role) to display rich information
+- This allows frontend to show meaningful variable information beyond just names
+
+**Medium Priority (After Core Features Work):**
+
+**Integration Setup:**
+- Replace frontend mock responses with actual HTTP calls to Python backend
+- Set up CORS configuration for local development
+- Test end-to-end workflows
+
+**Low Priority (Later):**
+
+**Formal API Contracts & Type Generation:**
+- `shared/` folder with OpenAPI specifications
+- `shared/api-contracts/process-files.json` - OpenAPI spec for file processing
+- `shared/api-contracts/analyze-variable.json` - OpenAPI spec for variable analysis
+- `shared/types/typescript/` - Auto-generated TypeScript types
+- `shared/types/python/` - Auto-generated Pydantic models
+- Type synchronization between frontend and backend
+
+**Docker & Deployment:**
+- `deployment/docker-compose.yml` for unified development environment
+- `deployment/Dockerfile.frontend` and `deployment/Dockerfile.backend`
+- Production deployment configuration
+- Monitoring and logging setup
+- Advanced error handling and retry logic
+
+**Development Flow (Simplified):**
+1. **Now**: Frontend with mocks + Python backend running separately
+2. **Soon**: Connect them via HTTP calls (no Docker needed initially)  
+3. **Later**: Docker, production deployment, advanced features
 
 #### 6) Development Setup (Mandatory)
 
@@ -225,16 +411,91 @@ Team focus
 
 ---
 
-#### 7) Environment Configuration
-- `LLM_PROVIDER=gpt|claude|gemini` (default `gemini` for free dev)
-- `OPENAI_API_KEY=`
-- `ANTHROPIC_API_KEY=`
-- `GOOGLE_API_KEY=`
-- `MAX_FILE_SIZE_MB=200`
-- `ENABLE_METADATA_ONLY=true`
-- `AI_MODE=mock|live|auto`          # mock (default) uses canned results; live calls provider; auto picks live if keys present
+#### 7) Environment Configuration (Monorepo)
 
-Secrets are stored only in server env (Vercel project settings). Client never sees keys.
+**Root Environment Template (.env.example):**
+```bash
+# ==============================================
+# SHARED ENVIRONMENT VARIABLES TEMPLATE
+# Copy to frontend/.env.local and backend/.env as needed
+# ==============================================
+
+# Development Configuration
+NODE_ENV=development
+PYTHON_ENV=development
+
+# Frontend-Specific Variables (copy to frontend/.env.local)
+NEXT_PUBLIC_API_BASE_URL=http://localhost:3000/api
+NEXT_PUBLIC_MAX_FILE_SIZE_MB=200
+
+# Backend-Specific Variables (copy to backend/.env)
+# LLM Provider Configuration
+LLM_PROVIDER=gemini
+OPENAI_API_KEY=your_openai_key_here
+ANTHROPIC_API_KEY=your_claude_key_here  
+GOOGLE_API_KEY=your_gemini_key_here
+
+# Processing Configuration
+AI_MODE=auto
+MAX_FILE_SIZE_MB=200
+ENABLE_METADATA_ONLY=true
+PROCESSING_TIMEOUT_SECONDS=300
+
+# FastAPI Configuration
+HOST=0.0.0.0
+PORT=8000
+DEBUG=true
+LOG_LEVEL=info
+
+# CORS Configuration
+ALLOWED_ORIGINS=http://localhost:3000,https://your-frontend-domain.com
+```
+
+**Frontend Environment Template (frontend/.env.example):**
+```bash
+# Frontend Environment Variables
+NEXT_PUBLIC_API_BASE_URL=http://localhost:3000/api
+NEXT_PUBLIC_MAX_FILE_SIZE_MB=200
+
+# Internal API Configuration (not exposed to browser)
+PYTHON_AI_BACKEND_URL=http://localhost:8000
+AI_API_TIMEOUT_MS=30000
+```
+
+**Backend Environment Template (backend/.env.example):**
+```bash
+# Python Backend Environment Variables
+# LLM Provider Configuration (AI Developer's choice)
+LLM_PROVIDER=gemini
+OPENAI_API_KEY=your_openai_key_here
+ANTHROPIC_API_KEY=your_claude_key_here  
+GOOGLE_API_KEY=your_gemini_key_here
+
+# Processing Configuration (AI Developer's choice)
+AI_MODE=auto
+MAX_FILE_SIZE_MB=200
+ENABLE_METADATA_ONLY=true
+PROCESSING_TIMEOUT_SECONDS=300
+
+# FastAPI Configuration (AI Developer's choice)
+HOST=0.0.0.0
+PORT=8000
+DEBUG=true
+LOG_LEVEL=info
+
+# CORS Configuration
+ALLOWED_ORIGINS=http://localhost:3000,https://your-frontend-domain.com
+
+# AI Developer can add any additional environment variables needed
+```
+
+**Environment Management Best Practices:**
+- **Root .env.example**: Template showing all possible variables across both services
+- **Service-specific .env.example**: Templates for each service's specific needs
+- **No duplication**: Each service only has variables it actually needs
+- **Security**: Sensitive variables (API keys) only in backend environment
+- **Development**: Use .env.local (frontend) and .env (backend) for actual values
+- **Production**: Set environment variables through deployment platform
 
 ---
 
