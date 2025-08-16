@@ -121,8 +121,7 @@ Use modern CSS features with Tailwind utilities:
 
 Tailwind-first guidance (avoid custom hardcoded CSS):
 - Use built-in breakpoints: `sm`, `md`, `lg`, `xl`, `2xl` for layout shifts.
-- Sidebar width uses Tailwind scales rather than arbitrary values: `w-64` (256px) on `md+`, `w-72` (288px) on `xl+`. Collapse to `w-0` and overlay panel for `< md` if needed.
-- Page layout with utilities only: `grid`, `grid-cols-1 lg:grid-cols-[auto_1fr]` avoided if possible; prefer `lg:grid-cols-12`, with `lg:col-span-3` for sidebar and `lg:col-span-9` for content to keep classes standard.
+- Sidebar width is fixed to 260px on `md+` via `md:grid-cols-[260px_1fr]` (design constraint).
 - Positioning: `sticky top-0` for the sidebar inside its column; `overflow-y-auto` to enable independent scrolling.
 - Typography/spacing: use Tailwind scales and `text-balance` if available; headline size via `text-[clamp(20px,3vw,28px)]` only if strictly necessary, otherwise `text-2xl md:text-3xl` to stay within utility presets.
 
@@ -151,42 +150,31 @@ Focus management:
 ---
 
 ## 9) File structure and ownership
-- UI work in `app/page.tsx` and possibly small primitives in `components/ui/` if reused.
-- Mock data can live in `features/upload/mocks.ts` or `features/datasets/mocks.ts` (choose one; prefer `features/datasets/` for this branch since we render a list).
+- Workspace route lives in `app/page.tsx`; interactive UI is a client component under `app/(workspace)/_components/`.
 - Keep domain-agnostic logic out of UI; only display mock data.
 
-New files to be created (aligned with `DESIGN.md` structure):
-- `types/files.ts`
-  - Exports `FileGroupKind` and `MockFile` interfaces used by UI and tests.
-- `features/datasets/mocks.ts`
-  - Exports `mockFiles: MockFile[]` grouped by `FileGroupKind`.
+Files added in this branch:
+- `app/(workspace)/_components/MainScreenClient.tsx` (client; composes sidebar + search)
 - `components/ui/sidebar/Sidebar.tsx`
-  - Simple layout wrapper for the left pane with `sticky` and scroll handling.
-- `components/ui/sidebar/SidebarGroup.tsx`
-  - Renders a group header (with color token) and its children list container.
-- `components/ui/sidebar/SidebarItem.tsx`
-  - Single file row with hover/active styles and truncation.
 - `components/search/SearchBar.tsx`
-  - Centered search input skeleton with left/right icon placeholders.
-- `app/page.tsx`
-  - Compose the sidebar (fed by `mockFiles`) and the centered search section.
-- `app/globals.css`
-  - Add CSS variables for surfaces, text, border, focus, and group accents in both light and dark themes.
+- `features/datasets/mocks.ts`
+- `types/files.ts`
+- `app/globals.css` (tokens extended)
 
 ---
 
-## 10) Implementation checklist (for this branch)
-1) Create mock dataset and types.
-2) Render left sidebar with grouped files using the mock dataset.
-3) Build centered search bar skeleton (headline + input with icons).
-4) Add CSS variables for group colors and base surfaces in `app/globals.css` (light and dark); map groups to tokens.
-5) Ensure responsive layout and dark mode styles.
-
-Done criteria:
-- Sidebar shows all groups with small gap between them; items truncate gracefully.
-- Colors are consistent per group and work in dark/light.
-- Search bar appears centered with placeholder icons and focus styles.
-- No runtime errors, typecheck and lint pass.
+## 10) Implementation status
+- Done
+  - Mock dataset and types
+  - Left sidebar populated from mocks (grouped)
+  - Centered search bar skeleton
+  - OKLCH tokens and group accents; per-item tone gradient
+  - Fixed 260px sidebar on `md+`; dark mode; focus-visible
+  - Interactive client component under `app/(workspace)/_components/`
+- Next
+  - Sidebar keyboard interaction (Arrow/Home/End) and ARIA roles
+  - Visual polish: group spacing/separators, radii, truncation tweaks
+  - Unit tests for `toneFor` and `groupFilesByKind`
 
 ---
 
@@ -214,14 +202,17 @@ Done criteria:
 ---
 
 ## 14) Commit plan (conventional commits)
-- chore(docs): finalize main screen UI spec and file map
-- feat(types): add `types/files.ts` with `FileGroupKind` and `MockFile`
-- feat(mocks): seed `features/datasets/mocks.ts` with grouped sample data
-- style(theme): define OKLCH tokens and dark/light variables in `app/globals.css`
-- feat(components): add sidebar primitives (`Sidebar`, `SidebarGroup`, `SidebarItem`)
-- feat(components): add `components/search/SearchBar.tsx` skeleton
-- feat(app): render sidebar from mocks and centered search in `app/page.tsx`
-- refactor(ui): adjust spacing/semantics after visual QA (optional)
+- Done
+  - feat(types): add `types/files.ts` with `FileGroupKind` and `MockFile`
+  - feat(mocks): seed `features/datasets/mocks.ts`
+  - style(theme): add OKLCH tokens and group accents in `app/globals.css`
+  - feat(components): add sidebar primitives and `SearchBar`
+  - feat(app): render main screen (client) from `app/page.tsx` with fixed 260px sidebar
+  - docs: align `DESIGN.md`, `.cursorrules`, `MAIN_SCREEN_UI.md`
+- Next
+  - feat(a11y): keyboard nav + ARIA for sidebar
+  - chore(ui): visual polish (spacing, separators, radii) to match reference
+  - test(ui): `toneFor` and `groupFilesByKind`
 
 Notes on commit cadence:
 - Keep each commit independently buildable. After adding types and mocks, run typecheck before moving to components.
