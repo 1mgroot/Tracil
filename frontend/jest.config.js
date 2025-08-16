@@ -13,7 +13,7 @@ const customJestConfig = {
     '<rootDir>/tests/**/*.test.{js,jsx,ts,tsx}',
     '<rootDir>/**/__tests__/**/*.{js,jsx,ts,tsx}',
   ],
-  moduleNameMapping: {
+  moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
     '^@ai/(.*)$': '<rootDir>/lib/ai/$1',
     '^@types/(.*)$': '<rootDir>/types/$1',
