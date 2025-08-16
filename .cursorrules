@@ -54,4 +54,32 @@
 - No server-side persistence. Respect Vercel limits and timeouts.
 - Serverless is lower priority initially; design entrypoints so server routes can be added later without changing UI contracts.
 
+## 2025 Development Checklist (All Required)
 
+**Before Every Commit:**
+- [ ] TypeScript strict compilation passes (zero errors)
+- [ ] ESLint accessibility rules pass (zero violations)
+- [ ] Automated accessibility tests pass
+- [ ] Performance budgets met
+- [ ] All interactive elements keyboard accessible
+- [ ] Proper ARIA labels and roles
+- [ ] Error boundaries implemented where needed
+- [ ] Documentation updated
+
+**Component Development:**
+- [ ] Use named imports: `import { useState } from 'react'`
+- [ ] ReactNode return type
+- [ ] Proper memoization (memo, useMemo, useCallback)
+- [ ] Error boundary coverage
+- [ ] Accessibility testing
+- [ ] Keyboard navigation support
+- [ ] Screen reader compatibility
+- [ ] Performance optimization
+
+**Quality Standards:**
+- WCAG 2.2 AA compliance (non-negotiable)
+- Core Web Vitals in "Good" range
+- 90%+ test coverage for critical components
+- Zero TypeScript errors or ESLint violations
+- Comprehensive accessibility testing
+- Performance monitoring integration
