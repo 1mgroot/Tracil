@@ -1,11 +1,17 @@
 # Requires: pip install pymupdf
 import fitz  # PyMuPDF
-import re
-import csv
+import re, csv, argparse
 from pathlib import Path
 
-PDF_PATH = "/Users/kexinguan/Documents/Tracil_kexin_test/data/sdtm/blankcrf.pdf"
-OUT_CSV  = "/Users/kexinguan/Documents/Tracil_kexin_test/pgm/output/acrf_var_index.csv"
+# --- Paths relative to this file ---
+HERE = Path(__file__).resolve().parent          # backend/pgm
+BACKEND = HERE.parent                            # backend/
+DATA = BACKEND / "data"
+OUTPUT = BACKEND / "output"
+
+# Defaults (can be overridden by CLI)
+DEFAULT_PDF = DATA / "protocol" / "blankcrf.pdf"
+DEFAULT_OUT = OUTPUT / "acrf_var_index.csv"
 
 DOMAIN_PREFIXES = {
     "AE","CM","DM","DS","EG","EX","LB","MH","PR","QS","SV","VS","PE","SC","SE","TE","TU",
@@ -76,21 +82,19 @@ def extract_from_annotations(page, page_no):
             out.extend(scan_line(content, page_no))
     return out
 
-def extract_vars_to_csv(pdf_path, out_csv):
-    doc = fitz.open(pdf_path)
+def extract_vars_to_csv(pdf_path: Path, out_csv: Path):
+    doc = fitz.open(str(pdf_path))
     first_seen = {}
 
     for i in range(len(doc)):
         page = doc[i]
         pno  = i + 1
 
-        # annotations
         for r in extract_from_annotations(page, pno):
             key = (r["var"], r["page"])
             if key not in first_seen:
                 first_seen[key] = r
 
-        # page text
         for line_text in extract_words_as_lines(page):
             for r in scan_line(line_text, pno):
                 key = (r["var"], r["page"])
@@ -99,7 +103,7 @@ def extract_vars_to_csv(pdf_path, out_csv):
 
     rows = list(first_seen.values())
 
-    Path(out_csv).parent.mkdir(parents=True, exist_ok=True)
+    out_csv.parent.mkdir(parents=True, exist_ok=True)
     with open(out_csv, "w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
         w.writerow(["var","page","context"])
@@ -110,4 +114,9 @@ def extract_vars_to_csv(pdf_path, out_csv):
     print(f"CSV : {out_csv}")
 
 if __name__ == "__main__":
-    extract_vars_to_csv(PDF_PATH, OUT_CSV)
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--pdf", default=str(DEFAULT_PDF), help="Path to aCRF PDF")
+    ap.add_argument("--out", default=str(DEFAULT_OUT), help="Output CSV path")
+    args = ap.parse_args()
+
+    extract_vars_to_csv(Path(args.pdf), Path(args.out))

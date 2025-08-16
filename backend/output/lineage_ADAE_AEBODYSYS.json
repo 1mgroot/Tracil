@@ -1,0 +1,77 @@
+{
+  "target": "ADAE.AEBODYSYS",
+  "graph": {
+    "nodes": [
+      {
+        "id": "CRF.AETERM:Page123",
+        "type": "crf",
+        "label": "AETERM",
+        "domain": null,
+        "var": "AETERM",
+        "origin": "Page 123",
+        "notes": "--TERM [AETERM, MHTERM]"
+      },
+      {
+        "id": "SDTM.AE.AEBODSYS",
+        "type": "sdtm",
+        "label": "AEBODSYS",
+        "domain": "AE",
+        "var": "AEBODSYS",
+        "origin": null,
+        "notes": null
+      },
+      {
+        "id": "ADAE.AEBODYSYS",
+        "type": "adam",
+        "label": "AEBODYSYS",
+        "domain": "ADAE",
+        "var": "AEBODYSYS",
+        "origin": null,
+        "notes": "Adverse Events Analysis Dataset"
+      }
+    ],
+    "edges": [
+      {
+        "from": "CRF.AETERM:Page123",
+        "to": "SDTM.AE.AEBODSYS",
+        "type": "mapped_from",
+        "evidence": "CRF_VAR=AETERM | PAGE=123 | CONTEXT=--TERM [AETERM, MHTERM]"
+      },
+      {
+        "from": "SDTM.AE.AEBODSYS",
+        "to": "ADAE.AEBODYSYS",
+        "type": "copy",
+        "evidence": "ADAE.AEBODYSYS is a direct copy of SDTM.AE.AEBODSYS"
+      }
+    ]
+  },
+  "derivation": {
+    "type": "copy",
+    "formula": "ADAE.AEBODYSYS = SDTM.AE.AEBODSYS",
+    "assumptions": "Direct copy from SDTM to ADaM",
+    "sources": [
+      {
+        "name": "SDTM.AE.AEBODSYS",
+        "role": "source",
+        "evidence": "ADAE.AEBODYSYS is a direct copy of SDTM.AE.AEBODSYS"
+      }
+    ]
+  },
+  "paths": [
+    [
+      "CRF.AETERM:Page123",
+      "SDTM.AE.AEBODSYS",
+      "ADAE.AEBODYSYS"
+    ]
+  ],
+  "evidence_snippets": [
+    {
+      "chunk_id": "CRF_INDEX::acrf_var_index.csv#65",
+      "text": "CRF_VAR=AETERM | PAGE=123 | CONTEXT=--TERM [AETERM, MHTERM]"
+    },
+    {
+      "chunk_id": "ADaM::define.xml#84",
+      "text": "<ItemGroupDef OID=\"ADAE\" Name=\"ADAE\" Repeating=\"Yes\" IsReferenceData=\"No\" Purpose=\"Analysis\" def:Label=\"Adverse Events Analysis Dataset\" def:Structure=\"one record per subject per adverse event\" def:DomainKeys=\"USUBJID, AETERM, ASTDT, AESEQ\" def:Class=\"ADAE\" def:ArchiveLocationID=\"Location.ADAE\" Comment=\"see program ..\\programs\\adae.sas\">"
+    }
+  ]
+}
