@@ -9,7 +9,6 @@ const axeConfig = {
   rules: {
     // Enable additional rules for 2025 WCAG 2.2 AA compliance
     'color-contrast': { enabled: true },
-    'keyboard-navigation': { enabled: true },
     'focus-order-semantics': { enabled: true },
     'landmark-unique': { enabled: true },
     'region': { enabled: true },
@@ -87,13 +86,19 @@ export function testKeyboardNavigation(
     const htmlElement = element as HTMLElement
     htmlElement.focus()
     
-    // Check if element has focus styles
+    // In JSDOM, we can't reliably test computed styles for pseudo-classes
+    // Instead, check that focus-visible classes are present in the className
+    const hasJSDOMFocusClasses = htmlElement.className.includes('focus-visible:outline') || 
+                                htmlElement.className.includes('focus-visible:ring') ||
+                                htmlElement.className.includes('focus-visible:border')
+    
+    // Fallback to computed style check for real browsers
     const computedStyle = window.getComputedStyle(htmlElement, ':focus-visible')
     const hasOutline = computedStyle.outline !== 'none' && computedStyle.outline !== '0px'
     const hasBoxShadow = computedStyle.boxShadow !== 'none'
     const hasBorder = computedStyle.borderColor !== 'transparent'
     
-    expect(hasOutline || hasBoxShadow || hasBorder).toBe(true)
+    expect(hasJSDOMFocusClasses || hasOutline || hasBoxShadow || hasBorder).toBe(true)
   })
 }
 

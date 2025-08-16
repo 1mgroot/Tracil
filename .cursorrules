@@ -1,62 +1,72 @@
-# Tracil Cursor Rules
+# Tracil Cursor Rules (Monorepo with Python Backend)
 
 ## Constraints
 - Do not persist uploaded files server-side; processing must be ephemeral.
-- Never expose API keys in client code. In production, LLM calls go through server routes. During development with `AI_MODE=mock`, no external LLM calls occur.
-- Prefer in-browser parsing; use serverless endpoints only when necessary and discard payloads immediately.
+- Never expose API keys in client code. All LLM API keys isolated in Python backend environment.
+- Python backend handles all AI processing; frontend only handles UI and proxies requests.
 
-## Architecture and ownership
-- UI flows live in `app/` (App Router). Shared UI in `components/`. Vertical slices in `features/`.
-- Interactive workspace UI is implemented as a client component under `app/(workspace)/_components/` and rendered by `app/page.tsx`.
-- Pure domain logic in `lib/` with an AI workspace at `lib/ai/` (entrypoints, parsers, lineage IR, provider). Keep these framework-agnostic.
-- Client state in `state/` (Zustand) and reusable hooks in `hooks/`.
-- Serverless API routes in `app/(api)/` are optional for later; when present, they are stateless proxies with strict timeouts that call `@ai/entrypoints/*`.
-- Web developer focus: `app/`, `components/`, `features/`, `hooks/`, `styles/`.
-- AI developer focus: `lib/ai/` (entrypoints, lineage, parsers, provider), `types/`, tests. API glue can be added later without changing entrypoint contracts.
+## Architecture and ownership (Monorepo)
+- **Frontend (`frontend/` folder)**: Next.js App Router, React components, UI logic
+  - UI flows in `frontend/app/`, shared UI in `frontend/components/`, vertical slices in `frontend/features/`
+  - Interactive workspace UI implemented as client component under `frontend/app/(workspace)/_components/`
+  - Client state in `frontend/state/` (Zustand) and reusable hooks in `frontend/hooks/`
+  - Next.js API routes in `frontend/app/(api)/` proxy requests to Python backend
+- **Backend (`backend/` folder)**: Python FastAPI, complete AI developer autonomy
+  - AI developer has complete freedom over `backend/` folder structure and implementation
+  - Only constraint: expose required API endpoints (`POST /process-files`, `POST /analyze-variable`)
+  - All AI processing, file parsing, LLM integration happens in Python backend
+- **Team Focus**:
+  - Web developer: `frontend/` folder (all Next.js/React code)
+  - AI developer: `backend/` folder (all Python AI code)
 
 ## Coding standards
-- TypeScript strict. Avoid `any`. Use explicit function signatures for exports and public APIs.
+- **Frontend**: TypeScript strict. Avoid `any`. Use explicit function signatures for exports and public APIs.
+- **Backend**: Python with type hints encouraged. AI developer's choice of coding standards.
 - Prefer descriptive names; avoid abbreviated identifiers.
 - Keep functions small with early returns; handle edge cases first.
 - No silent catches. Provide meaningful error messages.
-- Keep code pure in `lib/`. Side effects only in routes, components, or dedicated hooks.
+- **Frontend**: Keep code pure in `frontend/lib/`. Side effects only in routes, components, or dedicated hooks.
+- **Backend**: AI developer has complete freedom over code organization and patterns.
 
-## UI/UX
+## UI/UX (Frontend Only)
 - Use shadcn/ui components and Tailwind for layout. Provide dark mode.
 - Ensure accessibility: keyboard navigation and proper ARIA roles.
 - Keep pages responsive and performant (virtualized lists for large datasets).
-- Use CSS variables (OKLCH) for theme tokens. In Tailwind v4, consume tokens via `bg-[var(--token)]` etc. Keep color logic centralized in `app/globals.css`.
+- Use CSS variables (OKLCH) for theme tokens. In Tailwind v4, consume tokens via `bg-[var(--token)]` etc. Keep color logic centralized in `frontend/app/globals.css`.
 - For the main screen, the left pane width is a fixed 260px on md+ (`md:grid-cols-[260px_1fr]`).
 
-## LLM usage
-- Implement a provider abstraction in `lib/ai/provider` with adapters for `gpt`, `claude`, and `gemini`. Select via `LLM_PROVIDER` env.
-- Control runtime mode with `AI_MODE=mock|live|auto`. In `mock`, entrypoints return canned results; in `live`, they call providers; in `auto`, use live if keys are present.
-- Redact PII/PHI and sample data values before sending to LLMs. Prefer metadata-only prompts.
-- Chunk large inputs; enforce token budgets; stream responses where supported.
-- UI must not call provider SDKs directly. UI imports only `@ai/entrypoints/*` now; later it may call server routes that delegate to entrypoints.
+## LLM usage (Python Backend Only)
+- **Backend**: AI developer implements LLM integration with complete freedom of choice
+- **Backend**: Provider abstraction (OpenAI, Anthropic, Google) - AI developer's implementation choice
+- **Backend**: Control runtime mode with `AI_MODE=mock|live|auto` in backend environment
+- **Backend**: Redact PII/PHI and sample data values before sending to LLMs. Prefer metadata-only prompts.
+- **Backend**: Chunk large inputs; enforce token budgets; stream responses where supported.
+- **Frontend**: Never calls LLM providers directly. Only calls Next.js API routes that proxy to Python backend.
 
-## Parsing and validation
-- Support XPT (v5), SAS7BDAT, XLSX, DOCX, PDF, RTF.
-- Use Web Workers for heavy parsing to avoid blocking the UI.
-- Provide basic CDISC checks and return concise validation statuses (✔ / ❌ / 缺失).
+## File processing and validation
+- **Backend**: Support XPT (v5), SAS7BDAT, XLSX, DOCX, PDF, RTF - AI developer's choice of libraries
+- **Frontend**: No heavy parsing in browser; all processing delegated to Python backend
+- **Backend**: Provide basic CDISC checks and return concise validation statuses (✔ / ❌ / Missing).
 
 ## Testing and quality
-- Lint, typecheck, and unit tests must pass on PRs. Keep edits small and focused.
-- Unit tests for parsers, lineage builders, and LLM normalization.
-- E2E smoke: upload → select → variables → lineage.
+- **Frontend**: Lint, typecheck, and unit tests must pass on PRs. Keep edits small and focused.
+- **Backend**: AI developer's choice of testing framework and standards.
+- **Integration**: E2E smoke tests: upload → select → variables → lineage.
 
-## Git and CI
+## Git and CI (Monorepo)
 - Conventional commits. Update `docs/` when schema or flows change.
-- Keep environment variables in `.env.local` (not committed). Document in `.env.example`.
+- **Frontend**: Keep environment variables in `frontend/.env.local` (not committed). Document in `.env.example`.
+- **Backend**: Keep environment variables in `backend/.env` (not committed). Document in `backend/.env.example`.
 
 ## Performance and privacy
-- Avoid large in-memory retention of files; clear buffers after use.
-- No server-side persistence. Respect Vercel limits and timeouts.
-- Serverless is lower priority initially; design entrypoints so server routes can be added later without changing UI contracts.
+- **Backend**: Avoid large in-memory retention of files; clear buffers after use.
+- **Backend**: No server-side persistence. Ephemeral processing only.
+- **Frontend**: All heavy processing delegated to Python backend.
+- **Integration**: Simple HTTP communication initially; Docker deployment is lower priority.
 
-## 2025 Development Checklist (All Required)
+## 2025 Development Checklist (Frontend Required)
 
-**Before Every Commit:**
+**Frontend - Before Every Commit:**
 - [ ] TypeScript strict compilation passes (zero errors)
 - [ ] ESLint accessibility rules pass (zero violations)
 - [ ] Automated accessibility tests pass
@@ -66,7 +76,7 @@
 - [ ] Error boundaries implemented where needed
 - [ ] Documentation updated
 
-**Component Development:**
+**Frontend - Component Development:**
 - [ ] Use named imports: `import { useState } from 'react'`
 - [ ] ReactNode return type
 - [ ] Proper memoization (memo, useMemo, useCallback)
@@ -76,7 +86,7 @@
 - [ ] Screen reader compatibility
 - [ ] Performance optimization
 
-**Quality Standards:**
+**Frontend - Quality Standards:**
 - WCAG 2.2 AA compliance (non-negotiable)
 - Core Web Vitals in "Good" range
 - 90%+ test coverage for critical components
