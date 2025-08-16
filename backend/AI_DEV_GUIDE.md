@@ -107,7 +107,125 @@ backend/                           # YOUR DOMAIN - organize however you want
 
 ---
 
-#### 4) Your Complete Freedom
+#### 4) API Testing with Postman
+
+**Yes, your FastAPI backend can be fully tested with Postman!** This is highly recommended for independent development and debugging.
+
+**Setup:**
+1. Run your FastAPI: `uvicorn main:app --reload --port 8000`
+2. Visit `http://localhost:8000/docs` for auto-generated API documentation
+3. Use Postman to test the endpoints below
+
+**Test 1: `POST /process-files` (File Upload)**
+```
+URL: http://localhost:8000/process-files
+Method: POST
+Headers: (none needed - Postman handles multipart automatically)
+Body: form-data
+├─ Key: "files" | Type: File | Value: [Upload your test files]
+   # Upload sample files like:
+   # - define.xml (ADaM metadata)
+   # - define.xml (SDTM metadata) 
+   # - sample.xpt (SDTM dataset)
+   # - aCRF.pdf or aCRF.xlsx
+```
+
+**Expected Response:**
+```json
+{
+  "files": [
+    {
+      "filename": "define.xml",
+      "type": "adam_metadata",
+      "datasets": [
+        {
+          "name": "ADSL",
+          "variables": [
+            {
+              "name": "USUBJID",
+              "label": "Unique Subject Identifier",
+              "type": "character", 
+              "length": 20,
+              "role": "identifier"
+            },
+            {
+              "name": "AGE",
+              "label": "Age at Baseline",
+              "type": "numeric",
+              "role": "covariate"
+            }
+          ],
+          "metadata": {...}
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Test 2: `POST /analyze-variable` (Lineage Analysis)**
+```
+URL: http://localhost:8000/analyze-variable
+Method: POST
+Headers: Content-Type: application/json
+Body: raw (JSON)
+```
+
+**Request Body:**
+```json
+{
+  "variable": "AEDECOD",
+  "dataset": "ADAE",
+  "files": [
+    {
+      "filename": "define.xml",
+      "type": "adam_metadata",
+      "datasets": [...]
+    }
+  ]
+}
+```
+
+**Expected Response:**
+```json
+{
+  "variable": "AEDECOD",
+  "dataset": "ADAE",
+  "lineage": {
+    "nodes": [
+      {"id": "aCRF.AE_TERM", "type": "source", "file": "aCRF"},
+      {"id": "SDTM.AE.AETERM", "type": "intermediate", "file": "ae.xpt"},
+      {"id": "ADaM.ADAE.AEDECOD", "type": "target", "file": "adae.xpt"}
+    ],
+    "edges": [
+      {"from": "aCRF.AE_TERM", "to": "SDTM.AE.AETERM", "confidence": 0.95},
+      {"from": "SDTM.AE.AETERM", "to": "ADaM.ADAE.AEDECOD", "confidence": 0.87}
+    ],
+    "gaps": ["Missing transformation logic documentation"]
+  }
+}
+```
+
+**What to Test:**
+- ✅ File upload handling (various formats: XPT, XLSX, PDF, DOCX, RTF)
+- ✅ File parsing accuracy (extract correct datasets/variables)
+- ✅ JSON response format matches contract
+- ✅ Error handling (invalid files, large files, missing files)
+- ✅ Variable lineage analysis with confidence scores
+- ✅ Gap detection in lineage chains
+- ✅ CORS headers for frontend integration
+- ✅ Performance with realistic file sizes
+
+**Postman Collection Tips:**
+- Save requests as a collection for easy re-testing
+- Use environment variables for base URL (`{{baseUrl}}`)
+- Test with various file types and sizes
+- Verify response schemas match the contract
+- Test error scenarios (malformed JSON, missing fields)
+
+---
+
+#### 5) Your Complete Freedom
 
 **What you control entirely:**
 - All Python code organization in `backend/`
