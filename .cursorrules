@@ -7,6 +7,7 @@
 
 ## Architecture and ownership
 - UI flows live in `app/` (App Router). Shared UI in `components/`. Vertical slices in `features/`.
+- Interactive workspace UI is implemented as a client component under `app/(workspace)/_components/` and rendered by `app/page.tsx`.
 - Pure domain logic in `lib/` with an AI workspace at `lib/ai/` (entrypoints, parsers, lineage IR, provider). Keep these framework-agnostic.
 - Client state in `state/` (Zustand) and reusable hooks in `hooks/`.
 - Serverless API routes in `app/(api)/` are optional for later; when present, they are stateless proxies with strict timeouts that call `@ai/entrypoints/*`.
@@ -24,6 +25,8 @@
 - Use shadcn/ui components and Tailwind for layout. Provide dark mode.
 - Ensure accessibility: keyboard navigation and proper ARIA roles.
 - Keep pages responsive and performant (virtualized lists for large datasets).
+- Use CSS variables (OKLCH) for theme tokens. In Tailwind v4, consume tokens via `bg-[var(--token)]` etc. Keep color logic centralized in `app/globals.css`.
+- For the main screen, the left pane width is a fixed 260px on md+ (`md:grid-cols-[260px_1fr]`).
 
 ## LLM usage
 - Implement a provider abstraction in `lib/ai/provider` with adapters for `gpt`, `claude`, and `gemini`. Select via `LLM_PROVIDER` env.
@@ -51,4 +54,32 @@
 - No server-side persistence. Respect Vercel limits and timeouts.
 - Serverless is lower priority initially; design entrypoints so server routes can be added later without changing UI contracts.
 
+## 2025 Development Checklist (All Required)
 
+**Before Every Commit:**
+- [ ] TypeScript strict compilation passes (zero errors)
+- [ ] ESLint accessibility rules pass (zero violations)
+- [ ] Automated accessibility tests pass
+- [ ] Performance budgets met
+- [ ] All interactive elements keyboard accessible
+- [ ] Proper ARIA labels and roles
+- [ ] Error boundaries implemented where needed
+- [ ] Documentation updated
+
+**Component Development:**
+- [ ] Use named imports: `import { useState } from 'react'`
+- [ ] ReactNode return type
+- [ ] Proper memoization (memo, useMemo, useCallback)
+- [ ] Error boundary coverage
+- [ ] Accessibility testing
+- [ ] Keyboard navigation support
+- [ ] Screen reader compatibility
+- [ ] Performance optimization
+
+**Quality Standards:**
+- WCAG 2.2 AA compliance (non-negotiable)
+- Core Web Vitals in "Good" range
+- 90%+ test coverage for critical components
+- Zero TypeScript errors or ESLint violations
+- Comprehensive accessibility testing
+- Performance monitoring integration
