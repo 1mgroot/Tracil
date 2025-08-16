@@ -1,12 +1,12 @@
-import * as React from 'react'
+import type { HTMLAttributes, ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { Search, Settings2 } from 'lucide-react'
 
-export interface SearchBarProps extends React.HTMLAttributes<HTMLDivElement> {
+export interface SearchBarProps extends HTMLAttributes<HTMLDivElement> {
 	readonly placeholder?: string
 }
 
-export function SearchBar({ className, placeholder = 'Search variables…', ...props }: SearchBarProps) {
+export function SearchBar({ className, placeholder = 'Search variables…', ...props }: SearchBarProps): ReactNode {
 	return (
 		<div className={cn('w-full max-w-2xl', className)} {...props}>
 			<div

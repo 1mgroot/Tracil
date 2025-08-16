@@ -1,4 +1,4 @@
-import type { MockFile } from '@types/files'
+import type { MockFile } from '@/types/files'
 
 export const mockFiles: MockFile[] = [
 	// ADaM
