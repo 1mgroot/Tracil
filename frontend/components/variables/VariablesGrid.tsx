@@ -1,11 +1,13 @@
 import { memo, useState, useCallback, useRef, useEffect, type ReactNode, type MouseEvent, type FocusEvent } from 'react'
 import type { Variable } from '@/types/variables'
+import type { FileGroupKind } from '@/types/files'
 import { VariableCard } from './VariableCard'
 import { VariableTooltip } from './VariableTooltip'
 import { useVariablesKeyboardNav } from '@/hooks/useVariablesKeyboardNav'
 
 interface VariablesGridProps {
   readonly variables: readonly Variable[]
+  readonly group: FileGroupKind
   readonly onVariableSelect?: (variable: Variable) => void
   readonly onEscape?: () => void
 }
@@ -18,6 +20,7 @@ interface TooltipState {
 
 export const VariablesGrid = memo(function VariablesGrid({ 
   variables,
+  group,
   onVariableSelect,
   onEscape
 }: VariablesGridProps): ReactNode {
@@ -26,6 +29,7 @@ export const VariablesGrid = memo(function VariablesGrid({
     position: { x: 0, y: 0 },
     isVisible: false
   })
+  const [selectedVariable, setSelectedVariable] = useState<string | null>(null)
 
   const handleVariableHover = useCallback((variable: Variable, event: MouseEvent<HTMLButtonElement>) => {
     const rect = event.currentTarget.getBoundingClientRect()
@@ -55,11 +59,16 @@ export const VariablesGrid = memo(function VariablesGrid({
     setTooltip(prev => ({ ...prev, isVisible: false }))
   }, [])
 
+  const handleVariableClick = useCallback((variable: Variable) => {
+    setSelectedVariable(variable.name)
+    onVariableSelect?.(variable)
+  }, [onVariableSelect])
+
   // Keyboard navigation
   const gridRef = useRef<HTMLDivElement>(null)
   const { focusedIndex } = useVariablesKeyboardNav({
     variables,
-    onVariableSelect,
+    onVariableSelect: handleVariableClick,
     onEscape
   })
 
@@ -89,7 +98,6 @@ export const VariablesGrid = memo(function VariablesGrid({
 
   return (
     <section 
-      role="region" 
       aria-labelledby="variables-heading"
       className="p-6"
     >
@@ -113,6 +121,9 @@ export const VariablesGrid = memo(function VariablesGrid({
           <VariableCard
             key={variable.name}
             variable={variable}
+            group={group}
+            selected={selectedVariable === variable.name}
+            onClick={handleVariableClick}
             onHover={handleVariableHover}
             onFocus={handleVariableFocus}
             onBlur={handleTooltipClose}

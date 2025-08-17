@@ -31,7 +31,8 @@ export const VariablesBrowser = memo(function VariablesBrowser({
         <DatasetHeader dataset={dataset} />
         <div className="flex-1 overflow-auto">
           <VariablesGrid 
-            variables={dataset.variables} 
+            variables={dataset.variables}
+            group={dataset.group}
             onVariableSelect={handleVariableSelect}
             onEscape={onEscape}
           />

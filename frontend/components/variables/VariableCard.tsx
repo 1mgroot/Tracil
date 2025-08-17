@@ -1,8 +1,12 @@
 import { memo, useRef, type ReactNode, type MouseEvent, type FocusEvent } from 'react'
 import type { Variable } from '@/types/variables'
+import type { FileGroupKind } from '@/types/files'
 
 interface VariableCardProps {
   readonly variable: Variable
+  readonly group: FileGroupKind
+  readonly selected?: boolean
+  readonly onClick?: (variable: Variable) => void
   readonly onHover?: (variable: Variable, event: MouseEvent<HTMLButtonElement>) => void
   readonly onFocus?: (variable: Variable, event: FocusEvent<HTMLButtonElement>) => void
   readonly onBlur?: () => void
@@ -16,6 +20,9 @@ interface VariableCardProps {
 
 export const VariableCard = memo(function VariableCard({
   variable,
+  group,
+  selected = false,
+  onClick,
   onHover,
   onFocus,
   onBlur,
@@ -52,15 +59,18 @@ export const VariableCard = memo(function VariableCard({
     }
   }
 
+  const handleClick = () => {
+    if (onClick) {
+      onClick(variable)
+    }
+  }
+
   return (
     <button
       ref={cardRef}
       className={`
         variable-card
         aspect-[2/1]
-        bg-[var(--surface-muted)]
-        hover:bg-[var(--surface-hover)]
-        focus:bg-[var(--surface-hover)]
         rounded-lg
         border border-[var(--border)]
         hover:border-[var(--border-hover)]
@@ -80,21 +90,26 @@ export const VariableCard = memo(function VariableCard({
         justify-center
         text-sm
         font-medium
-        text-[var(--text-primary)]
         cursor-pointer
         p-2
+        ${selected ? 'is-selected' : 'is-idle'}
         ${isFocused ? 'ring-2 ring-[var(--focus-ring)] ring-offset-2' : ''}
       `}
+      style={{
+        '--accent-color': `var(--accent-${group.toLowerCase()})`
+      } as React.CSSProperties & { [key: string]: string }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onFocus={handleFocus}
       onBlur={handleBlur}
+      onClick={handleClick}
       tabIndex={tabIndex}
       data-variable-card={dataVariableCard}
       aria-rowindex={ariaRowindex}
       aria-colindex={ariaColindex}
       aria-label={`Variable ${variable.name}: ${variable.label}`}
       aria-describedby={`tooltip-${variable.name}`}
+      aria-selected={selected}
       role="gridcell"
       type="button"
     >
