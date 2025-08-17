@@ -59,18 +59,25 @@ export const VariablesGrid = memo(function VariablesGrid({
     setTooltip(prev => ({ ...prev, isVisible: false }))
   }, [])
 
-  const handleVariableClick = useCallback((variable: Variable) => {
-    setSelectedVariable(variable.name)
-    onVariableSelect?.(variable)
-  }, [onVariableSelect])
-
   // Keyboard navigation
   const gridRef = useRef<HTMLDivElement>(null)
-  const { focusedIndex } = useVariablesKeyboardNav({
+  const { focusedIndex, setFocusedIndex } = useVariablesKeyboardNav({
     variables,
-    onVariableSelect: handleVariableClick,
+    onVariableSelect: (variable: Variable) => {
+      // When selecting via keyboard (Enter/Space), update selection but keep focus
+      setSelectedVariable(variable.name)
+      onVariableSelect?.(variable)
+    },
     onEscape
   })
+
+  const handleVariableClick = useCallback((variable: Variable) => {
+    const clickedIndex = variables.findIndex(v => v.name === variable.name)
+    // When clicking, update both selection and focus to clicked item
+    setSelectedVariable(variable.name)
+    setFocusedIndex(clickedIndex)
+    onVariableSelect?.(variable)
+  }, [onVariableSelect, variables, setFocusedIndex])
 
   // Focus management - ensure focused card is visible
   useEffect(() => {

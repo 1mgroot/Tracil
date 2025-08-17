@@ -37,6 +37,7 @@ export const VariablesBrowser = memo(function VariablesBrowser({
         </div>
         <div className="flex-1 overflow-auto">
           <VariablesGrid 
+            key={dataset.id}
             variables={dataset.variables}
             group={dataset.group}
             onVariableSelect={handleVariableSelect}
