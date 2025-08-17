@@ -7,6 +7,11 @@ interface VariableCardProps {
   readonly onFocus?: (variable: Variable, event: FocusEvent<HTMLButtonElement>) => void
   readonly onBlur?: () => void
   readonly onMouseLeave?: () => void
+  readonly isFocused?: boolean
+  readonly tabIndex?: number
+  readonly 'data-variable-card'?: boolean
+  readonly 'aria-rowindex'?: number
+  readonly 'aria-colindex'?: number
 }
 
 export const VariableCard = memo(function VariableCard({
@@ -14,7 +19,12 @@ export const VariableCard = memo(function VariableCard({
   onHover,
   onFocus,
   onBlur,
-  onMouseLeave
+  onMouseLeave,
+  isFocused,
+  tabIndex = -1,
+  'data-variable-card': dataVariableCard,
+  'aria-rowindex': ariaRowindex,
+  'aria-colindex': ariaColindex
 }: VariableCardProps): ReactNode {
   const cardRef = useRef<HTMLButtonElement>(null)
 
@@ -45,7 +55,7 @@ export const VariableCard = memo(function VariableCard({
   return (
     <button
       ref={cardRef}
-      className="
+      className={`
         variable-card
         aspect-[2/1]
         bg-[var(--surface-muted)]
@@ -73,13 +83,19 @@ export const VariableCard = memo(function VariableCard({
         text-[var(--text-primary)]
         cursor-pointer
         p-2
-      "
+        ${isFocused ? 'ring-2 ring-[var(--focus-ring)] ring-offset-2' : ''}
+      `}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onFocus={handleFocus}
       onBlur={handleBlur}
+      tabIndex={tabIndex}
+      data-variable-card={dataVariableCard}
+      aria-rowindex={ariaRowindex}
+      aria-colindex={ariaColindex}
       aria-label={`Variable ${variable.name}: ${variable.label}`}
       aria-describedby={`tooltip-${variable.name}`}
+      role="gridcell"
       type="button"
     >
       <span className="text-center truncate w-full">

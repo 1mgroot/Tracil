@@ -182,7 +182,14 @@ export function MainScreenClient(): ReactNode {
 						</button>
 					</div>
 					<div className="flex-1 overflow-hidden">
-						<VariablesBrowser dataset={selectedDataset} />
+						<VariablesBrowser 
+							dataset={selectedDataset} 
+							onVariableSelect={(variable) => {
+								console.log('Variable selected in main screen:', variable.name)
+								// Future: Open variable details modal or navigate to lineage view
+							}}
+							onEscape={handleBackToSearch}
+						/>
 					</div>
 				</div>
 			)}

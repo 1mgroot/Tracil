@@ -1,10 +1,13 @@
-import { memo, useState, useCallback, type ReactNode, type MouseEvent, type FocusEvent } from 'react'
+import { memo, useState, useCallback, useRef, useEffect, type ReactNode, type MouseEvent, type FocusEvent } from 'react'
 import type { Variable } from '@/types/variables'
 import { VariableCard } from './VariableCard'
 import { VariableTooltip } from './VariableTooltip'
+import { useVariablesKeyboardNav } from '@/hooks/useVariablesKeyboardNav'
 
 interface VariablesGridProps {
   readonly variables: readonly Variable[]
+  readonly onVariableSelect?: (variable: Variable) => void
+  readonly onEscape?: () => void
 }
 
 interface TooltipState {
@@ -14,7 +17,9 @@ interface TooltipState {
 }
 
 export const VariablesGrid = memo(function VariablesGrid({ 
-  variables 
+  variables,
+  onVariableSelect,
+  onEscape
 }: VariablesGridProps): ReactNode {
   const [tooltip, setTooltip] = useState<TooltipState>({
     variable: null,
@@ -24,7 +29,6 @@ export const VariablesGrid = memo(function VariablesGrid({
 
   const handleVariableHover = useCallback((variable: Variable, event: MouseEvent<HTMLButtonElement>) => {
     const rect = event.currentTarget.getBoundingClientRect()
-    console.log('Tooltip hover:', variable.name, 'Position:', rect.left, rect.top)
     setTooltip({
       variable,
       position: {
@@ -37,7 +41,6 @@ export const VariablesGrid = memo(function VariablesGrid({
 
   const handleVariableFocus = useCallback((variable: Variable, event: FocusEvent<HTMLButtonElement>) => {
     const rect = event.currentTarget.getBoundingClientRect()
-    console.log('Tooltip focus:', variable.name)
     setTooltip({
       variable,
       position: {
@@ -49,9 +52,28 @@ export const VariablesGrid = memo(function VariablesGrid({
   }, [])
 
   const handleTooltipClose = useCallback(() => {
-    console.log('Tooltip closing')
     setTooltip(prev => ({ ...prev, isVisible: false }))
   }, [])
+
+  // Keyboard navigation
+  const gridRef = useRef<HTMLDivElement>(null)
+  const { focusedIndex } = useVariablesKeyboardNav({
+    variables,
+    onVariableSelect,
+    onEscape
+  })
+
+  // Focus management - ensure focused card is visible
+  useEffect(() => {
+    if (focusedIndex >= 0 && gridRef.current) {
+      const cards = gridRef.current.querySelectorAll('[data-variable-card]')
+      const focusedCard = cards[focusedIndex] as HTMLElement
+      if (focusedCard) {
+        focusedCard.focus()
+        focusedCard.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+      }
+    }
+  }, [focusedIndex])
 
   if (variables.length === 0) {
     return (
@@ -79,12 +101,15 @@ export const VariablesGrid = memo(function VariablesGrid({
       </h2>
       
       <div 
+        ref={gridRef}
         className="variables-grid grid gap-3"
         style={{
           gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))'
         }}
+        role="grid"
+        aria-label="Dataset variables"
       >
-        {variables.map((variable) => (
+        {variables.map((variable, index) => (
           <VariableCard
             key={variable.name}
             variable={variable}
@@ -92,6 +117,11 @@ export const VariablesGrid = memo(function VariablesGrid({
             onFocus={handleVariableFocus}
             onBlur={handleTooltipClose}
             onMouseLeave={handleTooltipClose}
+            isFocused={focusedIndex === index}
+            tabIndex={focusedIndex === index ? 0 : -1}
+            data-variable-card={true}
+            aria-rowindex={Math.floor(index / 6) + 1}
+            aria-colindex={(index % 6) + 1}
           />
         ))}
       </div>
