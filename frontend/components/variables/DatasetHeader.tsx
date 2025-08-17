@@ -13,7 +13,7 @@ export const DatasetHeader = memo(function DatasetHeader({
   return (
     <header 
       role="banner" 
-      className="px-6 py-4"
+      className="py-4"
     >
       <div className="flex items-center gap-3">
         <div 

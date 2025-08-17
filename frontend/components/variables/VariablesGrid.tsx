@@ -99,7 +99,7 @@ export const VariablesGrid = memo(function VariablesGrid({
   return (
     <section 
       aria-labelledby="variables-heading"
-      className="p-6"
+      className="px-6 pt-6 pb-6"
     >
       <h2 
         id="variables-heading" 

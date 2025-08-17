@@ -72,9 +72,6 @@ export const VariableCard = memo(function VariableCard({
         variable-card
         aspect-[2/1]
         rounded-lg
-        border border-[var(--border)]
-        hover:border-[var(--border-hover)]
-        focus:border-[var(--border-focus)]
         focus:outline-none
         focus:ring-2
         focus:ring-[var(--focus-ring)]

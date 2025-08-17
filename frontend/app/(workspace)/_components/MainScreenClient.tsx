@@ -64,11 +64,7 @@ export function MainScreenClient(): ReactNode {
 		}
 	}, [sidebarToVariablesBrowserIdMap])
 
-	// Handle back to search
-	const handleBackToSearch = useCallback(() => {
-		setSelectedItem(null)
-		setSelectedId(null)
-	}, [])
+
 
 	// Handle keyboard navigation
 	const { handleKeyDown } = useSidebarKeyboardNav({
@@ -77,12 +73,7 @@ export function MainScreenClient(): ReactNode {
 		itemIds: allItemIds,
 	})
 
-	// Handle escape key to return to search
-	const handleMainKeyDown = useCallback((event: React.KeyboardEvent) => {
-		if (event.key === 'Escape' && viewState === 'variables') {
-			handleBackToSearch()
-		}
-	}, [viewState, handleBackToSearch])
+
 
 	const toneFor = useCallback((index: number, total: number): number => {
 		const maxTone = 22
@@ -94,7 +85,6 @@ export function MainScreenClient(): ReactNode {
 	return (
 		<div 
 			className="min-h-screen w-full grid grid-cols-1 md:grid-cols-[260px_1fr]"
-			onKeyDown={handleMainKeyDown}
 		>
 			<aside className="hidden md:block">
 				<Sidebar header={null} onKeyDown={handleKeyDown}>
@@ -165,32 +155,18 @@ export function MainScreenClient(): ReactNode {
 			)}
 
 			{viewState === 'variables' && selectedDataset && (
-				<div className="flex flex-col h-screen">
-					<div className="flex items-center gap-2 p-4 border-b border-[var(--border)]">
-						<button
-							onClick={handleBackToSearch}
-							className="
-								flex items-center gap-2 px-3 py-1 text-sm 
-								text-[var(--text-secondary)] hover:text-[var(--text-primary)]
-								hover:bg-[var(--surface-hover)] rounded-md
-								transition-colors duration-200
-								focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]
-							"
-							aria-label="Back to search"
-						>
-							← Back to Search
-						</button>
-					</div>
-					<div className="flex-1 overflow-hidden">
-						<VariablesBrowser 
-							dataset={selectedDataset} 
-							onVariableSelect={(variable) => {
-								console.log('Variable selected in main screen:', variable.name)
-								// Future: Open variable details modal or navigate to lineage view
-							}}
-							onEscape={handleBackToSearch}
-						/>
-					</div>
+				<div className="flex-1 overflow-hidden">
+					<VariablesBrowser 
+						dataset={selectedDataset} 
+						onVariableSelect={(variable) => {
+							console.log('Variable selected in main screen:', variable.name)
+							// Future: Open variable details modal or navigate to lineage view
+						}}
+						onEscape={() => {
+							setSelectedItem(null)
+							setSelectedId(null)
+						}}
+					/>
 				</div>
 			)}
 		</div>

@@ -1,5 +1,6 @@
 import { memo, useCallback, type ReactNode } from 'react'
 import type { DatasetWithGroup, Variable } from '@/types/variables'
+import { SearchBar } from '@/components/search/SearchBar'
 import { DatasetHeader } from './DatasetHeader'
 import { VariablesGrid } from './VariablesGrid'
 import { VariablesErrorBoundary } from './VariablesErrorBoundary'
@@ -28,7 +29,12 @@ export const VariablesBrowser = memo(function VariablesBrowser({
         className="flex flex-col h-full overflow-hidden"
         aria-live="polite"
       >
-        <DatasetHeader dataset={dataset} />
+        <div className="px-6 pt-6 pb-4">
+          <SearchBar placeholder="Search variables..." />
+        </div>
+        <div className="px-6">
+          <DatasetHeader dataset={dataset} />
+        </div>
         <div className="flex-1 overflow-auto">
           <VariablesGrid 
             variables={dataset.variables}
