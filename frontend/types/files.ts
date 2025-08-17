@@ -20,6 +20,9 @@ export interface GroupedFiles {
 	readonly TLF: MockFile[]
 }
 
+// Re-export DatasetWithGroup for backward compatibility
+export type { DatasetWithGroup } from './variables'
+
 export function groupFilesByKind(files: ReadonlyArray<MockFile>): GroupedFiles {
 	return {
 		ADaM: files.filter(f => f.group === 'ADaM'),
