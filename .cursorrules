@@ -11,10 +11,13 @@
   - Interactive workspace UI implemented as client component under `frontend/app/(workspace)/_components/`
   - Client state in `frontend/state/` (Zustand) and reusable hooks in `frontend/hooks/`
   - Next.js API routes in `frontend/app/(api)/` proxy requests to Python backend
+  - **Data Structure**: Source-agnostic, CDISC-first organization (SDTM, ADaM, CRF, TLF)
 - **Backend (`backend/` folder)**: Python FastAPI, complete AI developer autonomy
   - AI developer has complete freedom over `backend/` folder structure and implementation
-  - Only constraint: expose required API endpoints (`POST /process-files`, `POST /analyze-variable`)
+  - Only constraint: expose required API endpoints with source-agnostic JSON structure
+  - **API Endpoints**: `POST /process-files` (CDISC-organized response), `POST /analyze-variable`
   - All AI processing, file parsing, LLM integration happens in Python backend
+  - **Source Flexibility**: Handle any combination of define.xml, spec sheets, raw datasets, documents
 - **Team Focus**:
   - Web developer: `frontend/` folder (all Next.js/React code)
   - AI developer: `backend/` folder (all Python AI code)
@@ -46,22 +49,35 @@
 ## File processing and validation
 - **Backend**: Support XPT (v5), SAS7BDAT, XLSX, DOCX, PDF, RTF - AI developer's choice of libraries
 - **Frontend**: No heavy parsing in browser; all processing delegated to Python backend
-- **Backend**: Provide basic CDISC checks and return concise validation statuses (✔ / ❌ / Missing).
+- **Backend**: Return source-agnostic CDISC structure organized by standards, not files
+- **Backend**: Provide source file traceability with roles (primary/supplementary/validation)
+- **Backend**: Include validation statuses (✔ / ❌ / Missing) and metadata for each dataset entity
 
 ## Testing and quality
 - **Frontend**: Lint, typecheck, and unit tests must pass on PRs. Keep edits small and focused.
+- **Frontend**: Source-agnostic data structure implemented with migration layer for backward compatibility
 - **Backend**: AI developer's choice of testing framework and standards.
-- **Integration**: E2E smoke tests: upload → select → variables → lineage.
+- **Backend**: Test source-agnostic processing with various file combinations (define.xml + spec sheets + raw datasets)
+- **Integration**: E2E smoke tests: upload → CDISC standards view → dataset entities → variables → lineage.
 
 ## Git and CI (Monorepo)
 - Conventional commits. Update `docs/` when schema or flows change.
 - **Frontend**: Keep environment variables in `frontend/.env.local` (not committed). Document in `.env.example`.
 - **Backend**: Keep environment variables in `backend/.env` (not committed). Document in `backend/.env.example`.
 
+## Data Structure Principles (Source-Agnostic)
+- **CDISC-First Organization**: Structure data by clinical standards (SDTM, ADaM, CRF, TLF), not source files
+- **Source Flexibility**: Same structure works whether data comes from define.xml, spec sheets, or raw datasets
+- **Traceability**: Each dataset entity links to source files with roles and extracted data details
+- **Extensibility**: Easy to add new standards, file types, or source combinations
+- **UI Compatibility**: Frontend components work with unified structure regardless of data source
+- **Migration Support**: Backward compatibility layer for legacy file-centric approaches
+
 ## Performance and privacy
 - **Backend**: Avoid large in-memory retention of files; clear buffers after use.
 - **Backend**: No server-side persistence. Ephemeral processing only.
 - **Frontend**: All heavy processing delegated to Python backend.
+- **Frontend**: Source-agnostic structure reduces complexity and improves performance
 - **Integration**: Simple HTTP communication initially; Docker deployment is lower priority.
 
 ## 2025 Development Checklist (Frontend Required)
@@ -85,6 +101,8 @@
 - [ ] Keyboard navigation support
 - [ ] Screen reader compatibility
 - [ ] Performance optimization
+- [ ] Use source-agnostic data transformation utilities
+- [ ] Ensure components work with CDISC-organized data structure
 
 **Frontend - Quality Standards:**
 - WCAG 2.2 AA compliance (non-negotiable)
