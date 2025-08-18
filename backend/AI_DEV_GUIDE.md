@@ -29,33 +29,89 @@ backend/                           # YOUR DOMAIN - organize however you want
 
 #### 2) Required API Endpoints (Your FastAPI App)
 
+**Important: Source-Agnostic Structure**
+The frontend now uses a CDISC-first, source-agnostic data structure. This means:
+- Organize data by CDISC standards (SDTM, ADaM, CRF, TLF) rather than source files
+- Same structure works whether data comes from define.xml, spec sheets, raw datasets, or documents
+- Clear traceability: each dataset entity links to its source files
+- Flexible: supports any combination of source file types
+- Future-proof: easy to extend for new standards or sources
+
 **Endpoint 1: `POST /process-files`**
-- **Purpose**: Process uploaded files and return dataset/variable structure
-- **Input**: Multipart form with files (aCRF, SDTM metadata, ADaM metadata)
-- **Output JSON**:
+- **Purpose**: Process uploaded files and return source-agnostic CDISC structure
+- **Input**: Multipart form with files (aCRF, SDTM metadata, ADaM metadata, TLF documents)
+- **Output JSON (Source-Agnostic Structure)**:
 ```json
 {
-  "files": [
-    {
-      "filename": "define.xml",
-      "type": "adam_metadata",
-      "datasets": [
-        {
-          "name": "ADSL", 
+  "standards": {
+    "SDTM": {
+      "type": "SDTM",
+      "label": "Study Data Tabulation Model",
+      "datasetEntities": {
+        "DM": {
+          "name": "DM",
+          "label": "Demographics",
+          "type": "domain",
           "variables": [
             {
               "name": "USUBJID",
-              "label": "Unique Subject Identifier", 
+              "label": "Unique Subject Identifier",
               "type": "character",
               "length": 20,
-              "role": "identifier"
+              "role": "identifier",
+              "mandatory": true
             }
           ],
+          "sourceFiles": [
+            {
+              "fileId": "define_sdtm_v1.xml",
+              "role": "primary",
+              "extractedData": ["metadata", "variables", "codelists"]
+            }
+          ],
+          "metadata": {
+            "records": 100,
+            "structure": "One record per subject",
+            "validationStatus": "compliant"
+          }
+        }
+      },
+      "metadata": {
+        "totalEntities": 1
+      }
+    },
+    "ADaM": {
+      "type": "ADaM",
+      "label": "Analysis Data Model",
+      "datasetEntities": {
+        "ADSL": {
+          "name": "ADSL",
+          "label": "Subject-Level Analysis Dataset",
+          "type": "analysis_dataset",
+          "variables": [...],
+          "sourceFiles": [...],
           "metadata": {...}
         }
-      ]
+      },
+      "metadata": {
+        "totalEntities": 1
+      }
     }
-  ]
+  },
+  "metadata": {
+    "processedAt": "2024-01-16T10:30:00Z",
+    "totalVariables": 150,
+    "sourceFiles": [
+      {
+        "id": "define_sdtm_v1.xml",
+        "filename": "define_sdtm_v1.xml",
+        "type": "define_xml",
+        "uploadedAt": "2024-01-15T09:00:00Z",
+        "sizeKB": 45,
+        "processingStatus": "completed"
+      }
+    ]
+  }
 }
 ```
 
@@ -130,36 +186,68 @@ Body: form-data
    # - aCRF.pdf or aCRF.xlsx
 ```
 
-**Expected Response:**
+**Expected Response (Source-Agnostic Structure):**
 ```json
 {
-  "files": [
-    {
-      "filename": "define.xml",
-      "type": "adam_metadata",
-      "datasets": [
-        {
+  "standards": {
+    "ADaM": {
+      "type": "ADaM",
+      "label": "Analysis Data Model",
+      "datasetEntities": {
+        "ADSL": {
           "name": "ADSL",
+          "label": "Subject-Level Analysis Dataset",
+          "type": "analysis_dataset",
           "variables": [
             {
               "name": "USUBJID",
               "label": "Unique Subject Identifier",
-              "type": "character", 
+              "type": "character",
               "length": 20,
-              "role": "identifier"
+              "role": "identifier",
+              "mandatory": true
             },
             {
               "name": "AGE",
               "label": "Age at Baseline",
               "type": "numeric",
-              "role": "covariate"
+              "role": "covariate",
+              "format": "3."
             }
           ],
-          "metadata": {...}
+          "sourceFiles": [
+            {
+              "fileId": "define.xml",
+              "role": "primary",
+              "extractedData": ["metadata", "variables"]
+            }
+          ],
+          "metadata": {
+            "records": 100,
+            "structure": "One record per subject",
+            "validationStatus": "compliant"
+          }
         }
-      ]
+      },
+      "metadata": {
+        "totalEntities": 1
+      }
     }
-  ]
+  },
+  "metadata": {
+    "processedAt": "2024-01-16T10:30:00Z",
+    "totalVariables": 10,
+    "sourceFiles": [
+      {
+        "id": "define.xml",
+        "filename": "define.xml",
+        "type": "define_xml",
+        "uploadedAt": "2024-01-16T10:00:00Z",
+        "sizeKB": 45,
+        "processingStatus": "completed"
+      }
+    ]
+  }
 }
 ```
 
@@ -176,13 +264,26 @@ Body: raw (JSON)
 {
   "variable": "AEDECOD",
   "dataset": "ADAE",
-  "files": [
-    {
-      "filename": "define.xml",
-      "type": "adam_metadata",
-      "datasets": [...]
+  "context": {
+    "standards": {
+      "ADaM": {
+        "datasetEntities": {
+          "ADAE": {
+            "variables": [...],
+            "sourceFiles": [...]
+          }
+        }
+      },
+      "SDTM": {
+        "datasetEntities": {
+          "AE": {
+            "variables": [...],
+            "sourceFiles": [...]
+          }
+        }
+      }
     }
-  ]
+  }
 }
 ```
 
@@ -208,11 +309,14 @@ Body: raw (JSON)
 
 **What to Test:**
 - ✅ File upload handling (various formats: XPT, XLSX, PDF, DOCX, RTF)
-- ✅ File parsing accuracy (extract correct datasets/variables)
-- ✅ JSON response format matches contract
-- ✅ Error handling (invalid files, large files, missing files)
+- ✅ Source-agnostic parsing (same structure regardless of source file type)
+- ✅ CDISC standards organization (SDTM, ADaM, CRF, TLF grouping)
+- ✅ Source file traceability (sourceFiles array with roles and extractedData)
+- ✅ JSON response format matches source-agnostic contract
+- ✅ Mixed source scenarios (e.g., define.xml + spec sheet + raw dataset)
 - ✅ Variable lineage analysis with confidence scores
 - ✅ Gap detection in lineage chains
+- ✅ Error handling (invalid files, large files, missing files)
 - ✅ CORS headers for frontend integration
 - ✅ Performance with realistic file sizes
 
@@ -225,7 +329,49 @@ Body: raw (JSON)
 
 ---
 
-#### 5) Your Complete Freedom
+#### 5) Source-Agnostic Benefits for AI Development
+
+**Why This Structure Helps You:**
+- **Unified Processing**: Same parsing logic works for any source file combination
+- **CDISC Native**: Structure matches how clinical data professionals think
+- **Flexible Input**: Users can upload define.xml OR spec sheets OR raw datasets
+- **Clear Traceability**: Always know which file contributed what data
+- **Extensible**: Easy to add support for new file types or standards
+- **Validation Ready**: Built-in structure for CDISC compliance checking
+
+**Example Scenarios You Can Handle:**
+1. **Define.xml Only**: Extract full metadata from define.xml files
+2. **Spec Sheets Only**: Parse Excel/Word specification documents  
+3. **Mixed Sources**: Combine define.xml metadata with raw .xpt validation
+4. **Raw Datasets**: Infer structure from SAS/XPT files directly
+5. **Document Analysis**: Extract variable definitions from PDF/Word docs
+
+**Processing Strategy:**
+```python
+# Pseudo-code for source-agnostic processing
+def process_files(uploaded_files):
+    standards = {"SDTM": {}, "ADaM": {}, "CRF": {}, "TLF": {}}
+    
+    for file in uploaded_files:
+        if file.type == "define.xml":
+            # Extract comprehensive metadata
+            extract_define_xml_metadata(file, standards)
+        elif file.type == "spec.xlsx":
+            # Parse specification sheets
+            extract_spec_sheet_data(file, standards)
+        elif file.type == "dataset.xpt":
+            # Validate against existing metadata or infer structure
+            validate_or_infer_from_dataset(file, standards)
+        elif file.type == "acrf.pdf":
+            # Extract CRF form structure
+            extract_crf_structure(file, standards)
+    
+    return build_source_agnostic_response(standards)
+```
+
+---
+
+#### 6) Your Complete Freedom
 
 **What you control entirely:**
 - All Python code organization in `backend/`

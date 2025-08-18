@@ -137,14 +137,42 @@ Output JSON Structure (Source-Agnostic):
               "label": "Unique Subject Identifier",
               "type": "character",
               "length": 20,
-              "role": "identifier"
+              "role": "identifier",
+              "mandatory": true
+            },
+            {
+              "name": "AGE",
+              "label": "Age",
+              "type": "numeric",
+              "role": "topic",
+              "format": "3."
             }
           ],
           "sourceFiles": [
-            {"fileId": "define_sdtm_001", "role": "primary"},
-            {"fileId": "dm_dataset_001", "role": "supplementary"}
-          ]
+            {
+              "fileId": "define_sdtm_v1.xml",
+              "role": "primary",
+              "extractedData": ["metadata", "variables", "codelists"]
+            },
+            {
+              "fileId": "dm.xpt", 
+              "role": "supplementary",
+              "extractedData": ["data_validation", "actual_values"]
+            }
+          ],
+          "metadata": {
+            "records": 100,
+            "structure": "One record per subject",
+            "version": "1.0",
+            "lastModified": "2024-01-15",
+            "validationStatus": "compliant"
+          }
         }
+      },
+      "metadata": {
+        "version": "1.0",
+        "lastModified": "2024-01-15",
+        "totalEntities": 2
       }
     },
     "ADaM": {
@@ -155,14 +183,105 @@ Output JSON Structure (Source-Agnostic):
           "name": "ADSL",
           "label": "Subject-Level Analysis Dataset",
           "type": "analysis_dataset",
-          "variables": [...],
-          "sourceFiles": [{"fileId": "spec_sheet_001", "role": "primary"}]
+          "variables": [
+            {
+              "name": "USUBJID",
+              "label": "Unique Subject Identifier",
+              "type": "character",
+              "length": 20,
+              "role": "identifier",
+              "mandatory": true
+            },
+            {
+              "name": "AGE",
+              "label": "Age at Baseline",
+              "type": "numeric",
+              "role": "covariate",
+              "format": "3."
+            }
+          ],
+          "sourceFiles": [
+            {
+              "fileId": "adam_spec_v2.xlsx",
+              "role": "primary",
+              "extractedData": ["metadata", "variables", "derivation_logic"]
+            }
+          ],
+          "metadata": {
+            "records": 100,
+            "structure": "One record per subject",
+            "version": "2.0",
+            "lastModified": "2024-01-16",
+            "validationStatus": "compliant"
+          }
         }
+      },
+      "metadata": {
+        "version": "2.0",
+        "lastModified": "2024-01-16",
+        "totalEntities": 2
+      }
+    },
+    "CRF": {
+      "type": "CRF",
+      "label": "Case Report Form",
+      "datasetEntities": {
+        "CRF_AE": {
+          "name": "CRF_AE",
+          "label": "Adverse Events Form",
+          "type": "crf_form",
+          "variables": [
+            {
+              "name": "AE_TERM",
+              "label": "Adverse Event Term",
+              "type": "character",
+              "length": 200,
+              "role": "topic"
+            }
+          ],
+          "sourceFiles": [
+            {
+              "fileId": "acrf_v1.0.pdf",
+              "role": "primary",
+              "extractedData": ["form_structure", "field_definitions"]
+            }
+          ],
+          "metadata": {
+            "structure": "Electronic case report form",
+            "version": "1.0",
+            "lastModified": "2024-01-10",
+            "validationStatus": "compliant"
+          }
+        }
+      },
+      "metadata": {
+        "version": "1.0",
+        "lastModified": "2024-01-10",
+        "totalEntities": 1
       }
     }
   },
   "metadata": {
-    "sourceFiles": [...]
+    "processedAt": "2024-01-16T10:30:00Z",
+    "totalVariables": 150,
+    "sourceFiles": [
+      {
+        "id": "define_sdtm_v1.xml",
+        "filename": "define_sdtm_v1.xml",
+        "type": "define_xml",
+        "uploadedAt": "2024-01-15T09:00:00Z",
+        "sizeKB": 45,
+        "processingStatus": "completed"
+      },
+      {
+        "id": "adam_spec_v2.xlsx",
+        "filename": "adam_spec_v2.xlsx", 
+        "type": "spec_xlsx",
+        "uploadedAt": "2024-01-16T08:30:00Z",
+        "sizeKB": 120,
+        "processingStatus": "completed"
+      }
+    ]
   }
 }
 
