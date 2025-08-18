@@ -154,6 +154,22 @@
   --accent-acrf-bg: oklch(0.30 0.03 30);
   --accent-tlf: oklch(0.80 0.16 320);
   --accent-tlf-bg: oklch(0.30 0.03 320);
+
+  /* Variables Browser UI tokens */
+  --text-primary: var(--text);
+  --text-secondary: var(--text-muted);
+  --surface-hover: oklch(0.94 0.01 260);
+  --border-hover: oklch(0.88 0.01 260);
+  --border-focus: var(--focus);
+  --focus-ring: var(--focus);
+}
+
+.dark {
+  /* ... existing dark mode variables ... */
+
+  /* Variables Browser UI tokens (dark mode) */
+  --surface-hover: oklch(0.26 0.01 260);
+  --border-hover: oklch(0.35 0.01 260);
 }
 
 @layer base {
@@ -181,4 +197,53 @@
 }
 .sidebar-item.is-active:hover {
   background: color-mix(in oklab, var(--accent-color, var(--sidebar-item-active-bg)) 85%, var(--sidebar-item-active-bg));
+}
+
+/* Variable card state styling with color-mix - similar to sidebar items */
+.variable-card.is-idle {
+  background: color-mix(in oklab, var(--accent-color) 15%, var(--surface-muted));
+  color: var(--text-primary);
+}
+.variable-card.is-idle:hover {
+  background: color-mix(in oklab, var(--accent-color) 35%, var(--surface-muted));
+  color: var(--text-primary);
+}
+.variable-card.is-selected {
+  background: color-mix(in oklab, var(--accent-color) 85%, var(--sidebar-item-active-bg));
+  color: var(--sidebar-item-active-text);
+}
+/* Selected cards don't change on hover */
+.variable-card.is-selected:hover {
+  background: color-mix(in oklab, var(--accent-color) 85%, var(--sidebar-item-active-bg));
+  color: var(--sidebar-item-active-text);
+}
+
+/* Variables Browser animations and transitions */
+.variable-card {
+  transition: all 0.2s ease-in-out;
+}
+
+.variable-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px oklch(0 0 0 / 0.1);
+}
+
+.dark .variable-card:hover {
+  box-shadow: 0 4px 12px oklch(0 0 0 / 0.3);
+}
+
+/* Tooltip animations */
+@keyframes tooltip-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-100%) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(-100%) scale(1);
+  }
+}
+
+.tooltip-animate-in {
+  animation: tooltip-in 200ms ease-out;
 }

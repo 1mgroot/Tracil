@@ -1,6 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react'
 import { Sidebar, SidebarGroup, SidebarItem } from '@/components/ui/sidebar/Sidebar'
-import { testAccessibility, testKeyboardNavigation, runFullAccessibilityTest } from '../helpers/accessibility'
+import { testAccessibility, runFullAccessibilityTest } from '../helpers/accessibility'
 import '@testing-library/jest-dom'
 
 describe('Sidebar Accessibility Tests', () => {

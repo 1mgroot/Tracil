@@ -8,14 +8,14 @@ export function reportWebVitals(metric: Metric) {
   }
   
   // Send to analytics service in production
-  if (process.env.NODE_ENV === 'production') {
+  if (process.env.NODE_ENV === 'production' && typeof window !== 'undefined') {
     // Example: Send to Google Analytics 4
-      if (typeof window !== 'undefined' && window.gtag) {
-    window.gtag('event', metric.name, {
-      value: Math.round(metric.value),
-      event_category: 'Web Vitals',
-      non_interaction: true,
-    } as Record<string, unknown>)
+    if (window.gtag) {
+      window.gtag('event', metric.name, {
+        value: Math.round(metric.value),
+        event_category: 'Web Vitals',
+        non_interaction: true,
+      } as Record<string, unknown>)
     }
     
     // Example: Send to custom analytics endpoint
@@ -40,18 +40,20 @@ export function reportError(error: Error, errorInfo?: Record<string, unknown>) {
     // Sentry.captureException(error, { extra: errorInfo })
     
     // Example: Send to custom error endpoint
-    fetch('/api/errors', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        message: error.message,
-        stack: error.stack,
-        timestamp: new Date().toISOString(),
-        userAgent: navigator.userAgent,
-        url: window.location.href,
-        errorInfo,
-      }),
-    }).catch(console.error)
+    if (typeof window !== 'undefined') {
+      fetch('/api/errors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: error.message,
+          stack: error.stack,
+          timestamp: new Date().toISOString(),
+          userAgent: navigator.userAgent,
+          url: window.location.href,
+          errorInfo,
+        }),
+      }).catch(console.error)
+    }
   } catch (reportingError) {
     console.error('Failed to report error:', reportingError)
   }
@@ -105,7 +107,7 @@ export function trackUserInteraction(action: string, category: string, label?: s
   }
   
   // Send to analytics in production
-  if (typeof window !== 'undefined' && window.gtag) {
+  if (process.env.NODE_ENV === 'production' && typeof window !== 'undefined' && window.gtag) {
     window.gtag('event', action, {
       event_category: category,
       event_label: label,
