@@ -109,68 +109,67 @@ Note: Free tiers/quotas change; verify before demos or releases and adjust defau
 **Workflow A: File Processing & Dataset Discovery**
 ```
 Input: Frontend receives files from user
-├─ aCRF files
-├─ SDTM metadata (SDTM spec or define.xml)
-└─ ADaM metadata (ADaM spec or define.xml)
+├─ aCRF files (PDF)
+├─ SDTM metadata (define.xml, spec sheets, or raw .xpt)
+├─ ADaM metadata (define.xml, spec sheets, or raw datasets)
+└─ TLF documents (RTF/PDF)
 
 Python Backend Processing:
-├─ Parse all uploaded files
-├─ Extract metadata and structure
-├─ Identify datasets within each metadata file
-└─ Extract variables under each dataset
+├─ Parse all uploaded files (source-agnostic)
+├─ Extract metadata and structure from any source type
+├─ Organize by CDISC standards rather than source files
 
-Output JSON Structure:
+
+Output JSON Structure (Source-Agnostic):
 {
-  "files": [
-    {
-      "filename": "define.xml",
-      "type": "adam_metadata",
-      "datasets": [
-        {
-          "name": "ADSL", 
+  "standards": {
+    "SDTM": {
+      "type": "SDTM",
+      "label": "Study Data Tabulation Model",
+      "datasetEntities": {
+        "DM": {
+          "name": "DM",
+          "label": "Demographics", 
+          "type": "domain",
           "variables": [
             {
               "name": "USUBJID",
-              "label": "Unique Subject Identifier", 
+              "label": "Unique Subject Identifier",
               "type": "character",
               "length": 20,
               "role": "identifier"
-            },
-            {
-              "name": "AGE",
-              "label": "Age at Baseline",
-              "type": "numeric", 
-              "role": "covariate"
             }
           ],
-          "metadata": {...}
-        },
-        {
-          "name": "ADAE",
-          "variables": [
-            {
-              "name": "USUBJID", 
-              "label": "Unique Subject Identifier",
-              "type": "character",
-              "role": "identifier"
-            },
-            {
-              "name": "AEDECOD",
-              "label": "Standardized MedDRA Term",
-              "type": "character",
-              "role": "topic"
-            }
-          ],
-          "metadata": {...}
+          "sourceFiles": [
+            {"fileId": "define_sdtm_001", "role": "primary"},
+            {"fileId": "dm_dataset_001", "role": "supplementary"}
+          ]
         }
-      ]
+      }
+    },
+    "ADaM": {
+      "type": "ADaM", 
+      "label": "Analysis Data Model",
+      "datasetEntities": {
+        "ADSL": {
+          "name": "ADSL",
+          "label": "Subject-Level Analysis Dataset",
+          "type": "analysis_dataset",
+          "variables": [...],
+          "sourceFiles": [{"fileId": "spec_sheet_001", "role": "primary"}]
+        }
+      }
     }
-  ]
+  },
+  "metadata": {
+    "sourceFiles": [...]
+  }
 }
 
 Frontend Usage:
 └─ Generate left pane file and dataset list (ADSL, ADAE, DM, LB, aCRF)
-└─ Future: Click dataset → display variables on main screen
+└─ Click dataset → display variables on main screen
+└─ Future: Click variables → display variables source traceability
 ```
 
 **Workflow B: Variable Lineage Analysis**
