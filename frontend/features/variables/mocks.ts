@@ -1235,7 +1235,24 @@ export const mockProcessFilesResponse: ProcessFilesResponse = {
     {
       filename: "acrf_v1.0.pdf",
       type: "acrf_document",
-      datasets: []
+      datasets: [
+        {
+          name: "CRF_DEMO",
+          label: "CRF Demographics",
+          variables: [
+            { name: "SEX", label: "Sex (CRF)", type: "character", length: 1 }
+          ],
+          metadata: { structure: "CRF Form: Demographics" }
+        },
+        {
+          name: "CRF_AE",
+          label: "CRF Adverse Events",
+          variables: [
+            { name: "AETERM", label: "AE Term (CRF)", type: "character", length: 200 }
+          ],
+          metadata: { structure: "CRF Form: Adverse Events" }
+        }
+      ]
     },
     {
       filename: "demographics_table.rtf",
