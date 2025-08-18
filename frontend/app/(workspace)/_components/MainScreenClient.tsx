@@ -4,8 +4,6 @@ import { useMemo, useState, useCallback, type ReactNode } from 'react'
 import { Sidebar, SidebarGroup, SidebarItem } from '@/components/ui/sidebar/Sidebar'
 import { SearchBar } from '@/components/search/SearchBar'
 import { VariablesBrowser } from '@/components/variables'
-import { mockFiles } from '@/features/datasets/mocks'
-import { groupFilesByKind } from '@/types/files'
 import { useVariablesBrowser } from '@/hooks/useVariablesBrowser'
 import { useSidebarKeyboardNav } from '@/hooks/useSidebarKeyboardNav'
 
@@ -13,8 +11,7 @@ type ViewState = 'search' | 'variables'
 type SelectedItem = { type: 'dataset'; datasetId: string } | null
 
 export function MainScreenClient(): ReactNode {
-	const grouped = useMemo(() => groupFilesByKind(mockFiles), [])
-	const { getDatasetById } = useVariablesBrowser()
+	const { datasets, getDatasetById } = useVariablesBrowser()
 	const [selectedItem, setSelectedItem] = useState<SelectedItem>(null)
 	const [selectedId, setSelectedId] = useState<string | null>(null)
 
@@ -26,43 +23,32 @@ export function MainScreenClient(): ReactNode {
 		? getDatasetById(selectedItem.datasetId) 
 		: undefined
 
+	// Group datasets by their group type for sidebar display
+	const groupedDatasets = useMemo(() => {
+		const groups = {
+			ADaM: datasets.filter(d => d.group === 'ADaM'),
+			SDTM: datasets.filter(d => d.group === 'SDTM'),
+			aCRF: datasets.filter(d => d.group === 'aCRF'),
+			TLF: datasets.filter(d => d.group === 'TLF')
+		}
+		return groups
+	}, [datasets])
+
 	// Create flat list of all item IDs for keyboard navigation
 	const allItemIds = useMemo(() => {
 		return [
-			...grouped.ADaM.map(f => f.id),
-			...grouped.SDTM.map(f => f.id),
-			...grouped.aCRF.map(f => f.id),
-			...grouped.TLF.map(f => f.id),
+			...groupedDatasets.ADaM.map(d => d.id),
+			...groupedDatasets.SDTM.map(d => d.id),
+			...groupedDatasets.aCRF.map(d => d.id),
+			...groupedDatasets.TLF.map(d => d.id),
 		]
-	}, [grouped])
-
-	// Create mapping from sidebar IDs to Variables Browser IDs
-	const sidebarToVariablesBrowserIdMap = useMemo(() => {
-		const map = new Map<string, string>()
-		// ADaM mappings
-		map.set('adam-adsl', 'define_adam.xml-ADSL')
-		map.set('adam-adae', 'define_adam.xml-ADAE')
-		map.set('adam-adlb', 'define_adam.xml-ADLB')
-		// SDTM mappings
-		map.set('sdtm-dm', 'define_sdtm.xml-DM')
-		map.set('sdtm-lb', 'define_sdtm.xml-LB')
-		map.set('sdtm-ae', 'define_sdtm.xml-AE')
-		map.set('sdtm-vs', 'define_sdtm.xml-VS')
-		return map
-	}, [])
+	}, [groupedDatasets])
 
 	// Handle dataset selection
 	const handleDatasetSelect = useCallback((datasetId: string) => {
 		setSelectedId(datasetId)
-		// Map sidebar ID to Variables Browser ID
-		const variablesBrowserId = sidebarToVariablesBrowserIdMap.get(datasetId)
-		if (variablesBrowserId) {
-			console.log(`Dataset selected: ${datasetId} → ${variablesBrowserId}`)
-			setSelectedItem({ type: 'dataset', datasetId: variablesBrowserId })
-		} else {
-			console.warn(`No mapping found for dataset ID: ${datasetId}`)
-		}
-	}, [sidebarToVariablesBrowserIdMap])
+		setSelectedItem({ type: 'dataset', datasetId })
+	}, [])
 
 
 
@@ -89,54 +75,54 @@ export function MainScreenClient(): ReactNode {
 			<aside className="hidden md:block">
 				<Sidebar header={null} onKeyDown={handleKeyDown}>
 					<SidebarGroup label="ADaM" accentVar="--accent-adam">
-						{grouped.ADaM.map((f, i) => (
+						{groupedDatasets.ADaM.map((dataset, i) => (
 							<SidebarItem 
-								key={f.id} 
-								active={selectedId === f.id} 
-								onClick={() => handleDatasetSelect(f.id)} 
-								tone={toneFor(i, grouped.ADaM.length)}
-								itemId={f.id}
+								key={dataset.id} 
+								active={selectedId === dataset.id} 
+								onClick={() => handleDatasetSelect(dataset.id)} 
+								tone={toneFor(i, groupedDatasets.ADaM.length)}
+								itemId={dataset.id}
 							>
-								{f.name}
+								{dataset.name}
 							</SidebarItem>
 						))}
 					</SidebarGroup>
 					<SidebarGroup label="SDTM" accentVar="--accent-sdtm">
-						{grouped.SDTM.map((f, i) => (
+						{groupedDatasets.SDTM.map((dataset, i) => (
 							<SidebarItem 
-								key={f.id} 
-								active={selectedId === f.id} 
-								onClick={() => handleDatasetSelect(f.id)} 
-								tone={toneFor(i, grouped.SDTM.length)}
-								itemId={f.id}
+								key={dataset.id} 
+								active={selectedId === dataset.id} 
+								onClick={() => handleDatasetSelect(dataset.id)} 
+								tone={toneFor(i, groupedDatasets.SDTM.length)}
+								itemId={dataset.id}
 							>
-								{f.name}
+								{dataset.name}
 							</SidebarItem>
 						))}
 					</SidebarGroup>
 					<SidebarGroup label="aCRF" accentVar="--accent-acrf">
-						{grouped.aCRF.map((f, i) => (
+						{groupedDatasets.aCRF.map((dataset, i) => (
 							<SidebarItem 
-								key={f.id} 
-								active={selectedId === f.id} 
-								onClick={() => handleDatasetSelect(f.id)} 
-								tone={toneFor(i, grouped.aCRF.length)}
-								itemId={f.id}
+								key={dataset.id} 
+								active={selectedId === dataset.id} 
+								onClick={() => handleDatasetSelect(dataset.id)} 
+								tone={toneFor(i, groupedDatasets.aCRF.length)}
+								itemId={dataset.id}
 							>
-								{f.name}
+								{dataset.name}
 							</SidebarItem>
 						))}
 					</SidebarGroup>
 					<SidebarGroup label="TLFs" accentVar="--accent-tlf">
-						{grouped.TLF.map((f, i) => (
+						{groupedDatasets.TLF.map((dataset, i) => (
 							<SidebarItem 
-								key={f.id} 
-								active={selectedId === f.id} 
-								onClick={() => handleDatasetSelect(f.id)} 
-								tone={toneFor(i, grouped.TLF.length)}
-								itemId={f.id}
+								key={dataset.id} 
+								active={selectedId === dataset.id} 
+								onClick={() => handleDatasetSelect(dataset.id)} 
+								tone={toneFor(i, groupedDatasets.TLF.length)}
+								itemId={dataset.id}
 							>
-								{f.name}
+								{dataset.name}
 							</SidebarItem>
 						))}
 					</SidebarGroup>
