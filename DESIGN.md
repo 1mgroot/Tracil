@@ -108,68 +108,186 @@ Note: Free tiers/quotas change; verify before demos or releases and adjust defau
 **Workflow A: File Processing & Dataset Discovery**
 ```
 Input: Frontend receives files from user
-├─ aCRF files
-├─ SDTM metadata (SDTM spec or define.xml)
-└─ ADaM metadata (ADaM spec or define.xml)
+├─ aCRF files (PDF)
+├─ SDTM metadata (define.xml, spec sheets, or raw .xpt)
+├─ ADaM metadata (define.xml, spec sheets, or raw datasets)
+└─ TLF documents (RTF/PDF)
 
 Python Backend Processing:
-├─ Parse all uploaded files
-├─ Extract metadata and structure
-├─ Identify datasets within each metadata file
-└─ Extract variables under each dataset
+├─ Parse all uploaded files (source-agnostic)
+├─ Extract metadata and structure from any source type
+├─ Organize by CDISC standards rather than source files
 
-Output JSON Structure:
+
+Output JSON Structure (Source-Agnostic):
 {
-  "files": [
-    {
-      "filename": "define.xml",
-      "type": "adam_metadata",
-      "datasets": [
-        {
-          "name": "ADSL", 
+  "standards": {
+    "SDTM": {
+      "type": "SDTM",
+      "label": "Study Data Tabulation Model",
+      "datasetEntities": {
+        "DM": {
+          "name": "DM",
+          "label": "Demographics", 
+          "type": "domain",
           "variables": [
             {
               "name": "USUBJID",
-              "label": "Unique Subject Identifier", 
+              "label": "Unique Subject Identifier",
               "type": "character",
               "length": 20,
-              "role": "identifier"
+              "role": "identifier",
+              "mandatory": true
+            },
+            {
+              "name": "AGE",
+              "label": "Age",
+              "type": "numeric",
+              "role": "topic",
+              "format": "3."
+            }
+          ],
+          "sourceFiles": [
+            {
+              "fileId": "define_sdtm_v1.xml",
+              "role": "primary",
+              "extractedData": ["metadata", "variables", "codelists"]
+            },
+            {
+              "fileId": "dm.xpt", 
+              "role": "supplementary",
+              "extractedData": ["data_validation", "actual_values"]
+            }
+          ],
+          "metadata": {
+            "records": 100,
+            "structure": "One record per subject",
+            "version": "1.0",
+            "lastModified": "2024-01-15",
+            "validationStatus": "compliant"
+          }
+        }
+      },
+      "metadata": {
+        "version": "1.0",
+        "lastModified": "2024-01-15",
+        "totalEntities": 2
+      }
+    },
+    "ADaM": {
+      "type": "ADaM", 
+      "label": "Analysis Data Model",
+      "datasetEntities": {
+        "ADSL": {
+          "name": "ADSL",
+          "label": "Subject-Level Analysis Dataset",
+          "type": "analysis_dataset",
+          "variables": [
+            {
+              "name": "USUBJID",
+              "label": "Unique Subject Identifier",
+              "type": "character",
+              "length": 20,
+              "role": "identifier",
+              "mandatory": true
             },
             {
               "name": "AGE",
               "label": "Age at Baseline",
-              "type": "numeric", 
-              "role": "covariate"
+              "type": "numeric",
+              "role": "covariate",
+              "format": "3."
             }
           ],
-          "metadata": {...}
-        },
-        {
-          "name": "ADAE",
+          "sourceFiles": [
+            {
+              "fileId": "adam_spec_v2.xlsx",
+              "role": "primary",
+              "extractedData": ["metadata", "variables", "derivation_logic"]
+            }
+          ],
+          "metadata": {
+            "records": 100,
+            "structure": "One record per subject",
+            "version": "2.0",
+            "lastModified": "2024-01-16",
+            "validationStatus": "compliant"
+          }
+        }
+      },
+      "metadata": {
+        "version": "2.0",
+        "lastModified": "2024-01-16",
+        "totalEntities": 2
+      }
+    },
+    "CRF": {
+      "type": "CRF",
+      "label": "Case Report Form",
+      "datasetEntities": {
+        "CRF_AE": {
+          "name": "CRF_AE",
+          "label": "Adverse Events Form",
+          "type": "crf_form",
           "variables": [
             {
-              "name": "USUBJID", 
-              "label": "Unique Subject Identifier",
+              "name": "AE_TERM",
+              "label": "Adverse Event Term",
               "type": "character",
-              "role": "identifier"
-            },
-            {
-              "name": "AEDECOD",
-              "label": "Standardized MedDRA Term",
-              "type": "character",
+              "length": 200,
               "role": "topic"
             }
           ],
-          "metadata": {...}
+          "sourceFiles": [
+            {
+              "fileId": "acrf_v1.0.pdf",
+              "role": "primary",
+              "extractedData": ["form_structure", "field_definitions"]
+            }
+          ],
+          "metadata": {
+            "structure": "Electronic case report form",
+            "version": "1.0",
+            "lastModified": "2024-01-10",
+            "validationStatus": "compliant"
+          }
         }
-      ]
+      },
+      "metadata": {
+        "version": "1.0",
+        "lastModified": "2024-01-10",
+        "totalEntities": 1
+      }
     }
-  ]
+  },
+  "metadata": {
+    "processedAt": "2024-01-16T10:30:00Z",
+    "totalVariables": 150,
+    "sourceFiles": [
+      {
+        "id": "define_sdtm_v1.xml",
+        "filename": "define_sdtm_v1.xml",
+        "type": "define_xml",
+        "uploadedAt": "2024-01-15T09:00:00Z",
+        "sizeKB": 45,
+        "processingStatus": "completed"
+      },
+      {
+        "id": "adam_spec_v2.xlsx",
+        "filename": "adam_spec_v2.xlsx", 
+        "type": "spec_xlsx",
+        "uploadedAt": "2024-01-16T08:30:00Z",
+        "sizeKB": 120,
+        "processingStatus": "completed"
+      }
+    ]
+  }
 }
 
 Frontend Usage:
 └─ Generate left pane file and dataset list (ADSL, ADAE, DM, LB, aCRF)
-└─ Future: Click dataset → display variables on main screen
+└─ Click dataset → display variables on main screen
+└─ Future: Click variables → display variables source traceability
 ```
 
 **Workflow B: Variable Lineage Analysis**

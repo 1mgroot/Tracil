@@ -7,6 +7,7 @@ import { VariablesBrowser } from '@/components/variables'
 import { useVariablesBrowser } from '@/hooks/useVariablesBrowser'
 import { useSidebarKeyboardNav } from '@/hooks/useSidebarKeyboardNav'
 
+
 type ViewState = 'search' | 'variables'
 type SelectedItem = { type: 'dataset'; datasetId: string } | null
 
