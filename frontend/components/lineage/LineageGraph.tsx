@@ -173,81 +173,87 @@ export function LineageGraph({ lineage }: LineageGraphProps) {
   }
 
   return (
-    <div className="relative min-h-[400px] overflow-auto">
-      {/* Render nodes as positioned buttons */}
-      {lineage.nodes.map((node) => {
-        const position = nodePositions[node.id]
-        if (!position) return null
-        
-        return (
-          <div
-            key={node.id}
-            className="absolute"
-            style={{
-              left: `${position.x}px`,
-              top: `${position.y}px`,
-              transform: 'translate(-50%, -50%)'
-            }}
-          >
-            <button 
-              className={`px-4 py-2 rounded-lg text-white font-medium shadow-md border-2 border-white
-                ${getGroupColor(node.group)} 
-                ${getGroupHoverColor(node.group)}
-                transition-all duration-200
-                hover:scale-105 hover:shadow-lg
-                focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
-              onMouseEnter={(e) => handleNodeMouseEnter(e, node)}
-              onMouseLeave={handleNodeMouseLeave}
-            >
-              {node.title}
-            </button>
-          </div>
-        )
-      })}
+    <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+      <h2 className="text-lg font-semibold text-gray-900 mb-6">
+        Lineage flow chart
+      </h2>
       
-      {/* Render edges as straight SVG connections */}
-      <svg className="absolute inset-0 w-full h-full pointer-events-none">
-        {lineage.edges.map((edge) => {
-          const connectionPoints = getConnectionPoints(edge.from, edge.to)
-          
-          if (!connectionPoints) return null
+      <div className="relative min-h-[400px] overflow-auto">
+        {/* Render nodes as positioned buttons */}
+        {lineage.nodes.map((node) => {
+          const position = nodePositions[node.id]
+          if (!position) return null
           
           return (
-            <g key={`${edge.from}-${edge.to}`}>
-              {/* Straight line connection */}
-              <line
-                x1={connectionPoints.from.x}
-                y1={connectionPoints.from.y}
-                x2={connectionPoints.to.x}
-                y2={connectionPoints.to.y}
-                stroke="#6b7280"
-                strokeWidth="2"
-                markerEnd="url(#arrowhead)"
-                className="pointer-events-auto cursor-pointer hover:stroke-gray-800 hover:stroke-[3px] transition-all duration-200"
-                onMouseEnter={(e) => handleEdgeMouseEnter(e, edge)}
-                onMouseLeave={handleEdgeMouseLeave}
-              />
-            </g>
+            <div
+              key={node.id}
+              className="absolute"
+              style={{
+                left: `${position.x}px`,
+                top: `${position.y}px`,
+                transform: 'translate(-50%, -50%)'
+              }}
+            >
+              <button 
+                className={`px-4 py-2 rounded-lg text-white font-medium shadow-md border-2 border-white
+                  ${getGroupColor(node.group)} 
+                  ${getGroupHoverColor(node.group)}
+                  transition-all duration-200
+                  hover:scale-105 hover:shadow-lg
+                  focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
+                onMouseEnter={(e) => handleNodeMouseEnter(e, node)}
+                onMouseLeave={handleNodeMouseLeave}
+              >
+                {node.title}
+              </button>
+            </div>
           )
         })}
         
-        {/* Arrow marker definition */}
-        <defs>
-          <marker
-            id="arrowhead"
-            markerWidth="10"
-            markerHeight="7"
-            refX="9"
-            refY="3.5"
-            orient="auto"
-          >
-            <polygon
-              points="0 0, 10 3.5, 0 7"
-              fill="#6b7280"
-            />
-          </marker>
-        </defs>
-      </svg>
+        {/* Render edges as straight SVG connections */}
+        <svg className="absolute inset-0 w-full h-full pointer-events-none">
+          {lineage.edges.map((edge) => {
+            const connectionPoints = getConnectionPoints(edge.from, edge.to)
+            
+            if (!connectionPoints) return null
+            
+            return (
+              <g key={`${edge.from}-${edge.to}`}>
+                {/* Straight line connection */}
+                <line
+                  x1={connectionPoints.from.x}
+                  y1={connectionPoints.from.y}
+                  x2={connectionPoints.to.x}
+                  y2={connectionPoints.to.y}
+                  stroke="#6b7280"
+                  strokeWidth="2"
+                  markerEnd="url(#arrowhead)"
+                  className="pointer-events-auto cursor-pointer hover:stroke-gray-800 hover:stroke-[3px] transition-all duration-200"
+                  onMouseEnter={(e) => handleEdgeMouseEnter(e, edge)}
+                  onMouseLeave={handleEdgeMouseLeave}
+                />
+              </g>
+            )
+          })}
+          
+          {/* Arrow marker definition */}
+          <defs>
+            <marker
+              id="arrowhead"
+              markerWidth="10"
+              markerHeight="7"
+              refX="9"
+              refY="3.5"
+              orient="auto"
+            >
+              <polygon
+                points="0 0, 10 3.5, 0 7"
+                fill="#6b7280"
+              />
+            </marker>
+          </defs>
+        </svg>
+      </div>
 
       {/* Tooltip */}
       {tooltip && (

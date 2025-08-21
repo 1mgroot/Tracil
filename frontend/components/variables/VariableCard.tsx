@@ -13,7 +13,6 @@ interface VariableCardProps {
   readonly onMouseLeave?: () => void
   readonly isFocused?: boolean
   readonly tabIndex?: number
-  readonly compact?: boolean
   readonly 'data-variable-card'?: boolean
   readonly 'aria-rowindex'?: number
   readonly 'aria-colindex'?: number
@@ -30,7 +29,6 @@ export const VariableCard = memo(function VariableCard({
   onMouseLeave,
   isFocused,
   tabIndex = -1,
-  compact = false,
   'data-variable-card': dataVariableCard,
   'aria-rowindex': ariaRowindex,
   'aria-colindex': ariaColindex
@@ -67,63 +65,6 @@ export const VariableCard = memo(function VariableCard({
     }
   }
 
-  // Compact mode styling - single row with reduced height
-  if (compact) {
-    return (
-      <button
-        ref={cardRef}
-        className={`
-          variable-card-compact
-          px-3
-          py-2
-          rounded-md
-          focus:outline-none
-          focus:ring-2
-          focus:ring-[var(--focus-ring)]
-          focus:ring-offset-2
-          transition-all
-          duration-200
-          ease-in-out
-          hover:transform
-          hover:-translate-y-0.5
-          hover:shadow-md
-          flex
-          items-center
-          justify-center
-          text-sm
-          font-medium
-          cursor-pointer
-          whitespace-nowrap
-          min-w-[80px]
-          ${selected ? 'is-selected' : 'is-idle'}
-          ${isFocused ? 'ring-2 ring-[var(--focus-ring)] ring-offset-2' : ''}
-        `}
-        style={{
-          '--accent-color': `var(--accent-${group.toLowerCase()})`
-        } as React.CSSProperties & { [key: string]: string }}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-        onFocus={handleFocus}
-        onBlur={handleBlur}
-        onClick={handleClick}
-        tabIndex={tabIndex}
-        data-variable-card={dataVariableCard}
-        aria-rowindex={ariaRowindex}
-        aria-colindex={ariaColindex}
-        aria-label={`Variable ${variable.name}: ${variable.label}`}
-        aria-describedby={`tooltip-${variable.name}`}
-        aria-selected={selected}
-        role="gridcell"
-        type="button"
-      >
-        <span className="text-center truncate w-full">
-          {variable.name}
-        </span>
-      </button>
-    )
-  }
-
-  // Default grid layout styling
   return (
     <button
       ref={cardRef}
