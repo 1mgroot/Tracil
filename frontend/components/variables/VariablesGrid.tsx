@@ -10,6 +10,8 @@ interface VariablesGridProps {
   readonly group: FileGroupKind
   readonly onVariableSelect?: (variable: Variable) => void
   readonly onEscape?: () => void
+  readonly compact?: boolean
+  readonly selectedVariable?: string | null
 }
 
 interface TooltipState {
@@ -22,14 +24,16 @@ export const VariablesGrid = memo(function VariablesGrid({
   variables,
   group,
   onVariableSelect,
-  onEscape
+  onEscape,
+  compact = false,
+  selectedVariable = null
 }: VariablesGridProps): ReactNode {
   const [tooltip, setTooltip] = useState<TooltipState>({
     variable: null,
     position: { x: 0, y: 0 },
     isVisible: false
   })
-  const [selectedVariable, setSelectedVariable] = useState<string | null>(null)
+  const [focusedVariable, setFocusedVariable] = useState<string | null>(null)
 
   const handleVariableHover = useCallback((variable: Variable, event: MouseEvent<HTMLButtonElement>) => {
     const rect = event.currentTarget.getBoundingClientRect()
@@ -65,7 +69,7 @@ export const VariablesGrid = memo(function VariablesGrid({
     variables,
     onVariableSelect: (variable: Variable) => {
       // When selecting via keyboard (Enter/Space), update selection but keep focus
-      setSelectedVariable(variable.name)
+      setFocusedVariable(variable.name)
       onVariableSelect?.(variable)
     },
     onEscape
@@ -74,7 +78,7 @@ export const VariablesGrid = memo(function VariablesGrid({
   const handleVariableClick = useCallback((variable: Variable) => {
     const clickedIndex = variables.findIndex(v => v.name === variable.name)
     // When clicking, update both selection and focus to clicked item
-    setSelectedVariable(variable.name)
+    setFocusedVariable(variable.name)
     setFocusedIndex(clickedIndex)
     onVariableSelect?.(variable)
   }, [onVariableSelect, variables, setFocusedIndex])
@@ -84,7 +88,7 @@ export const VariablesGrid = memo(function VariablesGrid({
     if (focusedIndex >= 0 && gridRef.current) {
       const cards = gridRef.current.querySelectorAll('[data-variable-card]')
       const focusedCard = cards[focusedIndex] as HTMLElement
-      if (focusedCard) {
+      if (focusedCard && typeof focusedCard.scrollIntoView === 'function') {
         focusedCard.focus()
         focusedCard.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
       }
@@ -103,6 +107,60 @@ export const VariablesGrid = memo(function VariablesGrid({
     )
   }
 
+  // In compact mode, show variables in a single row with reduced height
+  if (compact) {
+    return (
+      <section 
+        aria-labelledby="variables-heading"
+        className="px-6 pt-4 pb-4 border-b border-gray-200"
+      >
+        <h2 
+          id="variables-heading" 
+          className="sr-only"
+        >
+          Variables
+        </h2>
+        
+        <div 
+          ref={gridRef}
+          className="variables-grid flex gap-2 overflow-x-auto pb-2"
+          role="grid"
+          aria-label="Dataset variables"
+        >
+          {variables.map((variable, index) => (
+            <VariableCard
+              key={variable.name}
+              variable={variable}
+              group={group}
+              selected={selectedVariable === variable.name}
+              onClick={handleVariableClick}
+              onHover={handleVariableHover}
+              onFocus={handleVariableFocus}
+              onBlur={handleTooltipClose}
+              onMouseLeave={handleTooltipClose}
+              isFocused={focusedIndex === index}
+              tabIndex={focusedIndex === index ? 0 : -1}
+              data-variable-card={true}
+              compact={true}
+              aria-rowindex={1}
+              aria-colindex={index + 1}
+            />
+          ))}
+        </div>
+
+        {tooltip.isVisible && tooltip.variable && (
+          <VariableTooltip
+            variable={tooltip.variable}
+            isVisible={tooltip.isVisible}
+            position={tooltip.position}
+            onClose={handleTooltipClose}
+          />
+        )}
+      </section>
+    )
+  }
+
+  // Default grid layout
   return (
     <section 
       aria-labelledby="variables-heading"
@@ -129,7 +187,7 @@ export const VariablesGrid = memo(function VariablesGrid({
             key={variable.name}
             variable={variable}
             group={group}
-            selected={selectedVariable === variable.name}
+            selected={focusedVariable === variable.name}
             onClick={handleVariableClick}
             onHover={handleVariableHover}
             onFocus={handleVariableFocus}
@@ -138,6 +196,7 @@ export const VariablesGrid = memo(function VariablesGrid({
             isFocused={focusedIndex === index}
             tabIndex={focusedIndex === index ? 0 : -1}
             data-variable-card={true}
+            compact={false}
             aria-rowindex={Math.floor(index / 6) + 1}
             aria-colindex={(index % 6) + 1}
           />

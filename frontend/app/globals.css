@@ -226,6 +226,24 @@
   color: var(--sidebar-item-active-text);
 }
 
+/* Compact variable card styling for lineage view */
+.variable-card-compact.is-idle {
+  background: color-mix(in oklab, var(--accent-color) 15%, var(--surface-muted));
+  color: var(--text-primary);
+}
+.variable-card-compact.is-idle:hover {
+  background: color-mix(in oklab, var(--accent-color) 35%, var(--surface-muted));
+  color: var(--text-primary);
+}
+.variable-card-compact.is-selected {
+  background: color-mix(in oklab, var(--accent-color) 85%, var(--sidebar-item-active-bg));
+  color: var(--sidebar-item-active-text);
+}
+.variable-card-compact.is-selected:hover {
+  background: color-mix(in oklab, var(--accent-color) 85%, var(--sidebar-item-active-bg));
+  color: var(--sidebar-item-active-text);
+}
+
 /* Variables Browser animations and transitions */
 .variable-card {
   transition: all 0.2s ease-in-out;
@@ -238,6 +256,20 @@
 
 .dark .variable-card:hover {
   box-shadow: 0 4px 12px oklch(0 0 0 / 0.3);
+}
+
+/* Compact variable card animations */
+.variable-card-compact {
+  transition: all 0.2s ease-in-out;
+}
+
+.variable-card-compact:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px oklch(0 0 0 / 0.1);
+}
+
+.dark .variable-card-compact:hover {
+  box-shadow: 0 2px 8px oklch(0 0 0 / 0.3);
 }
 
 /* Tooltip animations */
