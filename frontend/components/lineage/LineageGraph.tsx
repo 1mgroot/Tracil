@@ -42,6 +42,7 @@ export function LineageGraph({ lineage }: LineageGraphProps) {
     const horizontalSpacing = 40 // Space between nodes horizontally
     const verticalSpacing = 80 // Space between rows
     const containerWidth = 800 // Approximate container width for wrapping
+    const bottomBuffer = 120 // Buffer space above the horizontal line
     
     const positions: { [key: string]: { x: number; y: number; width: number; height: number } } = {}
     let currentX = 0
@@ -56,9 +57,13 @@ export function LineageGraph({ lineage }: LineageGraphProps) {
         maxHeightInRow = 0
       }
       
+      // Ensure we don't position nodes too close to the bottom horizontal line
+      const maxY = 500 - bottomBuffer // Maximum Y position before the line
+      const adjustedY = Math.min(currentY + nodeHeight / 2, maxY)
+      
       positions[node.id] = {
         x: currentX + nodeWidth / 2,
-        y: currentY + nodeHeight / 2,
+        y: adjustedY,
         width: nodeWidth,
         height: nodeHeight
       }
@@ -173,7 +178,7 @@ export function LineageGraph({ lineage }: LineageGraphProps) {
   }
 
   return (
-    <div className="relative min-h-[400px] overflow-auto">
+    <div className="relative min-h-[500px] overflow-auto pb-8">
       {/* Render nodes as positioned buttons */}
       {lineage.nodes.map((node) => {
         const position = nodePositions[node.id]
@@ -206,7 +211,7 @@ export function LineageGraph({ lineage }: LineageGraphProps) {
       })}
       
       {/* Render edges as straight SVG connections */}
-      <svg className="absolute inset-0 w-full h-full pointer-events-none">
+      <svg className="absolute inset-0 w-full h-[calc(100%-120px)] pointer-events-none">
         {lineage.edges.map((edge) => {
           const connectionPoints = getConnectionPoints(edge.from, edge.to)
           
@@ -266,7 +271,7 @@ export function LineageGraph({ lineage }: LineageGraphProps) {
       )}
       
       {/* Accessible fallback list */}
-      <div className="mt-8 pt-6 border-t border-gray-200">
+      <div className="mt-16 pt-8 border-t border-gray-200 bg-gray-50 rounded-lg p-6">
         <h3 className="text-sm font-medium text-gray-900 mb-3">
           Lineage Details (Accessibility)
         </h3>
