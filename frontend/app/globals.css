@@ -93,12 +93,16 @@
   /* Group accents (foreground + soft bg) */
   --accent-sdtm: oklch(0.60 0.16 260);
   --accent-sdtm-bg: oklch(0.96 0.03 260);
+  --accent-sdtm-hover: oklch(0.55 0.16 260);
   --accent-adam: oklch(0.60 0.16 160);
   --accent-adam-bg: oklch(0.96 0.03 160);
+  --accent-adam-hover: oklch(0.55 0.16 160);
   --accent-acrf: oklch(0.60 0.16 30);
   --accent-acrf-bg: oklch(0.96 0.03 30);
+  --accent-acrf-hover: oklch(0.55 0.16 30);
   --accent-tlf: oklch(0.60 0.16 320);
   --accent-tlf-bg: oklch(0.96 0.03 320);
+  --accent-tlf-hover: oklch(0.55 0.16 320);
 }
 
 .dark {
@@ -148,12 +152,16 @@
   /* Group accents tuned for dark */
   --accent-sdtm: oklch(0.80 0.16 260);
   --accent-sdtm-bg: oklch(0.30 0.03 260);
+  --accent-sdtm-hover: oklch(0.75 0.16 260);
   --accent-adam: oklch(0.80 0.16 160);
   --accent-adam-bg: oklch(0.30 0.03 160);
+  --accent-adam-hover: oklch(0.75 0.16 160);
   --accent-acrf: oklch(0.80 0.16 30);
   --accent-acrf-bg: oklch(0.30 0.03 30);
+  --accent-acrf-hover: oklch(0.75 0.16 30);
   --accent-tlf: oklch(0.80 0.16 320);
   --accent-tlf-bg: oklch(0.30 0.03 320);
+  --accent-tlf-hover: oklch(0.75 0.16 320);
 
   /* Variables Browser UI tokens */
   --text-primary: var(--text);

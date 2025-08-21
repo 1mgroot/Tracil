@@ -19,6 +19,17 @@ Purpose: add an interactive lineage flow chart view that opens when a user picks
 
 ---
 
+### Current state (code alignment)
+- Data model: source-agnostic mocks live in `frontend/features/variables/mockSourceAgnostic.ts` (organized by CDISC standards)
+- Migration layer: `frontend/lib/data-structure/migration.ts` transforms either legacy or source-agnostic responses into a unified UI shape consumed by the Variables Browser
+- UI state: `MainScreenClient` currently supports `'search'` and `'variables'`; lineage view is planned (see Navigation and state)
+- Entrypoint: `frontend/lib/ai/entrypoints/analyzeLineage.ts` is the single consumer; implement as a mock now and later proxy to the backend
+
+Notes:
+- The standard is named `CRF` in the data layer, while the UI group label is shown as `aCRF`. The migration layer handles grouping for the sidebar.
+
+---
+
 ### Types and contracts
 New shared types to match the backend response. These types are intentionally provider-agnostic and can be returned by the Next.js API proxy once the Python backend is wired.
 
@@ -141,6 +152,53 @@ Accessibility:
 
 ---
 
+### Visual Design - Node Styling
+
+Each lineage node is displayed as a button with the background color matching its group's color:
+
+**Node Button Styling:**
+- **ADaM nodes**: Green background (`--accent-adam`) - e.g., ADSL.SEX, ADAE.AEBODSYS
+- **SDTM nodes**: Blue background (`--accent-sdtm`) - e.g., DM.SEX, AE.AEBODSYS  
+- **aCRF nodes**: Red background (`--accent-acrf`) - e.g., CRF_DEMO.SEX, CRF_AE.AETERM
+- **TLF nodes**: Purple background (`--accent-tlf`) - e.g., T-14-3-01
+
+**Button Design:**
+- Rounded corners (consistent with current UI)
+- Group color as background with white text
+- Subtle border/shadow for depth
+- Hover states with slightly darker group color
+- Active/selected state with darker group color
+
+**Example Node Appearance:**
+```tsx
+// Node button with group-specific styling
+<button 
+  className={`px-4 py-2 rounded-lg text-white font-medium
+    ${getGroupColor(node.group)} 
+    hover:${getGroupHoverColor(node.group)}
+    transition-colors duration-200`}
+>
+  {node.title}
+</button>
+```
+
+**Group Color Mapping:**
+```tsx
+const getGroupColor = (group: ArtifactGroup): string => {
+  switch (group) {
+    case 'ADaM': return 'bg-[var(--accent-adam)]'
+    case 'SDTM': return 'bg-[var(--accent-sdtm)]'
+    case 'aCRF': return 'bg-[var(--accent-acrf)]'
+    case 'TLF': return 'bg-[var(--accent-tlf)]'
+    default: return 'bg-gray-500'
+  }
+}
+```
+
+This design ensures visual consistency with the existing sidebar grouping and makes the lineage flow intuitive to follow by color-coding the data flow between different CDISC standards.
+
+---
+
 ### Navigation and state
 - Extend `MainScreenClient` view state to include `'lineage'`
 - Track `{ datasetId, datasetName, variableName }` on selection
@@ -159,32 +217,35 @@ Accessibility:
 
 ### Update: variables mocks to include aCRF data
 
-To show aCRF items in the left pane and enable future CRF-driven flows, extend `frontend/features/variables/mocks.ts` so the aCRF file includes pseudo-datasets with variables captured on CRF.
+To show aCRF items in the left pane and enable future CRF-driven flows, extend `frontend/features/variables/mockSourceAgnostic.ts` so the `CRF` standard includes pseudo-datasets with variables captured on CRF.
 
 Proposed minimal addition (example):
 ```ts
-// In mockProcessFilesResponse.files for the aCRF document
-{
-  filename: 'acrf_v1.0.pdf',
-  type: 'acrf_document',
-  datasets: [
-    {
-      name: 'CRF_DEMO',
-      label: 'CRF Demographics',
-      variables: [
-        { name: 'SEX', label: 'Sex (CRF)', type: 'character', length: 1 },
-      ],
-      metadata: { structure: 'CRF Form: Demographics' }
-    },
-    {
-      name: 'CRF_AE',
-      label: 'CRF Adverse Events',
-      variables: [
-        { name: 'AETERM', label: 'AE Term (CRF)', type: 'character', length: 200 },
-      ],
-      metadata: { structure: 'CRF Form: Adverse Events' }
-    }
-  ]
+// In mockSourceAgnosticResponse.standards.CRF.datasetEntities
+CRF_DEMO: {
+  name: 'CRF_DEMO',
+  label: 'CRF Demographics',
+  type: 'crf_form',
+  variables: [
+    { name: 'SEX', label: 'Sex (CRF)', type: 'character', length: 1 },
+  ],
+  sourceFiles: [
+    { fileId: 'acrf_v1.0.pdf', role: 'primary', extractedData: ['form_structure', 'field_definitions'] }
+  ],
+  metadata: { structure: 'CRF Form: Demographics', validationStatus: 'compliant' }
+},
+// Ensure CRF_AE exists (or add similarly if missing)
+CRF_AE: {
+  name: 'CRF_AE',
+  label: 'CRF Adverse Events',
+  type: 'crf_form',
+  variables: [
+    { name: 'AETERM', label: 'AE Term (CRF)', type: 'character', length: 200 },
+  ],
+  sourceFiles: [
+    { fileId: 'acrf_v1.0.pdf', role: 'primary', extractedData: ['form_structure', 'field_definitions'] }
+  ],
+  metadata: { structure: 'CRF Form: Adverse Events', validationStatus: 'compliant' }
 }
 ```
 
@@ -192,6 +253,7 @@ Notes:
 - This keeps the left pane’s aCRF group non-empty and provides consistent dataset/variable shapes for the browser
 - Names are prefixed to avoid collisions with SDTM/ADaM datasets
 - These CRF variables are only for navigation/visibility; lineage still comes from `mockLineage`
+- Data layer standard is `CRF`; UI group label is `aCRF` (handled in the migration/grouping logic)
 
 ---
 

@@ -4,20 +4,22 @@ import { useMemo, useState, useCallback, type ReactNode } from 'react'
 import { Sidebar, SidebarGroup, SidebarItem } from '@/components/ui/sidebar/Sidebar'
 import { SearchBar } from '@/components/search/SearchBar'
 import { VariablesBrowser } from '@/components/variables'
+import { LineageView } from './LineageView'
 import { useVariablesBrowser } from '@/hooks/useVariablesBrowser'
 import { useSidebarKeyboardNav } from '@/hooks/useSidebarKeyboardNav'
 
 
-type ViewState = 'search' | 'variables'
+type ViewState = 'search' | 'variables' | 'lineage'
 type SelectedItem = { type: 'dataset'; datasetId: string } | null
 
 export function MainScreenClient(): ReactNode {
 	const { datasets, getDatasetById } = useVariablesBrowser()
 	const [selectedItem, setSelectedItem] = useState<SelectedItem>(null)
 	const [selectedId, setSelectedId] = useState<string | null>(null)
+	const [lineageState, setLineageState] = useState<{ dataset: string; variable: string } | null>(null)
 
 	// Determine current view state
-	const viewState: ViewState = selectedItem?.type === 'dataset' ? 'variables' : 'search'
+	const viewState: ViewState = lineageState ? 'lineage' : selectedItem?.type === 'dataset' ? 'variables' : 'search'
 	
 	// Get the selected dataset for variables view
 	const selectedDataset = selectedItem?.type === 'dataset' 
@@ -49,9 +51,23 @@ export function MainScreenClient(): ReactNode {
 	const handleDatasetSelect = useCallback((datasetId: string) => {
 		setSelectedId(datasetId)
 		setSelectedItem({ type: 'dataset', datasetId })
+		setLineageState(null) // Clear lineage when switching datasets
 	}, [])
 
+	// Handle variable selection - open lineage view
+	const handleVariableSelect = useCallback((variable: { name: string }) => {
+		if (selectedDataset) {
+			setLineageState({
+				dataset: selectedDataset.name,
+				variable: variable.name
+			})
+		}
+	}, [selectedDataset])
 
+	// Handle back from lineage view
+	const handleLineageBack = useCallback(() => {
+		setLineageState(null)
+	}, [])
 
 	// Handle keyboard navigation
 	const { handleKeyDown } = useSidebarKeyboardNav({
@@ -59,8 +75,6 @@ export function MainScreenClient(): ReactNode {
 		onSelectionChange: handleDatasetSelect,
 		itemIds: allItemIds,
 	})
-
-
 
 	const toneFor = useCallback((index: number, total: number): number => {
 		const maxTone = 22
@@ -145,16 +159,21 @@ export function MainScreenClient(): ReactNode {
 				<div className="flex-1 overflow-hidden">
 					<VariablesBrowser 
 						dataset={selectedDataset} 
-						onVariableSelect={(variable) => {
-							console.log('Variable selected in main screen:', variable.name)
-							// Future: Open variable details modal or navigate to lineage view
-						}}
+						onVariableSelect={handleVariableSelect}
 						onEscape={() => {
 							setSelectedItem(null)
 							setSelectedId(null)
 						}}
 					/>
 				</div>
+			)}
+
+			{viewState === 'lineage' && lineageState && (
+				<LineageView
+					dataset={lineageState.dataset}
+					variable={lineageState.variable}
+					onBack={handleLineageBack}
+				/>
 			)}
 		</div>
 	)
