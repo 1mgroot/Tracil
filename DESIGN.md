@@ -72,7 +72,6 @@ Note: Free tiers/quotas change; verify before demos or releases and adjust defau
   - File parsing (XPT, SAS7BDAT, XLSX, DOCX, PDF, RTF)
   - LLM integration (OpenAI GPT, Anthropic Claude, Google Gemini)
   - Lineage analysis and gap detection
-  - CDISC compliance validation
 - **Features**: Streaming responses, async processing, automatic API documentation
 - **Privacy**: Ephemeral processing, no file persistence, metadata-only LLM calls
 - **Deployment**: Docker containers, scalable serverless deployment
@@ -308,6 +307,7 @@ Output JSON Structure:
 {
   "variable": "AEDECOD",
   "dataset": "ADAE", 
+  "summary": "The variable AEDECOD in the ADAE dataset is traced from its source in the aCRF file, through an intermediate transformation in the SDTM dataset, to its final form in the ADaM dataset. The traceability analysis highlights the transformation path and identifies any documentation gaps.",
   "lineage": {
     "nodes": [
       {"id": "aCRF.AE_TERM", "type": "source", "file": "aCRF"},
@@ -636,7 +636,6 @@ ALLOWED_ORIGINS=http://localhost:3000,https://your-frontend-domain.com
 - File upload with validation and progress indicators
 - AI-powered parsing with privacy-first approach
 - Variables browser with advanced filtering and search
-- Real-time CDISC compliance checking
 
 **Phase 3: Advanced Features**
 - Interactive lineage visualization with React Flow
@@ -664,7 +663,6 @@ ALLOWED_ORIGINS=http://localhost:3000,https://your-frontend-domain.com
 - Multi-provider consensus and fallback strategies
 - Advanced prompt engineering and few-shot learning
 - Real-time confidence scoring and uncertainty quantification
-- Advanced CDISC validation and compliance scoring
 
 **User Experience:**
 - Advanced keyboard shortcuts and power-user features

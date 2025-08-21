@@ -1,18 +1,18 @@
 import { useMemo } from 'react'
 import type { DatasetWithGroup } from '@/types/variables'
 import { mockSourceAgnosticResponse } from '@/features/variables/mockSourceAgnostic'
-import { getDatasetsForUI } from '@/lib/data-structure/migration'
+import { transformSourceAgnosticToUI } from '@/types/variables'
 
 /**
  * Hook for managing variables browser state and data
  * Provides transformed dataset data compatible with UI components
- * Uses source-agnostic data structure
+ * Uses source-agnostic data structure directly
  */
 export function useVariablesBrowser() {
   // Transform API response to UI-compatible format
-  // Now using source-agnostic structure by default
+  // Directly using source-agnostic structure
   const datasets = useMemo(() => {
-    return getDatasetsForUI(mockSourceAgnosticResponse)
+    return transformSourceAgnosticToUI(mockSourceAgnosticResponse)
   }, [])
 
   // Create a lookup map for quick dataset retrieval by ID

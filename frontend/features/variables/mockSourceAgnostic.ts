@@ -385,6 +385,27 @@ export const mockSourceAgnosticResponse: SourceAgnosticProcessFilesResponse = {
       type: "CRF",
       label: "Case Report Form",
       datasetEntities: {
+        CRF_DEMO: {
+          name: "CRF_DEMO",
+          label: "CRF Demographics",
+          type: "crf_form",
+          variables: [
+            { name: "SEX", label: "Sex (CRF)", type: "character", length: 1 }
+          ],
+          sourceFiles: [
+            {
+              fileId: "acrf_v1.0.pdf",
+              role: "primary",
+              extractedData: ["form_structure", "field_definitions"]
+            }
+          ],
+          metadata: {
+            structure: "CRF Form: Demographics",
+            version: "1.0",
+            lastModified: "2024-01-10",
+            validationStatus: "compliant"
+          }
+        },
         CRF_AE: {
           name: "CRF_AE",
           label: "Adverse Events Form",
@@ -408,7 +429,7 @@ export const mockSourceAgnosticResponse: SourceAgnosticProcessFilesResponse = {
       metadata: {
         version: "1.0",
         lastModified: "2024-01-10",
-        totalEntities: 1
+        totalEntities: 2
       }
     },
     TLF: {
