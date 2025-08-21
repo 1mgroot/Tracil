@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+pydantic
+python-multipart
+openai
+lxml
+numpy
+pandas
+pyreadstat
