@@ -8,12 +8,17 @@ import { LineageView } from './LineageView'
 import { useVariablesBrowser } from '@/hooks/useVariablesBrowser'
 import { useSidebarKeyboardNav } from '@/hooks/useSidebarKeyboardNav'
 
-
 type ViewState = 'search' | 'variables' | 'lineage'
 type SelectedItem = { type: 'dataset'; datasetId: string } | null
 
 export function MainScreenClient(): ReactNode {
-	const { datasets, getDatasetById } = useVariablesBrowser()
+	const { 
+		datasets, 
+		getDatasetById, 
+		loading, 
+		error, 
+		refresh 
+	} = useVariablesBrowser()
 	const [selectedItem, setSelectedItem] = useState<SelectedItem>(null)
 	const [selectedId, setSelectedId] = useState<string | null>(null)
 	const [lineageState, setLineageState] = useState<{ dataset: string; variable: string } | null>(null)
@@ -83,6 +88,63 @@ export function MainScreenClient(): ReactNode {
 		return Math.round(maxTone - ((maxTone - minTone) * index) / (total - 1))
 	}, [])
 
+	// Loading state
+	if (loading) {
+		return (
+			<div className="min-h-screen w-full flex items-center justify-center">
+				<div className="text-center">
+					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+					<p className="text-lg text-gray-600">Loading datasets...</p>
+				</div>
+			</div>
+		)
+	}
+
+	// Error state
+	if (error) {
+		return (
+			<div className="min-h-screen w-full flex items-center justify-center">
+				<div className="text-center max-w-md">
+					<div className="text-red-500 text-6xl mb-4">⚠️</div>
+					<h2 className="text-xl font-semibold text-gray-800 mb-2">Failed to load data</h2>
+					<p className="text-gray-600 mb-4">{error}</p>
+					<button
+						onClick={refresh}
+						className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+					>
+						Try Again
+					</button>
+				</div>
+			</div>
+		)
+	}
+
+	// No data state
+	if (!loading && datasets.length === 0) {
+		return (
+			<div className="min-h-screen w-full flex items-center justify-center">
+				<div className="text-center max-w-md">
+					<div className="text-blue-500 text-6xl mb-4">📁</div>
+					<h2 className="text-xl font-semibold text-gray-800 mb-2">No datasets available</h2>
+					<p className="text-gray-600 mb-4">
+						To get started, upload files to the Python backend using:
+					</p>
+					<div className="bg-gray-100 p-4 rounded-lg text-sm font-mono text-left mb-4">
+						curl -X POST http://localhost:8000/process-files \<br/>
+						&nbsp;&nbsp;-F "files=@your_file.xpt"<br/>
+						&nbsp;&nbsp;-F "files=@your_define.xml"
+					</div>
+					<button
+						onClick={refresh}
+						className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+					>
+						🔄 Refresh
+					</button>
+				</div>
+			</div>
+		)
+	}
+
 	return (
 		<div 
 			className="min-h-screen w-full grid grid-cols-1 md:grid-cols-[260px_1fr]"
@@ -151,6 +213,38 @@ export function MainScreenClient(): ReactNode {
 							What can I help with?
 						</h1>
 						<SearchBar className="w-full" />
+						
+						{/* Show upload instructions if no datasets */}
+						{datasets.length === 0 && (
+							<div className="max-w-2xl text-center">
+								<div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+									<h3 className="text-lg font-semibold text-blue-800 mb-3">
+										🚀 Get Started with File Upload
+									</h3>
+									<p className="text-blue-700 mb-4">
+										Upload your clinical data files to the Python backend to start exploring variables and lineage.
+									</p>
+									<div className="bg-white p-4 rounded border text-sm font-mono text-left">
+										<span className="text-gray-600"># Upload files to backend</span><br/>
+										curl -X POST http://localhost:8000/process-files \<br/>
+										&nbsp;&nbsp;-F "files=@your_file.xpt"<br/>
+										&nbsp;&nbsp;-F "files=@your_define.xml"<br/>
+										&nbsp;&nbsp;-F "files=@your_crf.pdf"
+									</div>
+									<p className="text-sm text-blue-600 mt-3">
+										After uploading, click "Refresh Data" to see your datasets.
+									</p>
+								</div>
+							</div>
+						)}
+						
+						{/* Add refresh button for testing */}
+						<button
+							onClick={refresh}
+							className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
+						>
+							🔄 Refresh Data
+						</button>
 					</div>
 				</main>
 			)}

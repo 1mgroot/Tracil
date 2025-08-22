@@ -170,6 +170,59 @@ def read_json_records(path: Path, ds_name_hint: str) -> Dict[str, Any]:
 @app.get("/health")
 def health(): return {"ok": True,"time": _nowz()}
 
+@app.get("/process-files")
+def get_latest_processed_files() -> Dict[str, Any]:
+    """Get the latest processed files data from the most recent session"""
+    try:
+        # Find the most recent session directory
+        session_dirs = [d for d in OUTPUT.iterdir() if d.is_dir() and d.name.startswith("session_")]
+        if not session_dirs:
+            return {
+                "standards": {},
+                "metadata": {
+                    "processedAt": _nowz(),
+                    "totalVariables": 0,
+                    "sourceFiles": [],
+                    "message": "No files have been processed yet. Upload files using POST /process-files"
+                }
+            }
+        
+        # Get the most recent session (sort by creation time)
+        latest_session = max(session_dirs, key=lambda d: d.stat().st_ctime)
+        session_summary_path = latest_session / "session_summary.json"
+        
+        if not session_summary_path.exists():
+            return {
+                "standards": {},
+                "metadata": {
+                    "processedAt": _nowz(),
+                    "totalVariables": 0,
+                    "sourceFiles": [],
+                    "message": f"Session summary not found in {latest_session.name}"
+                }
+            }
+        
+        # Read and return the session summary
+        with session_summary_path.open('r', encoding='utf-8') as f:
+            result = json.load(f)
+        
+        # Add metadata about which session this is from
+        result["metadata"]["sessionId"] = latest_session.name
+        result["metadata"]["sessionPath"] = str(latest_session)
+        
+        return result
+        
+    except Exception as e:
+        return {
+            "standards": {},
+            "metadata": {
+                "processedAt": _nowz(),
+                "totalVariables": 0,
+                "sourceFiles": [],
+                "error": f"Failed to retrieve latest processed files: {str(e)}"
+            }
+        }
+
 @app.post("/process-files")
 async def process_files(files: List[UploadFile] = File(...)) -> Dict[str, Any]:
     sess_dir, saved_files = _save_uploads(files)
