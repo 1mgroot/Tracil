@@ -14,7 +14,7 @@ export interface LineageNode {
 export interface LineageEdge {
   readonly from: string
   readonly to: string
-  readonly confidence?: number   // 0..1
+  readonly confidence: string    // "high", "medium", "low" from backend
   readonly label?: string        // e.g., "retain", "MedDRA map"
 }
 

@@ -9,8 +9,8 @@ export const mockLineage: Record<string, LineageGraph> = {
       { id: 'ADaM.ADSL.SEX', title: 'ADSL.SEX', group: 'ADaM', kind: 'target', dataset: 'ADSL', variable: 'SEX' },
     ],
     edges: [
-      { from: 'aCRF.DEMO.SEX', to: 'SDTM.DM.SEX', confidence: 0.95, label: 'CRF capture → SDTM standardize' },
-      { from: 'SDTM.DM.SEX', to: 'ADaM.ADSL.SEX', confidence: 0.98, label: 'retain' },
+      { from: 'aCRF.DEMO.SEX', to: 'SDTM.DM.SEX', confidence: 'high', label: 'CRF capture → SDTM standardize' },
+      { from: 'SDTM.DM.SEX', to: 'ADaM.ADSL.SEX', confidence: 'high', label: 'retain' },
     ],
     gaps: { notes: ['Confirm SDTM → ADaM retention rule in spec.'] },
   },
@@ -23,10 +23,149 @@ export const mockLineage: Record<string, LineageGraph> = {
       { id: 'ADaM.ADAE.AEBODSYS', title: 'ADAE.AEBODSYS', group: 'ADaM', kind: 'target', dataset: 'ADAE', variable: 'AEBODSYS' },
     ],
     edges: [
-      { from: 'aCRF.AE.TERM', to: 'SDTM.AE.AETERM', confidence: 0.90, label: 'CRF capture' },
-      { from: 'SDTM.AE.AETERM', to: 'SDTM.AE.AEBODSYS', confidence: 0.85, label: 'MedDRA map' },
-      { from: 'SDTM.AE.AEBODSYS', to: 'ADaM.ADAE.AEBODSYS', confidence: 0.95, label: 'retain' },
+      { from: 'aCRF.AE.TERM', to: 'SDTM.AE.AETERM', confidence: 'high', label: 'CRF capture' },
+      { from: 'SDTM.AE.AETERM', to: 'SDTM.AE.AEBODSYS', confidence: 'medium', label: 'MedDRA map' },
+      { from: 'SDTM.AE.AEBODSYS', to: 'ADaM.ADAE.AEBODSYS', confidence: 'high', label: 'retain' },
     ],
     gaps: { notes: ['Document MedDRA version and mapping rules.'] },
   },
+  'ADAE.AESCAN': {
+    summary: 'Lineage analysis for ADAE.AESCAN',
+    nodes: [
+      {
+        id: 'ADAE.AESCAN',
+        title: 'AESCAN',
+        dataset: 'ADAE',
+        variable: 'AESCAN',
+        group: 'ADaM',
+        kind: 'target',
+        meta: {
+          notes: 'Adverse Event Scan'
+        }
+      },
+      {
+        id: 'AE.AESCAN',
+        title: 'AESCAN',
+        dataset: 'ADAE',
+        variable: 'AESCAN',
+        group: 'ADaM',
+        kind: 'target',
+        meta: {
+          notes: 'Adverse Event Scan'
+        }
+      },
+      {
+        id: 'CRF.Page.121',
+        title: 'CRF Page 121',
+        dataset: 'ADAE',
+        variable: 'AESCAN',
+        group: 'aCRF',
+        kind: 'target',
+        meta: {
+          file: 'blankcrf.pdf',
+          notes: 'CRF page for AE data'
+        }
+      },
+      {
+        id: 'CRF.Page.122',
+        title: 'CRF Page 122',
+        dataset: 'ADAE',
+        variable: 'AESCAN',
+        group: 'aCRF',
+        kind: 'target',
+        meta: {
+          file: 'blankcrf.pdf',
+          notes: 'CRF page for AE data'
+        }
+      },
+      {
+        id: 'CRF.Page.123',
+        title: 'CRF Page 123',
+        dataset: 'ADAE',
+        variable: 'AESCAN',
+        group: 'aCRF',
+        kind: 'target',
+        meta: {
+          file: 'blankcrf.pdf',
+          notes: 'CRF page for AE data'
+        }
+      },
+      {
+        id: 'Protocol.Section.11.2',
+        title: 'Protocol Section 11.2',
+        dataset: 'ADAE',
+        variable: 'AESCAN',
+        group: 'TLF',
+        kind: 'target',
+        meta: {
+          file: 'SAP_SEC_11.2',
+          notes: 'Protocol section for AE analysis'
+        }
+      },
+      {
+        id: 'Table_14-5.02',
+        title: 'Table 14-5.02',
+        dataset: 'ADAE',
+        variable: 'AESCAN',
+        group: 'ADaM',
+        kind: 'target',
+        meta: {
+          notes: 'Incidence of Treatment Emergent Serious Adverse Events by Treatment Group'
+        }
+      },
+      {
+        id: 'ADaM.ADAE.AESCAN',
+        title: 'AESCAN',
+        dataset: 'ADAE',
+        variable: 'AESCAN',
+        group: 'ADaM',
+        kind: 'target',
+        meta: {
+          file: 'define',
+          notes: 'define'
+        }
+      }
+    ],
+    edges: [
+      {
+        from: 'ADAE.AESCAN',
+        to: 'AE.AESCAN',
+        confidence: 'high',
+        label: 'Derived from'
+      },
+      {
+        from: 'AE.AESCAN',
+        to: 'CRF.Page.121',
+        confidence: 'high',
+        label: 'Collected on'
+      },
+      {
+        from: 'AE.AESCAN',
+        to: 'CRF.Page.122',
+        confidence: 'high',
+        label: 'Collected on'
+      },
+      {
+        from: 'AE.AESCAN',
+        to: 'CRF.Page.123',
+        confidence: 'high',
+        label: 'Collected on'
+      },
+      {
+        from: 'Protocol.Section.11.2',
+        to: 'ADAE.AESCAN',
+        confidence: 'high',
+        label: 'Described in'
+      },
+      {
+        from: 'ADAE.AESCAN',
+        to: 'Table_14-5.02',
+        confidence: 'high',
+        label: 'Used in'
+      }
+    ],
+    gaps: {
+      notes: []
+    }
+  }
 }
