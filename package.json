@@ -18,8 +18,11 @@
     "backend:dev": "cd backend && echo 'AI Developer: Set up your Python environment and run your FastAPI server'",
     "backend:install": "cd backend && echo 'AI Developer: Install your Python dependencies (pip install -r requirements.txt)'"
   },
-  "devDependencies": {},
   "engines": {
     "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "dagre": "^0.8.5",
+    "reactflow": "^11.11.4"
   }
 }
