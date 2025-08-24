@@ -24,37 +24,40 @@ jest.mock('dagre', () => ({
   default: {
     graphlib: {
       Graph: class MockDagreGraph {
+        private nodesMap: Map<string, any>
+        private edgesMap: Map<string, any>
+        
         constructor() {
-          this.nodes = new Map()
-          this.edges = new Map()
+          this.nodesMap = new Map()
+          this.edgesMap = new Map()
         }
         
         setDefaultEdgeLabel() {}
         setGraph() {}
         setNode(id: string, dimensions: any) {
-          this.nodes.set(id, { x: 100, y: 100, ...dimensions })
+          this.nodesMap.set(id, { x: 100, y: 100, ...dimensions })
         }
         setEdge() {}
         layout() {}
         node(id: string) {
-          return this.nodes.get(id) || { x: 100, y: 100, width: 160, height: 60 }
+          return this.nodesMap.get(id) || { x: 100, y: 100, width: 160, height: 60 }
         }
         
         // Add missing methods that the component expects
         nodes() {
-          return Array.from(this.nodes.keys())
+          return Array.from(this.nodesMap.keys())
         }
         
         edges() {
-          return Array.from(this.edges.keys())
+          return Array.from(this.edgesMap.keys())
         }
         
         removeNode(nodeId: string) {
-          this.nodes.delete(nodeId)
+          this.nodesMap.delete(nodeId)
         }
         
         removeEdge(edgeId: string) {
-          this.edges.delete(edgeId)
+          this.edgesMap.delete(edgeId)
         }
       }
     }
