@@ -156,7 +156,7 @@ export function FileUploadModal({ isOpen, onClose, onUpload }: FileUploadModalPr
               Drop files here or click to browse
             </p>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-              Support for .xpt, .sas7bdat, .csv, .pdf, .docx, .rtf, .xml files
+              Support for .xpt, .sas7bdat, .csv, .pdf, .docx, .rtf, .xml, .json files
             </p>
             <Button
               onClick={() => fileInputRef.current?.click()}
@@ -169,7 +169,7 @@ export function FileUploadModal({ isOpen, onClose, onUpload }: FileUploadModalPr
               ref={fileInputRef}
               type="file"
               multiple
-              accept=".xpt,.sas7bdat,.csv,.pdf,.docx,.rtf,.xml,.html"
+              accept=".xpt,.sas7bdat,.csv,.pdf,.docx,.rtf,.xml,.html,.json"
               onChange={(e) => handleFileSelect(e.target.files)}
               className="hidden"
             />

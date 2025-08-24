@@ -320,7 +320,8 @@ export function MainScreenClient(): ReactNode {
 										curl -X POST http://localhost:8000/process-files \<br/>
 										&nbsp;&nbsp;-F &quot;files=@your_file.xpt&quot;<br/>
 										&nbsp;&nbsp;-F &quot;files=@your_define.xml&quot;<br/>
-										&nbsp;&nbsp;-F &quot;files=@your_crf.pdf&quot;
+										&nbsp;&nbsp;-F &quot;files=@your_crf.pdf&quot;<br/>
+										&nbsp;&nbsp;-F &quot;files=@your_data.json&quot;
 									</div>
 									<p className="text-sm text-blue-600 mt-3">
 										After uploading, your datasets will appear in the sidebar.
@@ -458,7 +459,8 @@ export function MainScreenClient(): ReactNode {
 											curl -X POST http://localhost:8000/process-files \<br/>
 											&nbsp;&nbsp;-F &quot;files=@your_file.xpt&quot;<br/>
 											&nbsp;&nbsp;-F &quot;files=@your_define.xml&quot;<br/>
-											&nbsp;&nbsp;-F &quot;files=@your_crf.pdf&quot;
+											&nbsp;&nbsp;-F &quot;files=@your_crf.pdf&quot;<br/>
+											&nbsp;&nbsp;-F &quot;files=@your_data.json&quot;
 										</div>
 										<p className="text-sm text-blue-600 mt-3">
 											After uploading, click &quot;Refresh Data&quot; to see your datasets.
