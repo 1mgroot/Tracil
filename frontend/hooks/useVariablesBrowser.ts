@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useCallback } from 'react'
+import { useMemo, useState, useCallback } from 'react'
 import type { DatasetWithGroup, SourceAgnosticProcessFilesResponse } from '@/types/variables'
 import { transformSourceAgnosticToUI } from '@/types/variables'
 
@@ -7,13 +7,14 @@ const API_ENDPOINT = '/api/ai/process-files'
 
 /**
  * Hook for managing variables browser state and data
- * Fetches data from the Next.js API route which proxies to Python backend
+ * Only fetches data when explicitly requested (after file upload)
  * Uses source-agnostic data structure directly
  */
 export function useVariablesBrowser() {
   const [data, setData] = useState<SourceAgnosticProcessFilesResponse | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false) // Start with false since we don't auto-fetch
   const [error, setError] = useState<string | null>(null)
+  const [hasUploadedFiles, setHasUploadedFiles] = useState(false)
 
   // Fetch data from API
   const fetchData = useCallback(async () => {
@@ -39,6 +40,7 @@ export function useVariablesBrowser() {
       }
       
       setData(result)
+      setHasUploadedFiles(true) // Mark that we have data from upload
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch data'
       console.error('❌ Error fetching variables data:', err)
@@ -48,10 +50,12 @@ export function useVariablesBrowser() {
     }
   }, [])
 
-  // Fetch data on mount
-  useEffect(() => {
-    fetchData()
-  }, [fetchData])
+  // Only fetch data if files have been uploaded
+  const fetchDataIfUploaded = useCallback(async () => {
+    if (hasUploadedFiles) {
+      await fetchData()
+    }
+  }, [hasUploadedFiles, fetchData])
 
   // Transform API response to UI-compatible format
   const datasets = useMemo(() => {
@@ -83,6 +87,18 @@ export function useVariablesBrowser() {
     fetchData()
   }, [fetchData])
 
+  // Set data directly (useful for upload responses)
+  const setDataDirectly = useCallback((newData: SourceAgnosticProcessFilesResponse) => {
+    if (newData && newData.standards) {
+      setData(newData)
+      setHasUploadedFiles(true)
+      setError(null)
+      console.log('✅ Data set directly from upload response')
+    } else {
+      console.warn('⚠️ Invalid data structure for setDataDirectly:', newData)
+    }
+  }, [])
+
   return {
     datasets,
     datasetMap,
@@ -91,6 +107,9 @@ export function useVariablesBrowser() {
     loading,
     error,
     refresh,
-    data
+    data,
+    hasUploadedFiles,
+    setHasUploadedFiles,
+    setDataDirectly
   }
 }

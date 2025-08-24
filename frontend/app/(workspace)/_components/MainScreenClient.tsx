@@ -7,6 +7,10 @@ import { VariablesBrowser } from '@/components/variables'
 import { LineageView } from './LineageView'
 import { useVariablesBrowser } from '@/hooks/useVariablesBrowser'
 import { useSidebarKeyboardNav } from '@/hooks/useSidebarKeyboardNav'
+import { FileUploadButton } from '@/components/ui/FileUploadButton'
+import { SidebarToggle } from '@/components/ui/sidebar/SidebarToggle'
+import { FileUploadModal } from '@/components/ui/FileUploadModal'
+import type { UploadState } from '@/types/upload'
 
 type ViewState = 'search' | 'variables' | 'lineage'
 type SelectedItem = { type: 'dataset'; datasetId: string } | null
@@ -17,11 +21,21 @@ export function MainScreenClient(): ReactNode {
 		getDatasetById, 
 		loading, 
 		error, 
-		refresh 
+		refresh,
+		hasUploadedFiles,
+		setHasUploadedFiles,
+		setDataDirectly
 	} = useVariablesBrowser()
 	const [selectedItem, setSelectedItem] = useState<SelectedItem>(null)
 	const [selectedId, setSelectedId] = useState<string | null>(null)
 	const [lineageState, setLineageState] = useState<{ dataset: string; variable: string } | null>(null)
+	const [sidebarVisible, setSidebarVisible] = useState(true)
+	const [uploadState, setUploadState] = useState<UploadState>({
+		isModalOpen: false,
+		isUploading: false,
+		progress: 0,
+		errors: []
+	})
 
 	// Determine current view state
 	const viewState: ViewState = lineageState ? 'lineage' : selectedItem?.type === 'dataset' ? 'variables' : 'search'
@@ -74,6 +88,56 @@ export function MainScreenClient(): ReactNode {
 		setLineageState(null)
 	}, [])
 
+	// Handle upload button click
+	const handleUploadClick = useCallback(() => {
+		setUploadState(prev => ({ ...prev, isModalOpen: true }))
+	}, [])
+
+	// Handle successful upload
+	const handleUploadSuccess = useCallback(async (files: File[]) => {
+		console.log('📁 Files uploaded successfully:', files)
+		
+		// Create FormData and send files to backend
+		const formData = new FormData()
+		files.forEach(file => {
+			formData.append('files', file)
+		})
+		
+		try {
+			const response = await fetch('/api/ai/process-files', {
+				method: 'POST',
+				body: formData,
+			})
+			
+			if (!response.ok) {
+				throw new Error(`Upload failed: ${response.statusText}`)
+			}
+			
+			const responseData = await response.json()
+			console.log('📊 Upload response data:', responseData)
+			
+			// Update the variables browser data directly with the upload response
+			// This ensures the UI updates immediately without needing a refresh
+			if (responseData && responseData.standards) {
+				// Set the data directly in the hook's state - this is the best practice
+				// It avoids unnecessary API calls and ensures immediate UI updates
+				setDataDirectly(responseData)
+			} else {
+				console.warn('⚠️ Upload response missing standards data:', responseData)
+				setHasUploadedFiles(true)
+			}
+			
+		} catch (error) {
+			console.error('❌ Upload error:', error)
+			throw error // Re-throw to let the modal handle the error
+		}
+	}, [refresh])
+
+	// Handle upload modal close
+	const handleUploadModalClose = useCallback(() => {
+		setUploadState(prev => ({ ...prev, isModalOpen: false }))
+	}, [])
+
 	// Handle keyboard navigation
 	const { handleKeyDown } = useSidebarKeyboardNav({
 		selectedId,
@@ -88,25 +152,25 @@ export function MainScreenClient(): ReactNode {
 		return Math.round(maxTone - ((maxTone - minTone) * index) / (total - 1))
 	}, [])
 
-	// Loading state
+	// Loading state (only show when actively loading after upload)
 	if (loading) {
 		return (
 			<div className="min-h-screen w-full flex items-center justify-center">
 				<div className="text-center">
 					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-					<p className="text-lg text-gray-600">Loading datasets...</p>
+					<p className="text-lg text-gray-600">Processing uploaded files...</p>
 				</div>
 			</div>
 		)
 	}
 
-	// Error state
-	if (error) {
+	// Error state (only show when there's an error after upload)
+	if (error && hasUploadedFiles) {
 		return (
 			<div className="min-h-screen w-full flex items-center justify-center">
 				<div className="text-center max-w-md">
 					<div className="text-red-500 text-6xl mb-4">⚠️</div>
-					<h2 className="text-xl font-semibold text-gray-800 mb-2">Failed to load data</h2>
+					<h2 className="text-xl font-semibold text-gray-800 mb-2">Failed to process uploaded files</h2>
 					<p className="text-gray-600 mb-4">{error}</p>
 					<button
 						onClick={refresh}
@@ -119,38 +183,113 @@ export function MainScreenClient(): ReactNode {
 		)
 	}
 
-	// No data state
-	if (!loading && datasets.length === 0) {
+	// No data state - show main interface even without uploaded files
+	if (!hasUploadedFiles) {
 		return (
-			<div className="min-h-screen w-full flex items-center justify-center">
-				<div className="text-center max-w-md">
-					<div className="text-blue-500 text-6xl mb-4">📁</div>
-					<h2 className="text-xl font-semibold text-gray-800 mb-2">No datasets available</h2>
-					<p className="text-gray-600 mb-4">
-						To get started, upload files to the Python backend using:
-					</p>
-					<div className="bg-gray-100 p-4 rounded-lg text-sm font-mono text-left mb-4">
-						curl -X POST http://localhost:8000/process-files \<br/>
-						&nbsp;&nbsp;-F "files=@your_file.xpt"<br/>
-						&nbsp;&nbsp;-F "files=@your_define.xml"
-					</div>
-					<button
-						onClick={refresh}
-						className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-					>
-						🔄 Refresh
-					</button>
+			<>
+				{/* Main interface without data */}
+				<div 
+					className={`min-h-screen w-full grid grid-cols-1 ${
+						sidebarVisible ? 'md:grid-cols-[260px_1fr]' : 'md:grid-cols-[0px_1fr]'
+					}`}
+				>
+					<aside className={`hidden md:block transition-all duration-300 ${
+						sidebarVisible ? 'w-[260px]' : 'w-0 overflow-hidden'
+					}`}>
+						<Sidebar header={null} onKeyDown={handleKeyDown}>
+							{/* Sidebar Header with Controls */}
+							<div className="flex items-center justify-between p-3 border-b border-gray-200 dark:border-gray-700">
+								<FileUploadButton
+									onUploadClick={handleUploadClick}
+									variant="sidebar"
+									className="flex-shrink-0"
+								/>
+								<SidebarToggle
+									isVisible={sidebarVisible}
+									onToggle={() => setSidebarVisible(!sidebarVisible)}
+									className="flex-shrink-0"
+								/>
+							</div>
+							{/* Empty sidebar content */}
+							<div className="p-4 text-center text-gray-500 dark:text-gray-400">
+								<p className="text-sm">No datasets available</p>
+								<p className="text-xs mt-1">Upload files to see your data</p>
+							</div>
+						</Sidebar>
+					</aside>
+
+					{/* Main content area */}
+					<main className="flex flex-col p-6">
+						{/* Header */}
+						<div className="flex items-center justify-center mb-6">
+							<h1 className="text-2xl md:text-3xl text-balance text-center">
+								What can I help with?
+							</h1>
+						</div>
+
+						{/* Main content */}
+						<div className="flex-1 flex flex-col items-center justify-center gap-6">
+							<SearchBar className="w-full max-w-2xl" />
+							
+							{/* Upload instructions */}
+							<div className="max-w-2xl text-center">
+								<div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+									<h3 className="text-lg font-semibold text-blue-800 mb-3">
+										🚀 Get Started with File Upload
+									</h3>
+									<p className="text-blue-700 mb-4">
+										Use the upload button in the left sidebar to add your clinical data files.
+									</p>
+									<div className="bg-white p-4 rounded border text-sm font-mono text-left">
+										<span className="text-gray-600"># Upload files to backend</span><br/>
+										curl -X POST http://localhost:8000/process-files \<br/>
+										&nbsp;&nbsp;-F &quot;files=@your_file.xpt&quot;<br/>
+										&nbsp;&nbsp;-F &quot;files=@your_define.xml&quot;<br/>
+										&nbsp;&nbsp;-F &quot;files=@your_crf.pdf&quot;
+									</div>
+									<p className="text-sm text-blue-600 mt-3">
+										After uploading, your datasets will appear in the sidebar.
+									</p>
+								</div>
+							</div>
+						</div>
+					</main>
 				</div>
-			</div>
+
+				{/* File Upload Modal */}
+				<FileUploadModal
+					isOpen={uploadState.isModalOpen}
+					onClose={handleUploadModalClose}
+					onUpload={handleUploadSuccess}
+				/>
+			</>
 		)
 	}
 
 	return (
-		<div 
-			className="min-h-screen w-full grid grid-cols-1 md:grid-cols-[260px_1fr]"
-		>
-			<aside className="hidden md:block">
+		<>
+			<div 
+				className={`min-h-screen w-full grid grid-cols-1 ${
+					sidebarVisible ? 'md:grid-cols-[260px_1fr]' : 'md:grid-cols-[0px_1fr]'
+				}`}
+			>
+			<aside className={`hidden md:block transition-all duration-300 ${
+				sidebarVisible ? 'w-[260px]' : 'w-0 overflow-hidden'
+			}`}>
 				<Sidebar header={null} onKeyDown={handleKeyDown}>
+					{/* Sidebar Header with Controls */}
+					<div className="flex items-center justify-between p-3 border-b border-gray-200 dark:border-gray-700">
+						<FileUploadButton
+							onUploadClick={handleUploadClick}
+							variant="sidebar"
+							className="flex-shrink-0"
+						/>
+						<SidebarToggle
+							isVisible={sidebarVisible}
+							onToggle={() => setSidebarVisible(!sidebarVisible)}
+							className="flex-shrink-0"
+						/>
+					</div>
 					<SidebarGroup label="ADaM" accentVar="--accent-adam">
 						{groupedDatasets.ADaM.map((dataset, i) => (
 							<SidebarItem 
@@ -207,12 +346,17 @@ export function MainScreenClient(): ReactNode {
 			</aside>
 
 			{viewState === 'search' && (
-				<main className="flex items-center justify-center p-6">
-					<div className="w-full flex flex-col items-center gap-6">
-						<h1 className="text-center text-2xl md:text-3xl text-balance">
+				<main className="flex flex-col p-6">
+					{/* Header */}
+					<div className="flex items-center justify-center mb-6">
+						<h1 className="text-2xl md:text-3xl text-balance text-center">
 							What can I help with?
 						</h1>
-						<SearchBar className="w-full" />
+					</div>
+
+					{/* Main content */}
+					<div className="flex-1 flex flex-col items-center justify-center gap-6">
+						<SearchBar className="w-full max-w-2xl" />
 						
 						{/* Show upload instructions if no datasets */}
 						{datasets.length === 0 && (
@@ -227,12 +371,12 @@ export function MainScreenClient(): ReactNode {
 									<div className="bg-white p-4 rounded border text-sm font-mono text-left">
 										<span className="text-gray-600"># Upload files to backend</span><br/>
 										curl -X POST http://localhost:8000/process-files \<br/>
-										&nbsp;&nbsp;-F "files=@your_file.xpt"<br/>
-										&nbsp;&nbsp;-F "files=@your_define.xml"<br/>
-										&nbsp;&nbsp;-F "files=@your_crf.pdf"
+										&nbsp;&nbsp;-F &quot;files=@your_file.xpt&quot;<br/>
+										&nbsp;&nbsp;-F &quot;files=@your_define.xml&quot;<br/>
+										&nbsp;&nbsp;-F &quot;files=@your_crf.pdf&quot;
 									</div>
 									<p className="text-sm text-blue-600 mt-3">
-										After uploading, click "Refresh Data" to see your datasets.
+										After uploading, click &quot;Refresh Data&quot; to see your datasets.
 									</p>
 								</div>
 							</div>
@@ -269,7 +413,15 @@ export function MainScreenClient(): ReactNode {
 					onBack={handleLineageBack}
 				/>
 			)}
-		</div>
+			</div>
+
+		{/* File Upload Modal */}
+		<FileUploadModal
+			isOpen={uploadState.isModalOpen}
+			onClose={handleUploadModalClose}
+			onUpload={handleUploadSuccess}
+		/>
+	</>
 	)
 }
 

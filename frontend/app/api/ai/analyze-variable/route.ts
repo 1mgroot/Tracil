@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import type { AnalyzeVariableRequest, AnalyzeVariableResponse } from '@/types/variables'
 
 // Configuration
-const PYTHON_BACKEND_URL = process.env.PYTHON_AI_BACKEND_URL || 'http://localhost:8000'
-const API_TIMEOUT_MS = parseInt(process.env.AI_API_TIMEOUT_MS || '30000')
+const PYTHON_BACKEND_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
+const API_TIMEOUT_MS = parseInt(process.env.NEXT_PUBLIC_API_TIMEOUT_MS || '30000')
 
 /**
  * Next.js API route for analyzing variable lineage

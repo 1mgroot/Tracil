@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import type { SourceAgnosticProcessFilesResponse } from '@/types/variables'
 
 // Configuration
-const PYTHON_BACKEND_URL = process.env.PYTHON_AI_BACKEND_URL || 'http://localhost:8000'
-const API_TIMEOUT_MS = parseInt(process.env.AI_API_TIMEOUT_MS || '30000')
+const PYTHON_BACKEND_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
+const API_TIMEOUT_MS = parseInt(process.env.NEXT_PUBLIC_API_TIMEOUT_MS || '30000')
 
 /**
  * Next.js API route for processing files
@@ -14,138 +14,6 @@ const API_TIMEOUT_MS = parseInt(process.env.AI_API_TIMEOUT_MS || '30000')
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
-    // For now, this route returns mock data since we're not implementing file upload yet
-    // In the future, this will:
-    // 1. Receive files from frontend
-    // 2. Forward to Python backend
-    // 3. Return the response
-    
-    // Mock response for testing
-    const mockResponse: SourceAgnosticProcessFilesResponse = {
-      standards: {
-        SDTM: {
-          type: "SDTM",
-          label: "Study Data Tabulation Model",
-          datasetEntities: {
-            DM: {
-              name: "DM",
-              label: "Demographics",
-              type: "domain",
-              variables: [
-                {
-                  name: "USUBJID",
-                  label: "Unique Subject Identifier",
-                  type: "character",
-                  length: 20,
-                  role: "identifier",
-                  mandatory: true
-                },
-                {
-                  name: "AGE",
-                  label: "Age",
-                  type: "numeric",
-                  role: "topic",
-                  format: "3."
-                }
-              ],
-              sourceFiles: [
-                {
-                  fileId: "define_sdtm_v1.xml",
-                  role: "primary",
-                  extractedData: ["metadata", "variables", "codelists"]
-                }
-              ],
-              metadata: {
-                records: 100,
-                structure: "One record per subject",
-                version: "1.0",
-                lastModified: "2024-01-15",
-                validationStatus: "compliant"
-              }
-            }
-          },
-          metadata: {
-            version: "1.0",
-            lastModified: "2024-01-15",
-            totalEntities: 1
-          }
-        },
-        ADaM: {
-          type: "ADaM",
-          label: "Analysis Data Model",
-          datasetEntities: {
-            ADSL: {
-              name: "ADSL",
-              label: "Subject-Level Analysis Dataset",
-              type: "analysis_dataset",
-              variables: [
-                {
-                  name: "USUBJID",
-                  label: "Unique Subject Identifier",
-                  type: "character",
-                  length: 20,
-                  role: "identifier",
-                  mandatory: true
-                },
-                {
-                  name: "AGE",
-                  label: "Age at Baseline",
-                  type: "numeric",
-                  role: "covariate",
-                  format: "3."
-                }
-              ],
-              sourceFiles: [
-                {
-                  fileId: "adam_spec_v2.xlsx",
-                  role: "primary",
-                  extractedData: ["metadata", "variables", "derivation_logic"]
-                }
-              ],
-              metadata: {
-                records: 100,
-                structure: "One record per subject",
-                version: "2.0",
-                lastModified: "2024-01-16",
-                validationStatus: "compliant"
-              }
-            }
-          },
-          metadata: {
-            version: "2.0",
-            lastModified: "2024-01-16",
-            totalEntities: 1
-          }
-        }
-      },
-      metadata: {
-        processedAt: new Date().toISOString(),
-        totalVariables: 4,
-        sourceFiles: [
-          {
-            id: "define_sdtm_v1.xml",
-            filename: "define_sdtm_v1.xml",
-            type: "define_xml",
-            uploadedAt: "2024-01-15T09:00:00Z",
-            sizeKB: 45,
-            processingStatus: "completed"
-          },
-          {
-            id: "adam_spec_v2.xlsx",
-            filename: "adam_spec_v2.xlsx",
-            type: "spec_xlsx",
-            uploadedAt: "2024-01-16T08:30:00Z",
-            sizeKB: 120,
-            processingStatus: "completed"
-          }
-        ]
-      }
-    }
-
-    return NextResponse.json(mockResponse)
-
-    /* Future implementation when file upload is ready:
-    
     // Get files from request
     const formData = await request.formData()
     const files = formData.getAll('files') as File[]
@@ -157,10 +25,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       )
     }
 
+    console.log(`📁 Processing ${files.length} files:`, files.map(f => f.name))
+    console.log(`🔗 Backend URL: ${PYTHON_BACKEND_URL}`)
+
     // Forward to Python backend
     const backendFormData = new FormData()
     files.forEach(file => {
       backendFormData.append('files', file)
+      console.log(`📎 Appending file: ${file.name} (${file.size} bytes)`)
     })
 
     const controller = new AbortController()
@@ -180,12 +52,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       }
 
       const data: SourceAgnosticProcessFilesResponse = await response.json()
+      console.log('✅ Files processed successfully by backend')
       return NextResponse.json(data)
     } catch (error) {
       clearTimeout(timeoutId)
       throw error
     }
-    */
     
   } catch (error) {
     console.error('Error processing files:', error)
@@ -280,7 +152,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       })
     }
     
-  } catch (error) {
+  } catch {
     return NextResponse.json({ 
       status: 'error',
       error: 'Failed to get data',
