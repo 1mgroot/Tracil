@@ -98,26 +98,72 @@ import type { FileGroupKind } from './files'
 export function transformSourceAgnosticToUI(response: SourceAgnosticProcessFilesResponse): DatasetWithGroup[] {
   const datasets: DatasetWithGroup[] = []
   
+  // Defensive programming: ensure response and standards exist
+  if (!response || !response.standards) {
+    console.warn('transformSourceAgnosticToUI: Invalid response structure', response)
+    return []
+  }
+  
   Object.entries(response.standards).forEach(([standardType, standard]) => {
-    if (!standard) return
+    if (!standard || !standard.datasetEntities) {
+      console.warn(`transformSourceAgnosticToUI: Invalid standard structure for ${standardType}`, standard)
+      return
+    }
     
     Object.values(standard.datasetEntities).forEach(entity => {
+      if (!entity || !entity.name || !entity.variables) {
+        console.warn(`transformSourceAgnosticToUI: Invalid entity structure`, entity)
+        return
+      }
+      
       datasets.push({
         name: entity.name,
         label: entity.label,
         variables: entity.variables,
         metadata: {
-          records: entity.metadata.records,
-          structure: entity.metadata.structure,
-          version: entity.metadata.version,
-          lastModified: entity.metadata.lastModified
+          records: entity.metadata?.records,
+          structure: entity.metadata?.structure,
+          version: entity.metadata?.version,
+          lastModified: entity.metadata?.lastModified
         },
         id: `${standardType}-${entity.name}`,
         group: standardType as FileGroupKind,
-        fileId: entity.sourceFiles[0]?.fileId || `${standardType}-${entity.name}`
+        fileId: entity.sourceFiles?.[0]?.fileId || `${standardType}-${entity.name}`
       })
     })
   })
   
   return datasets
+}
+
+// API Request/Response Types for Variable Analysis
+export interface AnalyzeVariableRequest {
+  readonly variable: string
+  readonly dataset: string
+  readonly files?: readonly { readonly [key: string]: any }[]
+}
+
+export interface AnalyzeVariableResponse {
+  readonly variable: string
+  readonly dataset: string
+  readonly summary: string
+  readonly lineage: {
+    readonly summary: string
+    readonly nodes: readonly {
+      readonly id: string
+      readonly title: string
+      readonly dataset?: string
+      readonly variable?: string
+      readonly group: 'ADaM' | 'SDTM' | 'aCRF' | 'TLF'
+      readonly kind: 'source' | 'intermediate' | 'target'
+      readonly meta?: { file?: string; notes?: string }
+    }[]
+    readonly edges: readonly {
+      readonly from: string
+      readonly to: string
+      readonly confidence?: number
+      readonly label?: string
+    }[]
+    readonly gaps?: { readonly notes?: string[] }
+  }
 }

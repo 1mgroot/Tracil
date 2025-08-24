@@ -1,0 +1,60 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tracil-backend"
+version = "0.1.0"
+description = "FastAPI backend for Tracil clinical data processing and AI-powered lineage analysis"
+authors = [
+    {name = "Tracil Team", email = "team@tracil.com"}
+]
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "fastapi>=0.116.0",
+    "uvicorn[standard]>=0.35.0",
+    "pydantic>=2.11.0",
+    "python-multipart>=0.0.20",
+    "openai>=1.100.0",
+    "numpy>=2.3.0",
+    "pandas>=2.3.0",
+    "pyreadstat>=1.3.0",
+    "lxml>=6.0.0",
+    "PyMuPDF>=1.26.0",
+    "python-docx>=1.2.0",
+    "striprtf>=0.0.29",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "flake8>=6.0.0",
+    "mypy>=1.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/tracil/tracil"
+Repository = "https://github.com/tracil/tracil"
+Documentation = "https://docs.tracil.com"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["services*"]
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+
+[tool.isort]
+profile = "black"
+line_length = 88
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true

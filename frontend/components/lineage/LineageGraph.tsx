@@ -14,6 +14,8 @@ interface TooltipData {
 
 export function LineageGraph({ lineage }: LineageGraphProps) {
   const [tooltip, setTooltip] = useState<TooltipData | null>(null)
+  
+
 
   const getGroupColor = (group: string): string => {
     switch (group) {
@@ -35,36 +37,81 @@ export function LineageGraph({ lineage }: LineageGraphProps) {
     }
   }
 
-  // Calculate node positions with horizontal layout and wrapping
+  // Calculate node positions with hierarchical tree layout
   const getNodePositions = () => {
-    const nodeWidth = 120 // Approximate width of each node button
-    const nodeHeight = 48 // Approximate height of each node button
-    const horizontalSpacing = 40 // Space between nodes horizontally
-    const verticalSpacing = 80 // Space between rows
-    const containerWidth = 800 // Approximate container width for wrapping
+    const nodeWidth = 140 // Increased width for better readability
+    const nodeHeight = 48
+    const horizontalSpacing = 180 // Increased horizontal spacing
+    const verticalSpacing = 100 // Increased vertical spacing
     
     const positions: { [key: string]: { x: number; y: number; width: number; height: number } } = {}
-    let currentX = 0
-    let currentY = 0
-    let maxHeightInRow = 0
     
-    lineage.nodes.forEach((node) => {
-      // Check if we need to wrap to a new row
-      if (currentX + nodeWidth > containerWidth && currentX > 0) {
-        currentX = 0
-        currentY += maxHeightInRow + verticalSpacing
-        maxHeightInRow = 0
-      }
+    // Build adjacency lists for incoming and outgoing edges
+    const incomingEdges: { [key: string]: string[] } = {}
+    const outgoingEdges: { [key: string]: string[] } = {}
+    
+    lineage.nodes.forEach(node => {
+      incomingEdges[node.id] = []
+      outgoingEdges[node.id] = []
+    })
+    
+    lineage.edges.forEach(edge => {
+      outgoingEdges[edge.from].push(edge.to)
+      incomingEdges[edge.to].push(edge.from)
+    })
+    
+    // Find root nodes (nodes with no incoming edges)
+    const rootNodes = lineage.nodes.filter(node => incomingEdges[node.id].length === 0)
+    
+    // Assign levels using BFS
+    const levels: { [key: string]: number } = {}
+    const queue = [...rootNodes.map(node => ({ id: node.id, level: 0 }))]
+    const visited = new Set<string>()
+    
+    while (queue.length > 0) {
+      const { id, level } = queue.shift()!
       
-      positions[node.id] = {
-        x: currentX + nodeWidth / 2,
-        y: currentY + nodeHeight / 2,
-        width: nodeWidth,
-        height: nodeHeight
-      }
+      if (visited.has(id)) continue
+      visited.add(id)
       
-      currentX += nodeWidth + horizontalSpacing
-      maxHeightInRow = Math.max(maxHeightInRow, nodeHeight)
+      levels[id] = level
+      
+      // Add children to queue
+      outgoingEdges[id].forEach(childId => {
+        if (!visited.has(childId)) {
+          queue.push({ id: childId, level: level + 1 })
+        }
+      })
+    }
+    
+    // Group nodes by level
+    const nodesByLevel: { [level: number]: string[] } = {}
+    Object.entries(levels).forEach(([nodeId, level]) => {
+      if (!nodesByLevel[level]) nodesByLevel[level] = []
+      nodesByLevel[level].push(nodeId)
+    })
+    
+    // Position nodes level by level
+    const maxLevel = Math.max(...Object.keys(nodesByLevel).map(Number))
+    
+    Object.entries(nodesByLevel).forEach(([levelStr, nodeIds]) => {
+      const level = parseInt(levelStr)
+      const y = level * verticalSpacing + nodeHeight / 2 + 50 // Start with some top padding
+      
+      // Calculate total width needed for this level
+      const totalWidth = nodeIds.length * nodeWidth + (nodeIds.length - 1) * horizontalSpacing
+      const startX = Math.max(nodeWidth / 2, (1000 - totalWidth) / 2) // Center the level, min width
+      
+      nodeIds.forEach((nodeId, index) => {
+        const x = startX + index * (nodeWidth + horizontalSpacing)
+        
+        positions[nodeId] = {
+          x,
+          y,
+          width: nodeWidth,
+          height: nodeHeight
+        }
+      })
     })
     
     return positions
@@ -72,7 +119,7 @@ export function LineageGraph({ lineage }: LineageGraphProps) {
 
   const nodePositions = getNodePositions()
 
-  // Calculate connection points at node edges
+  // Calculate connection points at node edges with improved routing
   const getConnectionPoints = (fromId: string, toId: string) => {
     const fromPos = nodePositions[fromId]
     const toPos = nodePositions[toId]
@@ -85,18 +132,65 @@ export function LineageGraph({ lineage }: LineageGraphProps) {
     
     // Normalize the direction vector
     const length = Math.sqrt(dx * dx + dy * dy)
+    if (length === 0) return null
+    
     const normalizedDx = dx / length
     const normalizedDy = dy / length
     
-    // Calculate connection points at node edges
-    const fromEdgeX = fromPos.x + (normalizedDx * fromPos.width / 2)
-    const fromEdgeY = fromPos.y + (normalizedDy * fromPos.height / 2)
-    const toEdgeX = toPos.x - (normalizedDx * toPos.width / 2)
-    const toEdgeY = toPos.y - (normalizedDy * toPos.height / 2)
+    // For better visual flow, prefer connecting from bottom of upper node to top of lower node
+    let fromEdgeX, fromEdgeY, toEdgeX, toEdgeY
+    
+    if (Math.abs(dy) > Math.abs(dx)) {
+      // Vertical connection is dominant
+      if (dy > 0) {
+        // From node is above to node
+        fromEdgeX = fromPos.x
+        fromEdgeY = fromPos.y + fromPos.height / 2
+        toEdgeX = toPos.x
+        toEdgeY = toPos.y - toPos.height / 2
+      } else {
+        // From node is below to node
+        fromEdgeX = fromPos.x
+        fromEdgeY = fromPos.y - fromPos.height / 2
+        toEdgeX = toPos.x
+        toEdgeY = toPos.y + toPos.height / 2
+      }
+    } else {
+      // Horizontal connection is dominant
+      if (dx > 0) {
+        // From node is left of to node
+        fromEdgeX = fromPos.x + fromPos.width / 2
+        fromEdgeY = fromPos.y
+        toEdgeX = toPos.x - toPos.width / 2
+        toEdgeY = toPos.y
+      } else {
+        // From node is right of to node
+        fromEdgeX = fromPos.x - fromPos.width / 2
+        fromEdgeY = fromPos.y
+        toEdgeX = toPos.x + toPos.width / 2
+        toEdgeY = toPos.y
+      }
+    }
     
     return {
       from: { x: fromEdgeX, y: fromEdgeY },
       to: { x: toEdgeX, y: toEdgeY }
+    }
+  }
+
+  // Create curved paths for better visual flow
+  const createPath = (from: { x: number; y: number }, to: { x: number; y: number }) => {
+    const dx = to.x - from.x
+    const dy = to.y - from.y
+    
+    // For hierarchical layout, use smooth curves
+    if (Math.abs(dy) > 20) {
+      // Vertical flow - use curved path
+      const midY = from.y + dy * 0.6
+      return `M ${from.x} ${from.y} Q ${from.x} ${midY} ${to.x} ${to.y}`
+    } else {
+      // Horizontal flow - use straight line
+      return `M ${from.x} ${from.y} L ${to.x} ${to.y}`
     }
   }
 
@@ -113,6 +207,11 @@ export function LineageGraph({ lineage }: LineageGraphProps) {
         {node.meta?.file && (
           <div className="text-sm text-gray-600">
             Source: {node.meta.file}
+          </div>
+        )}
+        {node.meta?.notes && (
+          <div className="text-sm text-gray-600">
+            Notes: {node.meta.notes}
           </div>
         )}
         <div className="text-sm text-gray-600">
@@ -154,7 +253,7 @@ export function LineageGraph({ lineage }: LineageGraphProps) {
         )}
         {edge.confidence && (
           <div className="text-sm text-gray-600">
-            Confidence: {Math.round(edge.confidence * 100)}%
+            Confidence: {edge.confidence}
           </div>
         )}
       </div>
@@ -172,13 +271,23 @@ export function LineageGraph({ lineage }: LineageGraphProps) {
     setTooltip(null)
   }
 
+  // Get confidence color based on string value
+  const getConfidenceColor = (confidence: string): string => {
+    switch (confidence.toLowerCase()) {
+      case 'high': return '#10b981' // green
+      case 'medium': return '#f59e0b' // amber
+      case 'low': return '#ef4444' // red
+      default: return '#6b7280' // gray
+    }
+  }
+
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
       <h2 className="text-lg font-semibold text-gray-900 mb-6">
         Lineage flow chart
       </h2>
       
-      <div className="relative min-h-[400px] overflow-auto">
+      <div className="relative min-h-[600px] overflow-auto" style={{ width: '100%', minWidth: '1200px' }}>
         {/* Render nodes as positioned buttons */}
         {lineage.nodes.map((node) => {
           const position = nodePositions[node.id]
@@ -210,23 +319,24 @@ export function LineageGraph({ lineage }: LineageGraphProps) {
           )
         })}
         
-        {/* Render edges as straight SVG connections */}
+        {/* Render edges as curved SVG paths */}
         <svg className="absolute inset-0 w-full h-full pointer-events-none">
           {lineage.edges.map((edge) => {
             const connectionPoints = getConnectionPoints(edge.from, edge.to)
             
             if (!connectionPoints) return null
             
+            const confidenceColor = getConfidenceColor(edge.confidence)
+            const pathData = createPath(connectionPoints.from, connectionPoints.to)
+            
             return (
               <g key={`${edge.from}-${edge.to}`}>
-                {/* Straight line connection */}
-                <line
-                  x1={connectionPoints.from.x}
-                  y1={connectionPoints.from.y}
-                  x2={connectionPoints.to.x}
-                  y2={connectionPoints.to.y}
-                  stroke="#6b7280"
+                {/* Curved path connection */}
+                <path
+                  d={pathData}
+                  stroke={confidenceColor}
                   strokeWidth="2"
+                  fill="none"
                   markerEnd="url(#arrowhead)"
                   className="pointer-events-auto cursor-pointer hover:stroke-gray-800 hover:stroke-[3px] transition-all duration-200"
                   onMouseEnter={(e) => handleEdgeMouseEnter(e, edge)}
@@ -297,7 +407,7 @@ export function LineageGraph({ lineage }: LineageGraphProps) {
                 <li key={`${edge.from}-${edge.to}`} className="text-sm text-gray-600">
                   <span className="font-medium">{edge.from}</span> → <span className="font-medium">{edge.to}</span>
                   {edge.label && ` (${edge.label})`}
-                  {edge.confidence && ` - Confidence: ${Math.round(edge.confidence * 100)}%`}
+                  {edge.confidence && ` - Confidence: ${edge.confidence}`}
                 </li>
               ))}
             </ul>

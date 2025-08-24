@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { TraceabilitySummary } from '@/components/lineage/TraceabilitySummary'
-import { LineageGraph } from '@/components/lineage/LineageGraph'
+import { LineageGraphReactFlow } from '@/components/lineage/LineageGraphReactFlow'
 import { analyzeLineage } from '@/lib/ai/entrypoints/analyzeLineage'
 import type { LineageGraph as LineageGraphType } from '@/types/lineage'
+import { mockLineage } from '@/features/lineage/mocks'
 
 interface LineageViewProps {
   dataset: string
@@ -23,6 +24,7 @@ export function LineageView({ dataset, variable, onBack }: LineageViewProps) {
         setLoading(true)
         setError(null)
         const result = await analyzeLineage({ dataset, variable })
+        console.log('LineageView received result:', result)
         setLineage(result)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load lineage')
@@ -114,7 +116,7 @@ export function LineageView({ dataset, variable, onBack }: LineageViewProps) {
         
         {/* Graph canvas - main area */}
         <div className="lg:col-span-2">
-          <LineageGraph lineage={lineage} />
+          <LineageGraphReactFlow lineage={lineage} />
         </div>
       </div>
     </div>

@@ -118,7 +118,7 @@ describe('SearchBar', () => {
     it('should have proper CSS classes', () => {
       render(<SearchBar />)
       
-      const container = screen.getByRole('textbox').closest('div').parentElement
+      const container = screen.getByRole('textbox').closest('div')?.parentElement
       expect(container).toHaveClass('w-full', 'max-w-2xl')
       
       const searchContainer = screen.getByRole('textbox').parentElement
@@ -131,7 +131,7 @@ describe('SearchBar', () => {
     it('should apply custom className', () => {
       render(<SearchBar className="custom-class" />)
       
-      const container = screen.getByRole('textbox').closest('div').parentElement
+      const container = screen.getByRole('textbox').closest('div')?.parentElement
       expect(container).toHaveClass('custom-class')
     })
 
@@ -245,14 +245,14 @@ describe('SearchBar', () => {
     it('should have proper max width constraint', () => {
       render(<SearchBar />)
       
-      const container = screen.getByRole('textbox').closest('div').parentElement
+      const container = screen.getByRole('textbox').closest('div')?.parentElement
       expect(container).toHaveClass('max-w-2xl')
     })
 
     it('should be full width within constraints', () => {
       render(<SearchBar />)
       
-      const container = screen.getByRole('textbox').closest('div').parentElement
+      const container = screen.getByRole('textbox').closest('div')?.parentElement
       expect(container).toHaveClass('w-full')
     })
   })
