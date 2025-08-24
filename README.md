@@ -79,6 +79,57 @@ npm run backend:dev     # Placeholder - AI Developer implements
 - Phase 2: Connect via HTTP API calls (no Docker needed)
 - Phase 3: Optional Docker setup for production
 
+### Accessibility Support
+
+Tracil is built with **accessibility-first** principles, ensuring the platform is usable by everyone, including users with disabilities.
+
+**WCAG 2.2 AA Compliance:**
+- ✅ Full keyboard navigation support
+- ✅ Screen reader compatibility (ARIA labels, roles, properties)
+- ✅ High contrast color schemes (OKLCH color space)
+- ✅ Focus management and visual indicators
+- ✅ Semantic HTML structure
+- ✅ Alternative text for images and icons
+
+**Accessibility Features:**
+- **Keyboard Navigation**: Complete interface control without mouse
+  - Tab/Shift+Tab for navigation
+  - Enter/Space for activation
+  - Arrow keys for lists and grids
+  - Escape to close modals/dropdowns
+- **Screen Reader Support**: Comprehensive ARIA implementation
+  - Descriptive labels for all interactive elements
+  - Live regions for dynamic content updates
+  - Proper heading hierarchy (h1-h6)
+  - Table headers and captions for data
+- **Visual Accessibility**: 
+  - 4.5:1 minimum contrast ratio (AAA level)
+  - Scalable text up to 200% without horizontal scrolling
+  - No reliance on color alone for information
+  - Reduced motion support for vestibular disorders
+- **Cognitive Accessibility**:
+  - Clear, consistent navigation patterns
+  - Descriptive error messages and validation
+  - Timeout warnings and extensions
+  - Help text and tooltips for complex interactions
+
+**Testing & Validation:**
+- Automated accessibility testing with axe-core
+- Manual keyboard navigation testing
+- Screen reader testing (NVDA, JAWS, VoiceOver)
+- Color contrast validation
+- 122 accessibility tests in the test suite
+
+**Keyboard Shortcuts:**
+- `Cmd/Ctrl + B`: Toggle sidebar
+- `Tab`: Navigate forward through interactive elements
+- `Shift + Tab`: Navigate backward
+- `Enter/Space`: Activate buttons and links
+- `Escape`: Close modals and dropdowns
+- `Arrow Keys`: Navigate within data grids and lists
+
+For accessibility feedback or support requests, please open an issue with the `accessibility` label.
+
 ### Deploy
 - Frontend: Vercel (environment variables in project settings)
 - Backend: AI Developer's choice of Python deployment platform
