@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import type { SourceAgnosticProcessFilesResponse } from '@/types/variables'
 
 // Configuration
-const PYTHON_BACKEND_URL = process.env.PYTHON_AI_BACKEND_URL || 'http://localhost:8000'
-const API_TIMEOUT_MS = parseInt(process.env.AI_API_TIMEOUT_MS || '30000')
+const PYTHON_BACKEND_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
+const API_TIMEOUT_MS = parseInt(process.env.NEXT_PUBLIC_API_TIMEOUT_MS || '30000')
 
 /**
  * Next.js API route for processing files
@@ -26,11 +26,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     console.log(`📁 Processing ${files.length} files:`, files.map(f => f.name))
+    console.log(`🔗 Backend URL: ${PYTHON_BACKEND_URL}`)
 
     // Forward to Python backend
     const backendFormData = new FormData()
     files.forEach(file => {
       backendFormData.append('files', file)
+      console.log(`📎 Appending file: ${file.name} (${file.size} bytes)`)
     })
 
     const controller = new AbortController()

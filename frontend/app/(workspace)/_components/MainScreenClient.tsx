@@ -22,7 +22,9 @@ export function MainScreenClient(): ReactNode {
 		loading, 
 		error, 
 		refresh,
-		hasUploadedFiles
+		hasUploadedFiles,
+		setHasUploadedFiles,
+		setDataDirectly
 	} = useVariablesBrowser()
 	const [selectedItem, setSelectedItem] = useState<SelectedItem>(null)
 	const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -94,8 +96,41 @@ export function MainScreenClient(): ReactNode {
 	// Handle successful upload
 	const handleUploadSuccess = useCallback(async (files: File[]) => {
 		console.log('📁 Files uploaded successfully:', files)
-		// Trigger data refresh after upload
-		await refresh()
+		
+		// Create FormData and send files to backend
+		const formData = new FormData()
+		files.forEach(file => {
+			formData.append('files', file)
+		})
+		
+		try {
+			const response = await fetch('/api/ai/process-files', {
+				method: 'POST',
+				body: formData,
+			})
+			
+			if (!response.ok) {
+				throw new Error(`Upload failed: ${response.statusText}`)
+			}
+			
+			const responseData = await response.json()
+			console.log('📊 Upload response data:', responseData)
+			
+			// Update the variables browser data directly with the upload response
+			// This ensures the UI updates immediately without needing a refresh
+			if (responseData && responseData.standards) {
+				// Set the data directly in the hook's state - this is the best practice
+				// It avoids unnecessary API calls and ensures immediate UI updates
+				setDataDirectly(responseData)
+			} else {
+				console.warn('⚠️ Upload response missing standards data:', responseData)
+				setHasUploadedFiles(true)
+			}
+			
+		} catch (error) {
+			console.error('❌ Upload error:', error)
+			throw error // Re-throw to let the modal handle the error
+		}
 	}, [refresh])
 
 	// Handle upload modal close

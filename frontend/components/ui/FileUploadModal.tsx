@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 interface FileUploadModalProps {
   isOpen: boolean
   onClose: () => void
-  onUpload: (files: File[]) => Promise<void>
+  onUpload: (files: File[]) => Promise<any> // Return the response data
 }
 
 interface UploadState {
@@ -75,10 +75,15 @@ export function FileUploadModal({ isOpen, onClose, onUpload }: FileUploadModalPr
         }))
       }, 200)
 
-      await onUpload(uploadState.selectedFiles)
+      const responseData = await onUpload(uploadState.selectedFiles)
       
       clearInterval(progressInterval)
       setUploadState(prev => ({ ...prev, progress: 100 }))
+      
+      // Store the response data for the parent component to use
+      if (responseData) {
+        console.log('📊 Upload response data:', responseData)
+      }
       
       // Close modal after successful upload
       setTimeout(() => {

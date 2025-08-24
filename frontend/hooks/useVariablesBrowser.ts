@@ -87,6 +87,18 @@ export function useVariablesBrowser() {
     fetchData()
   }, [fetchData])
 
+  // Set data directly (useful for upload responses)
+  const setDataDirectly = useCallback((newData: SourceAgnosticProcessFilesResponse) => {
+    if (newData && newData.standards) {
+      setData(newData)
+      setHasUploadedFiles(true)
+      setError(null)
+      console.log('✅ Data set directly from upload response')
+    } else {
+      console.warn('⚠️ Invalid data structure for setDataDirectly:', newData)
+    }
+  }, [])
+
   return {
     datasets,
     datasetMap,
@@ -97,6 +109,7 @@ export function useVariablesBrowser() {
     refresh,
     data,
     hasUploadedFiles,
-    setHasUploadedFiles
+    setHasUploadedFiles,
+    setDataDirectly
   }
 }
