@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState, useCallback, type ReactNode } from 'react'
+import { useMemo, useState, useCallback, type ReactNode, useEffect } from 'react'
 import { Sidebar, SidebarGroup, SidebarItem } from '@/components/ui/sidebar/Sidebar'
 import { SearchBar } from '@/components/search/SearchBar'
 import { VariablesBrowser } from '@/components/variables'
@@ -29,13 +29,44 @@ export function MainScreenClient(): ReactNode {
 	const [selectedItem, setSelectedItem] = useState<SelectedItem>(null)
 	const [selectedId, setSelectedId] = useState<string | null>(null)
 	const [lineageState, setLineageState] = useState<{ dataset: string; variable: string } | null>(null)
-	const [sidebarVisible, setSidebarVisible] = useState(true)
+	const [sidebarVisible, setSidebarVisible] = useState(true) // Always start with true for SSR
 	const [uploadState, setUploadState] = useState<UploadState>({
 		isModalOpen: false,
 		isUploading: false,
 		progress: 0,
 		errors: []
 	})
+
+	// Load sidebar preference from localStorage after component mounts (client-side only)
+	useEffect(() => {
+		if (typeof window !== 'undefined') {
+			const saved = localStorage.getItem('tracil-sidebar-visible')
+			if (saved !== null) {
+				setSidebarVisible(JSON.parse(saved))
+			}
+		}
+	}, [])
+
+	// Persist sidebar visibility preference to localStorage
+	useEffect(() => {
+		if (typeof window !== 'undefined') {
+			localStorage.setItem('tracil-sidebar-visible', JSON.stringify(sidebarVisible))
+		}
+	}, [sidebarVisible])
+
+	// Keyboard shortcut for toggling sidebar (Cmd/Ctrl + B)
+	useEffect(() => {
+		const handleKeyDown = (event: KeyboardEvent) => {
+			// Check if Cmd (Mac) or Ctrl (Windows/Linux) is pressed
+			if ((event.metaKey || event.ctrlKey) && event.key === 'b') {
+				event.preventDefault()
+				setSidebarVisible((prev: boolean) => !prev)
+			}
+		}
+
+		document.addEventListener('keydown', handleKeyDown)
+		return () => document.removeEventListener('keydown', handleKeyDown)
+	}, [])
 
 	// Determine current view state
 	const viewState: ViewState = lineageState ? 'lineage' : selectedItem?.type === 'dataset' ? 'variables' : 'search'
@@ -131,7 +162,7 @@ export function MainScreenClient(): ReactNode {
 			console.error('❌ Upload error:', error)
 			throw error // Re-throw to let the modal handle the error
 		}
-	}, [refresh])
+	}, [setDataDirectly, setHasUploadedFiles])
 
 	// Handle upload modal close
 	const handleUploadModalClose = useCallback(() => {
@@ -183,11 +214,33 @@ export function MainScreenClient(): ReactNode {
 		)
 	}
 
-	// No data state - show main interface even without uploaded files
-	if (!hasUploadedFiles) {
-		return (
-			<>
-				{/* Main interface without data */}
+	return (
+		<>
+			{/* Floating restore button - always visible when sidebar is hidden */}
+			{!sidebarVisible && (
+				<div className="fixed left-0 top-1/2 -translate-y-1/2 z-40 group">
+					<button
+						onClick={() => setSidebarVisible(true)}
+						className="p-2 h-12 w-6 rounded-r-lg rounded-l-none bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border border-l-0 border-gray-200 dark:border-gray-700 shadow-lg hover:shadow-xl transition-all duration-200 ease-out hover:w-8 hover:bg-white dark:hover:bg-gray-900 group-hover:w-8 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset"
+						aria-label="Restore sidebar"
+					>
+						<svg className="w-4 h-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+						</svg>
+					</button>
+					
+					{/* Tooltip */}
+					<div className="absolute left-8 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+						<div className="bg-gray-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
+							Restore sidebar
+						</div>
+						<div className="absolute left-0 top-1/2 -translate-y-1/2 w-0 h-0 border-l-4 border-l-gray-900 border-t-4 border-t-transparent border-b-4 border-b-transparent"></div>
+					</div>
+				</div>
+			)}
+
+			{/* No data state - show main interface even without uploaded files */}
+			{!hasUploadedFiles ? (
 				<div 
 					className={`min-h-screen w-full grid grid-cols-1 ${
 						sidebarVisible ? 'md:grid-cols-[260px_1fr]' : 'md:grid-cols-[0px_1fr]'
@@ -205,7 +258,6 @@ export function MainScreenClient(): ReactNode {
 									className="flex-shrink-0"
 								/>
 								<SidebarToggle
-									isVisible={sidebarVisible}
 									onToggle={() => setSidebarVisible(!sidebarVisible)}
 									className="flex-shrink-0"
 								/>
@@ -219,7 +271,30 @@ export function MainScreenClient(): ReactNode {
 					</aside>
 
 					{/* Main content area */}
-					<main className="flex flex-col p-6">
+					<main className="flex flex-col p-6 relative">
+						{/* Left edge restore hint when sidebar is hidden */}
+						{!sidebarVisible && (
+							<button
+								onClick={() => setSidebarVisible(true)}
+								onKeyDown={(e) => {
+									if (e.key === 'Enter' || e.key === ' ') {
+										e.preventDefault()
+										setSidebarVisible(true)
+									}
+								}}
+								className="absolute left-0 top-0 bottom-0 w-1 group cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset"
+								aria-label="Click to restore sidebar"
+								tabIndex={0}
+							>
+								<div className="absolute left-0 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity duration-200 pointer-events-none">
+									<div className="bg-blue-500 text-white text-xs px-2 py-1 rounded-r whitespace-nowrap shadow-lg">
+										Click to restore sidebar
+									</div>
+									<div className="absolute left-0 top-1/2 -translate-y-1/2 w-0 h-0 border-l-4 border-l-blue-500 border-t-4 border-t-transparent border-b-4 border-b-transparent"></div>
+								</div>
+							</button>
+						)}
+						
 						{/* Header */}
 						<div className="flex items-center justify-center mb-6">
 							<h1 className="text-2xl md:text-3xl text-balance text-center">
@@ -255,173 +330,232 @@ export function MainScreenClient(): ReactNode {
 						</div>
 					</main>
 				</div>
+			) : (
+				<div 
+					className={`min-h-screen w-full grid grid-cols-1 ${
+						sidebarVisible ? 'md:grid-cols-[260px_1fr]' : 'md:grid-cols-[0px_1fr]'
+					}`}
+				>
+				<aside className={`hidden md:block transition-all duration-300 ${
+					sidebarVisible ? 'w-[260px]' : 'w-0 overflow-hidden'
+				}`}>
+					<Sidebar header={null} onKeyDown={handleKeyDown}>
+						{/* Sidebar Header with Controls */}
+						<div className="flex items-center justify-between p-3 border-b border-gray-200 dark:border-gray-700">
+							<FileUploadButton
+								onUploadClick={handleUploadClick}
+								variant="sidebar"
+								className="flex-shrink-0"
+							/>
+							<SidebarToggle
+								onToggle={() => setSidebarVisible(!sidebarVisible)}
+								className="flex-shrink-0"
+							/>
+						</div>
+						<SidebarGroup label="ADaM" accentVar="--accent-adam">
+							{groupedDatasets.ADaM.map((dataset, i) => (
+								<SidebarItem 
+									key={dataset.id} 
+									active={selectedId === dataset.id} 
+									onClick={() => handleDatasetSelect(dataset.id)} 
+									tone={toneFor(i, groupedDatasets.ADaM.length)}
+									itemId={dataset.id}
+								>
+									{dataset.name}
+								</SidebarItem>
+							))}
+						</SidebarGroup>
+						<SidebarGroup label="SDTM" accentVar="--accent-sdtm">
+							{groupedDatasets.SDTM.map((dataset, i) => (
+								<SidebarItem 
+									key={dataset.id} 
+									active={selectedId === dataset.id} 
+									onClick={() => handleDatasetSelect(dataset.id)} 
+									tone={toneFor(i, groupedDatasets.SDTM.length)}
+									itemId={dataset.id}
+								>
+									{dataset.name}
+								</SidebarItem>
+							))}
+						</SidebarGroup>
+						<SidebarGroup label="aCRF" accentVar="--accent-acrf">
+							{groupedDatasets.aCRF.map((dataset, i) => (
+								<SidebarItem 
+									key={dataset.id} 
+									active={selectedId === dataset.id} 
+									onClick={() => handleDatasetSelect(dataset.id)} 
+									tone={toneFor(i, groupedDatasets.aCRF.length)}
+									itemId={dataset.id}
+								>
+									{dataset.name}
+								</SidebarItem>
+							))}
+						</SidebarGroup>
+						<SidebarGroup label="TLFs" accentVar="--accent-tlf">
+							{groupedDatasets.TLF.map((dataset, i) => (
+								<SidebarItem 
+									key={dataset.id} 
+									active={selectedId === dataset.id} 
+									onClick={() => handleDatasetSelect(dataset.id)} 
+									tone={toneFor(i, groupedDatasets.TLF.length)}
+									itemId={dataset.id}
+								>
+									{dataset.name}
+								</SidebarItem>
+							))}
+						</SidebarGroup>
+					</Sidebar>
+				</aside>
 
-				{/* File Upload Modal */}
-				<FileUploadModal
-					isOpen={uploadState.isModalOpen}
-					onClose={handleUploadModalClose}
-					onUpload={handleUploadSuccess}
-				/>
-			</>
-		)
-	}
-
-	return (
-		<>
-			<div 
-				className={`min-h-screen w-full grid grid-cols-1 ${
-					sidebarVisible ? 'md:grid-cols-[260px_1fr]' : 'md:grid-cols-[0px_1fr]'
-				}`}
-			>
-			<aside className={`hidden md:block transition-all duration-300 ${
-				sidebarVisible ? 'w-[260px]' : 'w-0 overflow-hidden'
-			}`}>
-				<Sidebar header={null} onKeyDown={handleKeyDown}>
-					{/* Sidebar Header with Controls */}
-					<div className="flex items-center justify-between p-3 border-b border-gray-200 dark:border-gray-700">
-						<FileUploadButton
-							onUploadClick={handleUploadClick}
-							variant="sidebar"
-							className="flex-shrink-0"
-						/>
-						<SidebarToggle
-							isVisible={sidebarVisible}
-							onToggle={() => setSidebarVisible(!sidebarVisible)}
-							className="flex-shrink-0"
-						/>
-					</div>
-					<SidebarGroup label="ADaM" accentVar="--accent-adam">
-						{groupedDatasets.ADaM.map((dataset, i) => (
-							<SidebarItem 
-								key={dataset.id} 
-								active={selectedId === dataset.id} 
-								onClick={() => handleDatasetSelect(dataset.id)} 
-								tone={toneFor(i, groupedDatasets.ADaM.length)}
-								itemId={dataset.id}
+				{viewState === 'search' && (
+					<main className="flex flex-col p-6 relative">
+						{/* Left edge restore hint when sidebar is hidden */}
+						{!sidebarVisible && (
+							<button
+								onClick={() => setSidebarVisible(true)}
+								onKeyDown={(e) => {
+									if (e.key === 'Enter' || e.key === ' ') {
+										e.preventDefault()
+										setSidebarVisible(true)
+									}
+								}}
+								className="absolute left-0 top-0 bottom-0 w-1 group cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset"
+								aria-label="Click to restore sidebar"
+								tabIndex={0}
 							>
-								{dataset.name}
-							</SidebarItem>
-						))}
-					</SidebarGroup>
-					<SidebarGroup label="SDTM" accentVar="--accent-sdtm">
-						{groupedDatasets.SDTM.map((dataset, i) => (
-							<SidebarItem 
-								key={dataset.id} 
-								active={selectedId === dataset.id} 
-								onClick={() => handleDatasetSelect(dataset.id)} 
-								tone={toneFor(i, groupedDatasets.SDTM.length)}
-								itemId={dataset.id}
-							>
-								{dataset.name}
-							</SidebarItem>
-						))}
-					</SidebarGroup>
-					<SidebarGroup label="aCRF" accentVar="--accent-acrf">
-						{groupedDatasets.aCRF.map((dataset, i) => (
-							<SidebarItem 
-								key={dataset.id} 
-								active={selectedId === dataset.id} 
-								onClick={() => handleDatasetSelect(dataset.id)} 
-								tone={toneFor(i, groupedDatasets.aCRF.length)}
-								itemId={dataset.id}
-							>
-								{dataset.name}
-							</SidebarItem>
-						))}
-					</SidebarGroup>
-					<SidebarGroup label="TLFs" accentVar="--accent-tlf">
-						{groupedDatasets.TLF.map((dataset, i) => (
-							<SidebarItem 
-								key={dataset.id} 
-								active={selectedId === dataset.id} 
-								onClick={() => handleDatasetSelect(dataset.id)} 
-								tone={toneFor(i, groupedDatasets.TLF.length)}
-								itemId={dataset.id}
-							>
-								{dataset.name}
-							</SidebarItem>
-						))}
-					</SidebarGroup>
-				</Sidebar>
-			</aside>
-
-			{viewState === 'search' && (
-				<main className="flex flex-col p-6">
-					{/* Header */}
-					<div className="flex items-center justify-center mb-6">
-						<h1 className="text-2xl md:text-3xl text-balance text-center">
-							What can I help with?
-						</h1>
-					</div>
-
-					{/* Main content */}
-					<div className="flex-1 flex flex-col items-center justify-center gap-6">
-						<SearchBar className="w-full max-w-2xl" />
-						
-						{/* Show upload instructions if no datasets */}
-						{datasets.length === 0 && (
-							<div className="max-w-2xl text-center">
-								<div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-									<h3 className="text-lg font-semibold text-blue-800 mb-3">
-										🚀 Get Started with File Upload
-									</h3>
-									<p className="text-blue-700 mb-4">
-										Upload your clinical data files to the Python backend to start exploring variables and lineage.
-									</p>
-									<div className="bg-white p-4 rounded border text-sm font-mono text-left">
-										<span className="text-gray-600"># Upload files to backend</span><br/>
-										curl -X POST http://localhost:8000/process-files \<br/>
-										&nbsp;&nbsp;-F &quot;files=@your_file.xpt&quot;<br/>
-										&nbsp;&nbsp;-F &quot;files=@your_define.xml&quot;<br/>
-										&nbsp;&nbsp;-F &quot;files=@your_crf.pdf&quot;
+								<div className="absolute left-0 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity duration-200 pointer-events-none">
+									<div className="bg-blue-500 text-white text-xs px-2 py-1 rounded-r whitespace-nowrap shadow-lg">
+										Click to restore sidebar
 									</div>
-									<p className="text-sm text-blue-600 mt-3">
-										After uploading, click &quot;Refresh Data&quot; to see your datasets.
-									</p>
+									<div className="absolute left-0 top-1/2 -translate-y-1/2 w-0 h-0 border-l-4 border-l-blue-500 border-t-4 border-t-transparent border-b-4 border-b-transparent"></div>
 								</div>
-							</div>
+							</button>
 						)}
 						
-						{/* Add refresh button for testing */}
-						<button
-							onClick={refresh}
-							className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
-						>
-							🔄 Refresh Data
-						</button>
-					</div>
-				</main>
-			)}
+						{/* Header */}
+						<div className="flex items-center justify-center mb-6">
+							<h1 className="text-2xl md:text-3xl text-balance text-center">
+								What can I help with?
+							</h1>
+						</div>
 
-			{viewState === 'variables' && selectedDataset && (
-				<div className="flex-1 overflow-hidden">
-					<VariablesBrowser 
-						dataset={selectedDataset} 
-						onVariableSelect={handleVariableSelect}
-						onEscape={() => {
-							setSelectedItem(null)
-							setSelectedId(null)
-						}}
-					/>
+						{/* Main content */}
+						<div className="flex-1 flex flex-col items-center justify-center gap-6">
+							<SearchBar className="w-full max-w-2xl" />
+							
+							{/* Show upload instructions if no datasets */}
+							{datasets.length === 0 && (
+								<div className="max-w-2xl text-center">
+									<div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+										<h3 className="text-lg font-semibold text-blue-800 mb-3">
+											🚀 Get Started with File Upload
+										</h3>
+										<p className="text-blue-700 mb-4">
+											Upload your clinical data files to the Python backend to start exploring variables and lineage.
+										</p>
+										<div className="bg-white p-4 rounded border text-sm font-mono text-left">
+											<span className="text-gray-600"># Upload files to backend</span><br/>
+											curl -X POST http://localhost:8000/process-files \<br/>
+											&nbsp;&nbsp;-F &quot;files=@your_file.xpt&quot;<br/>
+											&nbsp;&nbsp;-F &quot;files=@your_define.xml&quot;<br/>
+											&nbsp;&nbsp;-F &quot;files=@your_crf.pdf&quot;
+										</div>
+										<p className="text-sm text-blue-600 mt-3">
+											After uploading, click &quot;Refresh Data&quot; to see your datasets.
+										</p>
+									</div>
+								</div>
+							)}
+							
+							{/* Add refresh button for testing */}
+							<button
+								onClick={refresh}
+								className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
+							>
+								🔄 Refresh Data
+							</button>
+						</div>
+					</main>
+				)}
+
+				{viewState === 'variables' && selectedDataset && (
+					<div className="flex-1 overflow-hidden relative">
+						{/* Left edge restore hint when sidebar is hidden */}
+						{!sidebarVisible && (
+							<button
+								onClick={() => setSidebarVisible(true)}
+								onKeyDown={(e) => {
+									if (e.key === 'Enter' || e.key === ' ') {
+										e.preventDefault()
+										setSidebarVisible(true)
+									}
+								}}
+								className="absolute left-0 top-0 bottom-0 w-1 group cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset"
+								aria-label="Click to restore sidebar"
+								tabIndex={0}
+							>
+								<div className="absolute left-0 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity duration-200 pointer-events-none">
+									<div className="bg-blue-500 text-white text-xs px-2 py-1 rounded-r whitespace-nowrap shadow-lg">
+										Click to restore sidebar
+									</div>
+									<div className="absolute left-0 top-1/2 -translate-y-1/2 w-0 h-0 border-l-4 border-l-blue-500 border-t-4 border-t-transparent border-b-4 border-b-transparent"></div>
+								</div>
+							</button>
+						)}
+						
+						<VariablesBrowser 
+							dataset={selectedDataset} 
+							onVariableSelect={handleVariableSelect}
+							onEscape={() => {
+								setSelectedItem(null)
+								setSelectedId(null)
+							}}
+						/>
+					</div>
+				)}
+
+				{viewState === 'lineage' && lineageState && (
+					<div className="relative">
+						{/* Left edge restore hint when sidebar is hidden */}
+						{!sidebarVisible && (
+							<button
+								onClick={() => setSidebarVisible(true)}
+								onKeyDown={(e) => {
+									if (e.key === 'Enter' || e.key === ' ') {
+										e.preventDefault()
+										setSidebarVisible(true)
+									}
+								}}
+								className="absolute left-0 top-0 bottom-0 w-1 group cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset"
+								aria-label="Click to restore sidebar"
+								tabIndex={0}
+							>
+								<div className="absolute left-0 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity duration-200 pointer-events-none">
+									<div className="bg-blue-500 text-white text-xs px-2 py-1 rounded-r whitespace-nowrap shadow-lg">
+										Click to restore sidebar
+									</div>
+									<div className="absolute left-0 top-1/2 -translate-y-1/2 w-0 h-0 border-l-4 border-l-blue-500 border-t-4 border-t-transparent border-b-4 border-b-transparent"></div>
+								</div>
+							</button>
+						)}
+						
+						<LineageView
+							dataset={lineageState.dataset}
+							variable={lineageState.variable}
+							onBack={handleLineageBack}
+						/>
+					</div>
+				)}
 				</div>
 			)}
 
-			{viewState === 'lineage' && lineageState && (
-				<LineageView
-					dataset={lineageState.dataset}
-					variable={lineageState.variable}
-					onBack={handleLineageBack}
-				/>
-			)}
-			</div>
-
-		{/* File Upload Modal */}
-		<FileUploadModal
-			isOpen={uploadState.isModalOpen}
-			onClose={handleUploadModalClose}
-			onUpload={handleUploadSuccess}
-		/>
-	</>
+			{/* File Upload Modal - always available */}
+			<FileUploadModal
+				isOpen={uploadState.isModalOpen}
+				onClose={handleUploadModalClose}
+				onUpload={handleUploadSuccess}
+			/>
+		</>
 	)
 }
 
