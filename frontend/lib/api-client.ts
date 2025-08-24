@@ -56,12 +56,12 @@ async function apiCall<T>(
       throw error
     }
     
-    if (error.name === 'AbortError') {
+    if (error instanceof Error && error.name === 'AbortError') {
       throw new APIError('Request timeout', 408, 'Request Timeout')
     }
     
     throw new APIError(
-      `Network error: ${error.message}`,
+      `Network error: ${error instanceof Error ? error.message : 'Unknown error'}`,
       0,
       'Network Error'
     )
