@@ -82,7 +82,8 @@ export function MainScreenClient(): ReactNode {
 			ADaM: datasets.filter(d => d.group === 'ADaM'),
 			SDTM: datasets.filter(d => d.group === 'SDTM'),
 			aCRF: datasets.filter(d => d.group === 'aCRF'),
-			TLF: datasets.filter(d => d.group === 'TLF')
+			TLF: datasets.filter(d => d.group === 'TLF'),
+			Protocol: datasets.filter(d => d.group === 'Protocol')
 		}
 		return groups
 	}, [datasets])
@@ -94,6 +95,7 @@ export function MainScreenClient(): ReactNode {
 			...groupedDatasets.SDTM.map(d => d.id),
 			...groupedDatasets.aCRF.map(d => d.id),
 			...groupedDatasets.TLF.map(d => d.id),
+			...groupedDatasets.Protocol.map(d => d.id),
 		]
 	}, [groupedDatasets])
 
@@ -399,6 +401,19 @@ export function MainScreenClient(): ReactNode {
 									active={selectedId === dataset.id} 
 									onClick={() => handleDatasetSelect(dataset.id)} 
 									tone={toneFor(i, groupedDatasets.TLF.length)}
+									itemId={dataset.id}
+								>
+									{dataset.name}
+								</SidebarItem>
+							))}
+						</SidebarGroup>
+						<SidebarGroup label="Protocol" accentVar="--accent-protocol">
+							{groupedDatasets.Protocol.map((dataset, i) => (
+								<SidebarItem 
+									key={dataset.id} 
+									active={selectedId === dataset.id} 
+									onClick={() => handleDatasetSelect(dataset.id)} 
+									tone={toneFor(i, groupedDatasets.Protocol.length)}
 									itemId={dataset.id}
 								>
 									{dataset.name}
