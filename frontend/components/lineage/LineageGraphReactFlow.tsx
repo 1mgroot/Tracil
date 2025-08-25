@@ -145,11 +145,8 @@ const getEdgeStyle = (edge: LineageEdge) => {
 }
 
 // Lineage-based layout function that follows the actual data flow
-const createLineageLayout = (nodes: readonly LineageNode[], edges: readonly LineageEdge[]) => {
-  const nodeWidth = 160
-  const nodeHeight = 60
+const createLineageLayout = (nodes: readonly LineageNode[]) => {
   const horizontalSpacing = 200
-  const verticalSpacing = 120
   
   const positions: { [key: string]: { x: number; y: number } } = {}
   
@@ -165,7 +162,7 @@ const createLineageLayout = (nodes: readonly LineageNode[], edges: readonly Line
   const tlfOutputNodes = nodes.filter(n => n.group === 'TLF' && !n.title.includes('Protocol'))
   
   let currentX = 100
-  let currentY = 100
+  const currentY = 100
   
   // Position Protocol nodes (leftmost)
   protocolNodes.forEach((node, index) => {
@@ -226,12 +223,13 @@ const createLineageLayout = (nodes: readonly LineageNode[], edges: readonly Line
 export function LineageGraphReactFlow({ lineage }: LineageGraphProps) {
   // Create lineage-based layout
   const layoutPositions = useMemo(() => {
-    const positions = createLineageLayout(lineage.nodes, lineage.edges)
+    const positions = createLineageLayout(lineage.nodes)
     console.log('Layout positions:', positions)
     return positions
-  }, [lineage.nodes, lineage.edges])
+  }, [lineage.nodes])
   
   // Convert lineage data to React Flow format
+  // Note: Data is already deduplicated at the API level
   const initialNodes: Node[] = useMemo(() => {
     return lineage.nodes.map((node) => {
       const position = layoutPositions[node.id] || { x: 0, y: 0 }
@@ -273,6 +271,7 @@ export function LineageGraphReactFlow({ lineage }: LineageGraphProps) {
     // Debug: Log the actual edge data
     console.log('Lineage edges data:', lineage.edges)
     
+    // Note: Data is already deduplicated at the API level
     return lineage.edges.map((edge) => {
       console.log('Processing edge:', edge, 'confidence type:', typeof edge.confidence, 'value:', edge.confidence)
       
@@ -297,16 +296,16 @@ export function LineageGraphReactFlow({ lineage }: LineageGraphProps) {
   }, [lineage.edges])
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
+  const [edges, , onEdgesChange] = useEdgesState(initialEdges)
 
   const onLayout = useCallback(() => {
-    const newPositions = createLineageLayout(lineage.nodes, lineage.edges)
+    const newPositions = createLineageLayout(lineage.nodes)
     const updatedNodes = nodes.map(node => ({
       ...node,
       position: newPositions[node.id] || node.position
     }))
     setNodes(updatedNodes)
-  }, [lineage.nodes, lineage.edges, nodes, setNodes])
+  }, [lineage.nodes, nodes, setNodes])
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
@@ -360,11 +359,11 @@ export function LineageGraphReactFlow({ lineage }: LineageGraphProps) {
           <div>
             <h4 className="text-sm font-medium text-gray-700 mb-2">Connections:</h4>
             <ul className="space-y-1">
-              {lineage.edges.map((edge) => (
-                <li key={`${edge.from}-${edge.to}`} className="text-sm text-gray-600">
-                  <span className="font-medium">{edge.from}</span> → <span className="font-medium">{edge.to}</span>
-                  {edge.label && ` (${edge.label})`}
-                  {edge.confidence && ` - Confidence: ${edge.confidence}`}
+              {initialEdges.map((edge) => (
+                <li key={edge.id} className="text-sm text-gray-600">
+                  <span className="font-medium">{edge.source}</span> → <span className="font-medium">{edge.target}</span>
+                  {edge.data?.label && ` (${edge.data.label})`}
+                  {edge.data?.confidence && ` - Confidence: ${edge.data.confidence}`}
                 </li>
               ))}
             </ul>

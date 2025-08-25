@@ -15,12 +15,12 @@ export interface Variable {
 }
 
 // Source-Agnostic Data Structure Types (New)
-export type StandardType = "ADaM" | "SDTM" | "CRF" | "TLF"
-export type EntityType = "domain" | "analysis_dataset" | "crf_form" | "tlf_item"
-export type SourceFileType = "define_xml" | "dataset_xpt" | "dataset_sas7bdat" | "spec_xlsx" | "acrf_pdf" | "tlf_rtf" | "tlf_pdf"
+export type StandardType = "ADaM" | "SDTM" | "CRF" | "TLF" | "Protocol"
+export type EntityType = "domain" | "analysis_dataset" | "crf_form" | "tlf_item" | "protocol_document" | "tlf_document"
+export type SourceFileType = "define_xml" | "dataset_xpt" | "dataset_sas7bdat" | "spec_xlsx" | "acrf_pdf" | "tlf_rtf" | "tlf_pdf" | "protocol_pdf" | "protocol_txt"
 export type FileRole = "primary" | "supplementary" | "validation"
 export type ProcessingStatus = "pending" | "processing" | "completed" | "error"
-export type ValidationStatus = "compliant" | "non_compliant" | "missing" | "unknown"
+export type ValidationStatus = "compliant" | "non_compliant" | "missing" | "unknown" | "not_applicable"
 
 export interface SourceFile {
   readonly id: string
@@ -43,6 +43,12 @@ export interface EntityMetadata {
   readonly version?: string
   readonly lastModified?: string
   readonly validationStatus?: ValidationStatus
+  readonly textFile?: string
+  readonly textChars?: number
+  readonly varIndexCsv?: string
+  readonly varIndexCount?: number
+  readonly titles?: readonly { readonly id: string; readonly title: string }[]
+  readonly titleCount?: number
 }
 
 export interface DatasetEntity {
@@ -85,10 +91,12 @@ export interface DatasetWithGroup {
     readonly structure?: string         // e.g., "one record per subject"
     readonly version?: string
     readonly lastModified?: string
+    readonly validationStatus?: string
   }
   readonly id: string                   // Generated from standard + dataset name
   readonly group: FileGroupKind        // Derived from standard type
   readonly fileId: string              // Reference to source file
+  readonly sourceFiles?: readonly SourceFileReference[]
 }
 
 // Import FileGroupKind from existing files.ts
@@ -116,24 +124,64 @@ export function transformSourceAgnosticToUI(response: SourceAgnosticProcessFiles
         return
       }
       
-      datasets.push({
-        name: entity.name,
-        label: entity.label,
-        variables: entity.variables,
-        metadata: {
-          records: entity.metadata?.records,
-          structure: entity.metadata?.structure,
-          version: entity.metadata?.version,
-          lastModified: entity.metadata?.lastModified
-        },
-        id: `${standardType}-${entity.name}`,
-        group: standardType as FileGroupKind,
-        fileId: entity.sourceFiles?.[0]?.fileId || `${standardType}-${entity.name}`
-      })
+      // Special handling for TLF documents - create individual items for each table title
+      if (standardType === 'TLF' && entity.type === 'tlf_document' && entity.metadata?.titles) {
+        entity.metadata.titles.forEach((titleItem) => {
+          datasets.push({
+            name: titleItem.id,
+            label: titleItem.title,
+            variables: [], // TLF items don't have variables
+            metadata: {
+              records: entity.metadata?.records,
+              structure: entity.metadata?.structure,
+              version: entity.metadata?.version,
+              lastModified: entity.metadata?.lastModified,
+              validationStatus: entity.metadata?.validationStatus
+            },
+            id: `TLF-${titleItem.id}`,
+            group: 'TLF' as FileGroupKind,
+            fileId: entity.sourceFiles?.[0]?.fileId || `TLF-${titleItem.id}`,
+            sourceFiles: entity.sourceFiles
+          })
+        })
+      } else {
+        // Standard handling for other entity types
+        datasets.push({
+          name: entity.name,
+          label: entity.label,
+          variables: entity.variables,
+          metadata: {
+            records: entity.metadata?.records,
+            structure: entity.metadata?.structure,
+            version: entity.metadata?.version,
+            lastModified: entity.metadata?.lastModified,
+            validationStatus: entity.metadata?.validationStatus
+          },
+          id: `${standardType}-${entity.name}`,
+          group: standardType as FileGroupKind,
+          fileId: entity.sourceFiles?.[0]?.fileId || `${standardType}-${entity.name}`,
+          sourceFiles: entity.sourceFiles
+        })
+      }
     })
   })
   
-  return datasets
+  // Deduplicate datasets by ID to prevent React key conflicts
+  const seen = new Set<string>()
+  const uniqueDatasets: DatasetWithGroup[] = []
+  
+  for (const dataset of datasets) {
+    if (!seen.has(dataset.id)) {
+      seen.add(dataset.id)
+      uniqueDatasets.push(dataset)
+    } else {
+      console.warn(`Duplicate dataset ID found: ${dataset.id}, skipping...`)
+    }
+  }
+  
+  console.log(`transformSourceAgnosticToUI: Processed ${datasets.length} → ${uniqueDatasets.length} unique datasets`)
+  
+  return uniqueDatasets
 }
 
 // API Request/Response Types for Variable Analysis
@@ -154,7 +202,7 @@ export interface AnalyzeVariableResponse {
       readonly title: string
       readonly dataset?: string
       readonly variable?: string
-      readonly group: 'ADaM' | 'SDTM' | 'aCRF' | 'TLF'
+      readonly group: 'ADaM' | 'SDTM' | 'aCRF' | 'TLF' | 'Protocol'
       readonly kind: 'source' | 'intermediate' | 'target'
       readonly meta?: { file?: string; notes?: string }
     }[]

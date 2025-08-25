@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import type { AnalyzeVariableRequest, AnalyzeVariableResponse } from '@/types/variables'
+import { processLineageData } from '@/lib/utils'
 
 // Configuration
 const PYTHON_BACKEND_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
@@ -43,6 +44,25 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       }
 
       const data: AnalyzeVariableResponse = await response.json()
+      
+      // Deduplicate lineage data to prevent React key conflicts
+      if (data.lineage && data.lineage.nodes && data.lineage.edges) {
+        const processedData = processLineageData(data.lineage.nodes, data.lineage.edges)
+        
+        // Create a new object with deduplicated data since the original is readonly
+        const deduplicatedData: AnalyzeVariableResponse = {
+          ...data,
+          lineage: {
+            ...data.lineage,
+            nodes: processedData.nodes,
+            edges: processedData.edges
+          }
+        }
+        
+        console.log(`✅ Deduplicated lineage data: ${processedData.nodes.length} nodes, ${processedData.edges.length} edges`)
+        return NextResponse.json(deduplicatedData)
+      }
+      
       return NextResponse.json(data)
     } catch (error) {
       clearTimeout(timeoutId)
