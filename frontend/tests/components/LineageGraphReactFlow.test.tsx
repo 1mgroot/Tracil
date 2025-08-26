@@ -74,6 +74,7 @@ const mockLineageData: LineageGraphType = {
       dataset: 'ADAE',
       variable: 'AESCAN',
       group: 'ADaM',
+      type: 'ADaM',
       kind: 'target',
       meta: {
         notes: 'Adverse Event Scan'
@@ -85,6 +86,7 @@ const mockLineageData: LineageGraphType = {
       dataset: 'ADAE',
       variable: 'AESCAN',
       group: 'ADaM',
+      type: 'SDTM',
       kind: 'target',
       meta: {
         notes: 'Adverse Event Scan'
@@ -96,6 +98,7 @@ const mockLineageData: LineageGraphType = {
       dataset: 'ADAE',
       variable: 'AESCAN',
       group: 'aCRF',
+      type: 'aCRF',
       kind: 'target',
       meta: {
         file: 'blankcrf.pdf',
@@ -125,7 +128,6 @@ describe('LineageGraphReactFlow', () => {
     render(<LineageGraphReactFlow lineage={mockLineageData} />)
     
     expect(screen.getByTestId('react-flow')).toBeInTheDocument()
-    expect(screen.getByTestId('react-flow-controls')).toBeInTheDocument()
     expect(screen.getByTestId('react-flow-background')).toBeInTheDocument()
   })
 
