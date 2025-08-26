@@ -80,8 +80,8 @@ export async function analyzeLineage(request: AnalyzeLineageRequest): Promise<Li
       }) => ({
         from: edge.from,
         to: edge.to,
-
-        label: edge.label || edge.explanation || 'derived'
+        label: edge.label || edge.explanation || 'derived',
+        explanation: edge.explanation
       })),
       gaps: { 
         notes: (() => {
@@ -143,17 +143,20 @@ export async function analyzeLineage(request: AnalyzeLineageRequest): Promise<Li
         {
           from: `Protocol.${data.dataset}.${data.variable}`,
           to: `CRF.${data.dataset}.${data.variable}`,
-          label: 'Protocol → CRF design'
+          label: 'Protocol → CRF design',
+          explanation: 'Protocol defines the variable requirements and CRF design implements data collection'
         },
         {
           from: `CRF.${data.dataset}.${data.variable}`,
           to: `SDTM.${data.dataset}.${data.variable}`,
-          label: 'CRF capture → SDTM standardize'
+          label: 'CRF capture → SDTM standardize',
+          explanation: 'Data captured on CRF is standardized according to SDTM guidelines'
         },
         {
           from: `SDTM.${data.dataset}.${data.variable}`,
           to: targetId,
-          label: 'retain or derive'
+          label: 'retain or derive',
+          explanation: 'Variable is retained or derived for analysis dataset according to ADaM specifications'
         }
       ]
       
@@ -211,17 +214,20 @@ export async function analyzeLineage(request: AnalyzeLineageRequest): Promise<Li
         {
           from: `Protocol.${request.dataset}.${request.variable}`,
           to: `CRF.${request.dataset}.${request.variable}`,
-          label: 'Protocol → CRF design'
+          label: 'Protocol → CRF design',
+          explanation: 'Protocol defines the variable requirements and CRF design implements data collection'
         },
         {
           from: `CRF.${request.dataset}.${request.variable}`,
           to: `SDTM.${request.dataset}.${request.variable}`,
-          label: 'CRF capture → SDTM standardize'
+          label: 'CRF capture → SDTM standardize',
+          explanation: 'Data captured on CRF is standardized according to SDTM guidelines'
         },
         {
           from: `SDTM.${request.dataset}.${request.variable}`,
           to: `${request.dataset}.${request.variable}`,
-          label: 'retain or derive'
+          label: 'retain or derive',
+          explanation: 'Variable is retained or derived for analysis dataset according to ADaM specifications'
         }
       ],
       gaps: { 

@@ -9,8 +9,8 @@ export const mockLineage: Record<string, LineageGraph> = {
       { id: 'ADaM.ADSL.SEX', title: 'ADSL.SEX', group: 'ADaM', kind: 'target', dataset: 'ADSL', variable: 'SEX' },
     ],
     edges: [
-      { from: 'aCRF.DEMO.SEX', to: 'SDTM.DM.SEX', label: 'CRF capture → SDTM standardize' },
-      { from: 'SDTM.DM.SEX', to: 'ADaM.ADSL.SEX', label: 'retain' },
+      { from: 'aCRF.DEMO.SEX', to: 'SDTM.DM.SEX', label: 'CRF capture → SDTM standardize', explanation: 'Demographic data captured on CRF and standardized according to SDTM guidelines' },
+      { from: 'SDTM.DM.SEX', to: 'ADaM.ADSL.SEX', label: 'retain', explanation: 'Variable retained without modification from SDTM to ADaM' },
     ],
     gaps: { notes: ['Confirm SDTM → ADaM retention rule in spec.'] },
   },
@@ -23,9 +23,9 @@ export const mockLineage: Record<string, LineageGraph> = {
       { id: 'ADaM.ADAE.AEBODSYS', title: 'ADAE.AEBODSYS', group: 'ADaM', kind: 'target', dataset: 'ADAE', variable: 'AEBODSYS' },
     ],
     edges: [
-      { from: 'aCRF.AE.TERM', to: 'SDTM.AE.AETERM', label: 'CRF capture' },
-      { from: 'SDTM.AE.AETERM', to: 'SDTM.AE.AEBODSYS', label: 'MedDRA map' },
-      { from: 'SDTM.AE.AEBODSYS', to: 'ADaM.ADAE.AEBODSYS', label: 'retain' },
+      { from: 'aCRF.AE.TERM', to: 'SDTM.AE.AETERM', label: 'CRF capture', explanation: 'Adverse event term captured directly from CRF' },
+      { from: 'SDTM.AE.AETERM', to: 'SDTM.AE.AEBODSYS', label: 'MedDRA map', explanation: 'Body system derived from MedDRA coding of AE term' },
+      { from: 'SDTM.AE.AEBODSYS', to: 'ADaM.ADAE.AEBODSYS', label: 'retain', explanation: 'Body system variable retained for analysis dataset' },
     ],
     gaps: { notes: ['Document MedDRA version and mapping rules.'] },
   },

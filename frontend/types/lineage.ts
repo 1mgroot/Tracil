@@ -15,6 +15,7 @@ export interface LineageEdge {
   readonly from: string
   readonly to: string
   readonly label?: string        // e.g., "retain", "MedDRA map"
+  readonly explanation?: string  // Detailed explanation of the relationship
 }
 
 export interface LineageGaps { readonly notes?: string[] }

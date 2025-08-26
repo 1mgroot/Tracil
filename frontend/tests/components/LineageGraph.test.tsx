@@ -79,9 +79,9 @@ describe('LineageGraph', () => {
     const svg = document.querySelector('svg')
     expect(svg).toBeInTheDocument()
     
-    // Check that paths are rendered (edges)
-    const paths = document.querySelectorAll('path')
-    expect(paths).toHaveLength(2) // 2 edges
+    // Check that paths are rendered (edges) - only count the actual edge paths, not accessibility icons
+    const edgePaths = document.querySelectorAll('svg path[marker-end]')
+    expect(edgePaths).toHaveLength(2) // 2 edges
   })
 
 
@@ -103,19 +103,41 @@ describe('LineageGraph', () => {
     // Check that connection labels are shown correctly
     expect(screen.getByText(/Derived from/)).toBeInTheDocument()
     expect(screen.getByText(/Collected on/)).toBeInTheDocument()
-    
+  })
 
+  it('handles edges with and without explanation fields', () => {
+    // Test with mock data that has explanation fields
+    const mockLineageWithExplanation = {
+      summary: 'Test lineage with explanations',
+      nodes: [
+        { id: 'A', title: 'Node A', group: 'ADaM' as const, kind: 'source' as const },
+        { id: 'B', title: 'Node B', group: 'SDTM' as const, kind: 'target' as const }
+      ],
+      edges: [
+        { from: 'A', to: 'B', label: 'Test', explanation: 'This is a test explanation' },
+        { from: 'B', to: 'A', label: 'Reverse' } // No explanation
+      ],
+      gaps: { notes: [] }
+    }
+    
+    render(<LineageGraph lineage={mockLineageWithExplanation} />)
+    
+    // Check that explanation is displayed when present
+    expect(screen.getByText(/This is a test explanation/)).toBeInTheDocument()
+    
+    // Check that edge without explanation still works
+    expect(screen.getByText(/Reverse/)).toBeInTheDocument()
   })
 
   it('positions edges correctly between nodes with hierarchical layout', () => {
     render(<LineageGraph lineage={mockLineageData} />)
     
-    // Now we use paths instead of lines
-    const paths = document.querySelectorAll('path')
-    expect(paths).toHaveLength(2) // 2 edges
+    // Now we use paths instead of lines - only count the actual edge paths
+    const edgePaths = document.querySelectorAll('svg path[marker-end]')
+    expect(edgePaths).toHaveLength(2) // 2 edges
     
     // Check that paths have proper d attributes (SVG path data)
-    paths.forEach(path => {
+    edgePaths.forEach(path => {
       const pathData = path.getAttribute('d')
       expect(pathData).toBeTruthy()
       expect(pathData).toMatch(/^M\s+\d+/) // Should start with Move command
