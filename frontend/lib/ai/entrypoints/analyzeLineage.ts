@@ -24,52 +24,86 @@ export async function analyzeLineage(request: AnalyzeLineageRequest): Promise<Li
     
     const data: AnalyzeVariableResponse = await response.json()
     
-    // Log the raw API response for debugging
-    console.log('Raw API response from backend:', data)
+    // Debug: Log the raw backend response
+    console.log('🔍 Debug - Raw backend response:', data)
+    console.log('🔍 Debug - Summary from backend:', data.summary)
+    console.log('🔍 Debug - Lineage data:', data.lineage)
+    console.log('🔍 Debug - Gaps data:', data.lineage?.gaps)
     
     // Transform the API response to match LineageGraph type
     // The backend returns a different structure, so we need to transform it
     const transformedLineage: LineageGraph = {
-      summary: `Lineage analysis for ${data.dataset}.${data.variable}`,
-      nodes: data.lineage.nodes.map((node: any) => {
-        // Backend returns nodes with 'type' instead of 'kind', and different structure
+      summary: data.summary || `Lineage analysis for ${data.dataset}.${data.variable}`,
+      nodes: data.lineage.nodes.map((node: {
+        id: string
+        type: string
+        file?: string
+        label: string
+        description: string
+        explanation: string
+      }) => {
+        // Backend returns nodes with 'type', 'label', 'description', and 'explanation'
         const nodeId = node.id || `${data.dataset}.${data.variable}`
         const nodeType = node.type || 'target'
         
-        // Determine group based on node ID or type
-        let group: 'ADaM' | 'SDTM' | 'aCRF' | 'TLF' = 'ADaM'
-        if (nodeId.startsWith('SDTM.')) group = 'SDTM'
-        else if (nodeId.startsWith('aCRF.') || nodeId.startsWith('CRF.')) group = 'aCRF'
-        else if (nodeId.startsWith('TLF.') || nodeId.startsWith('Protocol.')) group = 'TLF'
+        // Determine group based on node type
+        let group: 'ADaM' | 'SDTM' | 'aCRF' | 'TLF' | 'Protocol' = 'ADaM'
+        if (nodeType === 'SDTM') group = 'SDTM'
+        else if (nodeType === 'CRF') group = 'aCRF'
+        else if (nodeType === 'TLF') group = 'TLF'
+        else if (nodeType === 'Protocol') group = 'Protocol'
         
-        // Determine kind based on type
+        // Determine kind based on type and position in flow
         let kind: 'source' | 'intermediate' | 'target' = 'target'
-        if (nodeType === 'source') kind = 'source'
-        else if (nodeType === 'intermediate') kind = 'intermediate'
+        if (nodeType === 'Protocol' || nodeType === 'CRF') kind = 'source'
+        else if (nodeType === 'SDTM') kind = 'intermediate'
+        else if (nodeType === 'target') kind = 'target'
         
         return {
           id: nodeId,
           title: node.label || nodeId.split('.').pop() || data.variable,
-          dataset: node.dataset || data.dataset,
-          variable: node.variable || data.variable,
+          dataset: data.dataset,
+          variable: data.variable,
           group,
           kind,
           meta: { 
             file: node.file,
-            notes: node.description || node.file
+            notes: node.description || node.explanation || node.file
           }
         }
       }),
-      edges: data.lineage.edges.map((edge: any) => ({
-        from: edge.source || edge.from,
-        to: edge.target || edge.to,
-        confidence: edge.confidence || 0.8,
-        label: edge.label || 'derived'
+      edges: data.lineage.edges.map((edge: {
+        from: string
+        to: string
+        label: string
+        explanation: string
+      }) => ({
+        from: edge.from,
+        to: edge.to,
+        label: edge.label || edge.explanation || 'derived',
+        explanation: edge.explanation
       })),
       gaps: { 
-        notes: Array.isArray(data.lineage.gaps) 
-          ? data.lineage.gaps.filter((gap: any) => typeof gap === 'string').map((gap: any) => gap.toString())
-          : [data.lineage.gaps?.toString() || 'No gaps identified'].filter(Boolean)
+        notes: (() => {
+          // Debug: Log the gaps transformation
+          console.log('🔍 Debug - Processing gaps:', data.lineage.gaps)
+          
+          if (Array.isArray(data.lineage.gaps)) {
+            const processedGaps = data.lineage.gaps.map((gap: { source: string; target: string; explanation: string }) => {
+              const explanation = gap.explanation || 'Gap identified'
+              console.log('🔍 Debug - Processing gap:', gap, '→ explanation:', explanation)
+              return explanation
+            }).filter(Boolean)
+            
+            // Remove duplicate explanations to prevent React key conflicts
+            const uniqueGaps = [...new Set(processedGaps)]
+            console.log('🔍 Debug - Final processed gaps (unique):', uniqueGaps)
+            return uniqueGaps
+          } else {
+            console.log('🔍 Debug - Gaps is not an array, using default')
+            return ['No gaps identified']
+          }
+        })()
       }
     }
     
@@ -99,7 +133,7 @@ export async function analyzeLineage(request: AnalyzeLineageRequest): Promise<Li
         {
           id: `Protocol.${data.dataset}.${data.variable}`,
           title: `Protocol: ${data.variable}`,
-          group: 'TLF' as const,
+          group: 'Protocol' as const,
           kind: 'source' as const,
           meta: { notes: 'Protocol definition' }
         }
@@ -109,20 +143,20 @@ export async function analyzeLineage(request: AnalyzeLineageRequest): Promise<Li
         {
           from: `Protocol.${data.dataset}.${data.variable}`,
           to: `CRF.${data.dataset}.${data.variable}`,
-          confidence: 'high',
-          label: 'Protocol → CRF design'
+          label: 'Protocol → CRF design',
+          explanation: 'Protocol defines the variable requirements and CRF design implements data collection'
         },
         {
           from: `CRF.${data.dataset}.${data.variable}`,
           to: `SDTM.${data.dataset}.${data.variable}`,
-          confidence: 'high',
-          label: 'CRF capture → SDTM standardize'
+          label: 'CRF capture → SDTM standardize',
+          explanation: 'Data captured on CRF is standardized according to SDTM guidelines'
         },
         {
           from: `SDTM.${data.dataset}.${data.variable}`,
           to: targetId,
-          confidence: 'high',
-          label: 'retain or derive'
+          label: 'retain or derive',
+          explanation: 'Variable is retained or derived for analysis dataset according to ADaM specifications'
         }
       ]
       
@@ -135,15 +169,11 @@ export async function analyzeLineage(request: AnalyzeLineageRequest): Promise<Li
       }
     }
     
-    // Log the final transformed lineage for debugging
-    console.log('Final transformed lineage:', transformedLineage)
-    
     return transformedLineage
   } catch (error) {
     console.error('Error analyzing lineage:', error)
     
     // Return meaningful fallback lineage data on error
-    console.log('Returning fallback lineage data')
     return {
       summary: `Lineage analysis for ${request.dataset}.${request.variable} is currently unavailable. This variable appears to be part of the ${request.dataset} dataset.`,
       nodes: [
@@ -175,7 +205,7 @@ export async function analyzeLineage(request: AnalyzeLineageRequest): Promise<Li
         {
           id: `Protocol.${request.dataset}.${request.variable}`,
           title: `Protocol: ${request.variable}`,
-          group: 'TLF' as const,
+          group: 'Protocol' as const,
           kind: 'source',
           meta: { notes: 'Protocol definition' }
         }
@@ -184,20 +214,20 @@ export async function analyzeLineage(request: AnalyzeLineageRequest): Promise<Li
         {
           from: `Protocol.${request.dataset}.${request.variable}`,
           to: `CRF.${request.dataset}.${request.variable}`,
-          confidence: 'high',
-          label: 'Protocol → CRF design'
+          label: 'Protocol → CRF design',
+          explanation: 'Protocol defines the variable requirements and CRF design implements data collection'
         },
         {
           from: `CRF.${request.dataset}.${request.variable}`,
           to: `SDTM.${request.dataset}.${request.variable}`,
-          confidence: 'high',
-          label: 'CRF capture → SDTM standardize'
+          label: 'CRF capture → SDTM standardize',
+          explanation: 'Data captured on CRF is standardized according to SDTM guidelines'
         },
         {
           from: `SDTM.${request.dataset}.${request.variable}`,
           to: `${request.dataset}.${request.variable}`,
-          confidence: 'high',
-          label: 'retain or derive'
+          label: 'retain or derive',
+          explanation: 'Variable is retained or derived for analysis dataset according to ADaM specifications'
         }
       ],
       gaps: { 
