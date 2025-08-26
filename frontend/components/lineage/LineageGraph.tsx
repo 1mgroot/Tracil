@@ -251,11 +251,7 @@ export function LineageGraph({ lineage }: LineageGraphProps) {
             Process: {edge.label}
           </div>
         )}
-        {edge.confidence && (
-          <div className="text-sm text-gray-600">
-            Confidence: {edge.confidence}
-          </div>
-        )}
+
       </div>
     )
     
@@ -271,15 +267,7 @@ export function LineageGraph({ lineage }: LineageGraphProps) {
     setTooltip(null)
   }
 
-  // Get confidence color based on string value
-  const getConfidenceColor = (confidence: string): string => {
-    switch (confidence.toLowerCase()) {
-      case 'high': return '#10b981' // green
-      case 'medium': return '#f59e0b' // amber
-      case 'low': return '#ef4444' // red
-      default: return '#6b7280' // gray
-    }
-  }
+
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
@@ -326,7 +314,6 @@ export function LineageGraph({ lineage }: LineageGraphProps) {
             
             if (!connectionPoints) return null
             
-            const confidenceColor = getConfidenceColor(edge.confidence)
             const pathData = createPath(connectionPoints.from, connectionPoints.to)
             
             return (
@@ -334,7 +321,7 @@ export function LineageGraph({ lineage }: LineageGraphProps) {
                 {/* Curved path connection */}
                 <path
                   d={pathData}
-                  stroke={confidenceColor}
+                  stroke="#6b7280"
                   strokeWidth="2"
                   fill="none"
                   markerEnd="url(#arrowhead)"
@@ -407,7 +394,6 @@ export function LineageGraph({ lineage }: LineageGraphProps) {
                 <li key={`${edge.from}-${edge.to}`} className="text-sm text-gray-600">
                   <span className="font-medium">{edge.from}</span> → <span className="font-medium">{edge.to}</span>
                   {edge.label && ` (${edge.label})`}
-                  {edge.confidence && ` - Confidence: ${edge.confidence}`}
                 </li>
               ))}
             </ul>

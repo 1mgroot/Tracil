@@ -45,13 +45,11 @@ const mockLineageData: LineageGraphType = {
     {
       from: 'ADAE.AESCAN',
       to: 'AE.AESCAN',
-      confidence: 'high',
       label: 'Derived from'
     },
     {
       from: 'AE.AESCAN',
       to: 'CRF.Page.121',
-      confidence: 'high',
       label: 'Collected on'
     }
   ],
@@ -86,16 +84,7 @@ describe('LineageGraph', () => {
     expect(paths).toHaveLength(2) // 2 edges
   })
 
-  it('applies correct confidence colors to edges', () => {
-    render(<LineageGraph lineage={mockLineageData} />)
-    
-    const paths = document.querySelectorAll('path')
-    paths.forEach(path => {
-      const stroke = path.getAttribute('stroke')
-      // High confidence should be green (#10b981)
-      expect(stroke).toBe('#10b981')
-    })
-  })
+
 
   it('renders accessibility information', () => {
     render(<LineageGraph lineage={mockLineageData} />)
@@ -115,9 +104,7 @@ describe('LineageGraph', () => {
     expect(screen.getByText(/Derived from/)).toBeInTheDocument()
     expect(screen.getByText(/Collected on/)).toBeInTheDocument()
     
-    // Check that confidence is displayed (appears twice - once for each edge)
-    const confidenceTexts = screen.getAllByText(/Confidence: high/)
-    expect(confidenceTexts).toHaveLength(2)
+
   })
 
   it('positions edges correctly between nodes with hierarchical layout', () => {

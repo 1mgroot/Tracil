@@ -76,19 +76,7 @@ const getNodeStyle = (node: LineageNode) => {
   }
 }
 
-const getConfidenceColor = (confidence: unknown): string => {
-  // Handle cases where confidence might not be a string
-  if (typeof confidence !== 'string') {
-    return '#6b7280' // Default gray color
-  }
-  
-  switch (confidence.toLowerCase()) {
-    case 'high': return '#10b981' // Green for high confidence
-    case 'medium': return '#f59e0b' // Orange for medium confidence
-    case 'low': return '#ef4444' // Red for low confidence
-    default: return '#6b7280'
-  }
-}
+
 
 const getEdgeStyle = (edge: LineageEdge) => {
   const baseStyle = {
@@ -139,7 +127,7 @@ const getEdgeStyle = (edge: LineageEdge) => {
   
   return {
     ...baseStyle,
-    stroke: getConfidenceColor(edge.confidence),
+    stroke: '#6b7280', // Default gray color
   }
 }
 
@@ -282,7 +270,6 @@ export function LineageGraphReactFlow({ lineage }: LineageGraphProps) {
         },
         data: {
           label: edge.label,
-          confidence: edge.confidence,
         },
       }
     })
@@ -356,7 +343,7 @@ export function LineageGraphReactFlow({ lineage }: LineageGraphProps) {
                 <li key={edge.id} className="text-sm text-gray-600">
                   <span className="font-medium">{edge.source}</span> → <span className="font-medium">{edge.target}</span>
                   {edge.data?.label && ` (${edge.data.label})`}
-                  {edge.data?.confidence && ` - Confidence: ${edge.data.confidence}`}
+
                 </li>
               ))}
             </ul>

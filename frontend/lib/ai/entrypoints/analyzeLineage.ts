@@ -80,7 +80,7 @@ export async function analyzeLineage(request: AnalyzeLineageRequest): Promise<Li
       }) => ({
         from: edge.from,
         to: edge.to,
-        confidence: 'high', // Default to high confidence for now
+
         label: edge.label || edge.explanation || 'derived'
       })),
       gaps: { 
@@ -143,19 +143,16 @@ export async function analyzeLineage(request: AnalyzeLineageRequest): Promise<Li
         {
           from: `Protocol.${data.dataset}.${data.variable}`,
           to: `CRF.${data.dataset}.${data.variable}`,
-          confidence: 'high',
           label: 'Protocol → CRF design'
         },
         {
           from: `CRF.${data.dataset}.${data.variable}`,
           to: `SDTM.${data.dataset}.${data.variable}`,
-          confidence: 'high',
           label: 'CRF capture → SDTM standardize'
         },
         {
           from: `SDTM.${data.dataset}.${data.variable}`,
           to: targetId,
-          confidence: 'high',
           label: 'retain or derive'
         }
       ]
@@ -214,19 +211,16 @@ export async function analyzeLineage(request: AnalyzeLineageRequest): Promise<Li
         {
           from: `Protocol.${request.dataset}.${request.variable}`,
           to: `CRF.${request.dataset}.${request.variable}`,
-          confidence: 'high',
           label: 'Protocol → CRF design'
         },
         {
           from: `CRF.${request.dataset}.${request.variable}`,
           to: `SDTM.${request.dataset}.${request.variable}`,
-          confidence: 'high',
           label: 'CRF capture → SDTM standardize'
         },
         {
           from: `SDTM.${request.dataset}.${request.variable}`,
           to: `${request.dataset}.${request.variable}`,
-          confidence: 'high',
           label: 'retain or derive'
         }
       ],

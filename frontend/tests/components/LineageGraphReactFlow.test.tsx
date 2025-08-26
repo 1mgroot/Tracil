@@ -107,13 +107,11 @@ const mockLineageData: LineageGraphType = {
     {
       from: 'ADAE.AESCAN',
       to: 'AE.AESCAN',
-      confidence: 'high',
       label: 'Derived from'
     },
     {
       from: 'AE.AESCAN',
       to: 'CRF.Page.121',
-      confidence: 'high',
       label: 'Collected on'
     }
   ],
@@ -155,9 +153,7 @@ describe('LineageGraphReactFlow', () => {
     expect(screen.getByText(/Derived from/)).toBeInTheDocument()
     expect(screen.getByText(/Collected on/)).toBeInTheDocument()
     
-    // Check that confidence is displayed (there should be 2 edges with high confidence)
-    const confidenceElements = screen.getAllByText(/Confidence: high/)
-    expect(confidenceElements).toHaveLength(2)
+
   })
 
   it('renders chart title', () => {
