@@ -104,7 +104,17 @@ export function MainScreenClient(): ReactNode {
 		setSelectedId(datasetId)
 		setSelectedItem({ type: 'dataset', datasetId })
 		setLineageState(null) // Clear lineage when switching datasets
-	}, [])
+		
+		// Auto-trigger lineage analysis for TLF items
+		const selectedDataset = getDatasetById(datasetId)
+		if (selectedDataset && selectedDataset.group === 'TLF') {
+			// For TLF items, automatically analyze lineage with the table ID
+			setLineageState({
+				dataset: 'TLF',
+				variable: selectedDataset.name
+			})
+		}
+	}, [getDatasetById])
 
 	// Handle variable selection - open lineage view
 	const handleVariableSelect = useCallback((variable: { name: string }) => {

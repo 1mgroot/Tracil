@@ -24,10 +24,16 @@ export async function analyzeLineage(request: AnalyzeLineageRequest): Promise<Li
     
     const data: AnalyzeVariableResponse = await response.json()
     
+    // Debug: Log the raw backend response
+    console.log('🔍 Debug - Raw backend response:', data)
+    console.log('🔍 Debug - Summary from backend:', data.summary)
+    console.log('🔍 Debug - Lineage data:', data.lineage)
+    console.log('🔍 Debug - Gaps data:', data.lineage?.gaps)
+    
     // Transform the API response to match LineageGraph type
     // The backend returns a different structure, so we need to transform it
     const transformedLineage: LineageGraph = {
-      summary: `Lineage analysis for ${data.dataset}.${data.variable}`,
+      summary: data.summary || `Lineage analysis for ${data.dataset}.${data.variable}`,
       nodes: data.lineage.nodes.map((node: {
         id: string
         type: string
@@ -78,9 +84,26 @@ export async function analyzeLineage(request: AnalyzeLineageRequest): Promise<Li
         label: edge.label || edge.explanation || 'derived'
       })),
       gaps: { 
-        notes: Array.isArray(data.lineage.gaps) 
-          ? data.lineage.gaps.map((gap: { source: string; target: string; explanation: string }) => gap.explanation || 'Gap identified').filter(Boolean)
-          : ['No gaps identified']
+        notes: (() => {
+          // Debug: Log the gaps transformation
+          console.log('🔍 Debug - Processing gaps:', data.lineage.gaps)
+          
+          if (Array.isArray(data.lineage.gaps)) {
+            const processedGaps = data.lineage.gaps.map((gap: { source: string; target: string; explanation: string }) => {
+              const explanation = gap.explanation || 'Gap identified'
+              console.log('🔍 Debug - Processing gap:', gap, '→ explanation:', explanation)
+              return explanation
+            }).filter(Boolean)
+            
+            // Remove duplicate explanations to prevent React key conflicts
+            const uniqueGaps = [...new Set(processedGaps)]
+            console.log('🔍 Debug - Final processed gaps (unique):', uniqueGaps)
+            return uniqueGaps
+          } else {
+            console.log('🔍 Debug - Gaps is not an array, using default')
+            return ['No gaps identified']
+          }
+        })()
       }
     }
     
