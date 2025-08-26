@@ -38,8 +38,8 @@ export interface ProtocolPopulation {
 }
 
 export interface ProtocolSOA {
-  readonly forms: readonly { readonly id: string; readonly name: string }[]
-  readonly schedule: readonly { readonly id: string; readonly name: string }[]
+  readonly forms: readonly (string | { readonly id: string; readonly name: string })[]
+  readonly schedule: readonly (string | { readonly id: string; readonly name: string })[]
 }
 
 export interface ProtocolDesign {
@@ -270,18 +270,42 @@ export function transformSourceAgnosticToUI(response: SourceAgnosticProcessFiles
         // Create SOA dataset
         if (design.soa) {
           const soaVariables = [
-            ...design.soa.forms.map((form: { readonly id: string; readonly name: string }) => ({
-              name: form.id,
-              label: form.name,
-              type: 'character' as VariableType,
-              comment: 'SOA Form'
-            })),
-            ...design.soa.schedule.map((schedule: { readonly id: string; readonly name: string }) => ({
-              name: schedule.id,
-              label: schedule.name,
-              type: 'character' as VariableType,
-              comment: 'SOA Schedule'
-            }))
+            // Handle both string arrays and object arrays for forms
+            ...(Array.isArray(design.soa.forms) ? design.soa.forms.map((form: string | { readonly id: string; readonly name: string }) => {
+              if (typeof form === 'string') {
+                return {
+                  name: form,
+                  label: form,
+                  type: 'character' as VariableType,
+                  comment: 'SOA Form'
+                }
+              } else {
+                return {
+                  name: form.id || form.name,
+                  label: form.name || form.id,
+                  type: 'character' as VariableType,
+                  comment: 'SOA Form'
+                }
+              }
+            }) : []),
+            // Handle both string arrays and object arrays for schedules
+            ...(Array.isArray(design.soa.schedule) ? design.soa.schedule.map((schedule: string | { readonly id: string; readonly name: string }) => {
+              if (typeof schedule === 'string') {
+                return {
+                  name: schedule,
+                  label: schedule,
+                  type: 'character' as VariableType,
+                  comment: 'SOA Schedule'
+                }
+              } else {
+                return {
+                  name: schedule.id || schedule.name,
+                  label: schedule.name || schedule.id,
+                  type: 'character' as VariableType,
+                  comment: 'SOA Schedule'
+                }
+              }
+            }) : [])
           ]
           
           if (soaVariables.length > 0) {
@@ -347,7 +371,7 @@ export function transformSourceAgnosticToUI(response: SourceAgnosticProcessFiles
 export interface AnalyzeVariableRequest {
   readonly variable: string
   readonly dataset: string
-  readonly files?: readonly { readonly [key: string]: any }[]
+  readonly files?: readonly { readonly [key: string]: unknown }[]
 }
 
 export interface AnalyzeVariableResponse {

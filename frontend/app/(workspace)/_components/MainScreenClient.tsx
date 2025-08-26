@@ -114,13 +114,19 @@ export function MainScreenClient(): ReactNode {
 				variable: selectedDataset.name
 			})
 		}
+		// Note: Protocol datasets don't auto-trigger lineage analysis
+		// Users must click on individual variables (forms, endpoints, etc.) to analyze
 	}, [getDatasetById])
 
 	// Handle variable selection - open lineage view
 	const handleVariableSelect = useCallback((variable: { name: string }) => {
 		if (selectedDataset) {
+			// For Protocol data, always use "Protocol" as the dataset
+			// This ensures that analyze-variable calls use dataset: "Protocol"
+			const datasetName = selectedDataset.group === 'Protocol' ? 'Protocol' : selectedDataset.name
+			
 			setLineageState({
-				dataset: selectedDataset.name,
+				dataset: datasetName,
 				variable: variable.name
 			})
 		}
