@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { TraceabilitySummary } from '@/components/lineage/TraceabilitySummary'
 import { LineageGraphReactFlow } from '@/components/lineage/LineageGraphReactFlow'
 import { analyzeLineage } from '@/lib/ai/entrypoints/analyzeLineage'
@@ -17,38 +17,19 @@ export function LineageView({ dataset, variable, onBack }: LineageViewProps) {
   const [lineage, setLineage] = useState<LineageGraphType | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  
-  // Prevent duplicate API calls for the same dataset/variable combination
-  const lastRequestRef = useRef<string>('')
-  const isRequestingRef = useRef(false)
 
   useEffect(() => {
-    const requestKey = `${dataset}:${variable}`
-    
-    // Prevent duplicate requests for the same dataset/variable
-    if (lastRequestRef.current === requestKey && isRequestingRef.current) {
-      return
-    }
-    
-    // Prevent duplicate requests while one is already in progress
-    if (isRequestingRef.current) {
-      return
-    }
-
     async function loadLineage() {
       try {
-        isRequestingRef.current = true
-        lastRequestRef.current = requestKey
         setLoading(true)
         setError(null)
-        
         const result = await analyzeLineage({ dataset, variable })
+        console.log('LineageView received result:', result)
         setLineage(result)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load lineage')
       } finally {
         setLoading(false)
-        isRequestingRef.current = false
       }
     }
 

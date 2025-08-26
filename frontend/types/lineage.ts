@@ -1,5 +1,5 @@
 export type LineageNodeKind = 'source' | 'intermediate' | 'target'
-export type ArtifactGroup = 'ADaM' | 'SDTM' | 'aCRF' | 'TLF' | 'Protocol'
+export type ArtifactGroup = 'ADaM' | 'SDTM' | 'aCRF' | 'TLF'
 
 export interface LineageNode {
   readonly id: string            // e.g., "SDTM.DM.SEX"
@@ -14,8 +14,8 @@ export interface LineageNode {
 export interface LineageEdge {
   readonly from: string
   readonly to: string
+  readonly confidence: string    // "high", "medium", "low" from backend
   readonly label?: string        // e.g., "retain", "MedDRA map"
-  readonly explanation?: string  // Detailed explanation of the relationship
 }
 
 export interface LineageGaps { readonly notes?: string[] }

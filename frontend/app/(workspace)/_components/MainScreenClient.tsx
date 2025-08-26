@@ -82,8 +82,7 @@ export function MainScreenClient(): ReactNode {
 			ADaM: datasets.filter(d => d.group === 'ADaM'),
 			SDTM: datasets.filter(d => d.group === 'SDTM'),
 			aCRF: datasets.filter(d => d.group === 'aCRF'),
-			TLF: datasets.filter(d => d.group === 'TLF'),
-			Protocol: datasets.filter(d => d.group === 'Protocol')
+			TLF: datasets.filter(d => d.group === 'TLF')
 		}
 		return groups
 	}, [datasets])
@@ -95,7 +94,6 @@ export function MainScreenClient(): ReactNode {
 			...groupedDatasets.SDTM.map(d => d.id),
 			...groupedDatasets.aCRF.map(d => d.id),
 			...groupedDatasets.TLF.map(d => d.id),
-			...groupedDatasets.Protocol.map(d => d.id),
 		]
 	}, [groupedDatasets])
 
@@ -104,29 +102,13 @@ export function MainScreenClient(): ReactNode {
 		setSelectedId(datasetId)
 		setSelectedItem({ type: 'dataset', datasetId })
 		setLineageState(null) // Clear lineage when switching datasets
-		
-		// Auto-trigger lineage analysis for TLF items
-		const selectedDataset = getDatasetById(datasetId)
-		if (selectedDataset && selectedDataset.group === 'TLF') {
-			// For TLF items, automatically analyze lineage with the table ID
-			setLineageState({
-				dataset: 'TLF',
-				variable: selectedDataset.name
-			})
-		}
-		// Note: Protocol datasets don't auto-trigger lineage analysis
-		// Users must click on individual variables (forms, endpoints, etc.) to analyze
-	}, [getDatasetById])
+	}, [])
 
 	// Handle variable selection - open lineage view
 	const handleVariableSelect = useCallback((variable: { name: string }) => {
 		if (selectedDataset) {
-			// For Protocol data, always use "Protocol" as the dataset
-			// This ensures that analyze-variable calls use dataset: "Protocol"
-			const datasetName = selectedDataset.group === 'Protocol' ? 'Protocol' : selectedDataset.name
-			
 			setLineageState({
-				dataset: datasetName,
+				dataset: selectedDataset.name,
 				variable: variable.name
 			})
 		}
@@ -417,19 +399,6 @@ export function MainScreenClient(): ReactNode {
 									active={selectedId === dataset.id} 
 									onClick={() => handleDatasetSelect(dataset.id)} 
 									tone={toneFor(i, groupedDatasets.TLF.length)}
-									itemId={dataset.id}
-								>
-									{dataset.name}
-								</SidebarItem>
-							))}
-						</SidebarGroup>
-						<SidebarGroup label="Protocol" accentVar="--accent-protocol">
-							{groupedDatasets.Protocol.map((dataset, i) => (
-								<SidebarItem 
-									key={dataset.id} 
-									active={selectedId === dataset.id} 
-									onClick={() => handleDatasetSelect(dataset.id)} 
-									tone={toneFor(i, groupedDatasets.Protocol.length)}
 									itemId={dataset.id}
 								>
 									{dataset.name}
