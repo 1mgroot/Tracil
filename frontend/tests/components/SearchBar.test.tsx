@@ -64,8 +64,9 @@ describe('SearchBar', () => {
       input.focus()
       expect(input).toHaveFocus()
       
-      searchButton.focus()
-      expect(searchButton).toHaveFocus()
+      // Search button should be disabled when no input, so it can't receive focus
+      // Instead, test that it has the proper disabled state
+      expect(searchButton).toBeDisabled()
       
       // Test that elements have proper tab order by checking they're all focusable
       // The actual tab order will be determined by the DOM structure
@@ -188,6 +189,46 @@ describe('SearchBar', () => {
       
       expect(filtersButton).toHaveClass('p-1', 'rounded-md', 'hover:bg-[--surface-muted]')
       expect(searchButton).toHaveClass('p-1', 'rounded-md', 'hover:bg-[--surface-muted]')
+    })
+  })
+
+  describe('Loading State', () => {
+    it('should show loading spinner when loading is true', () => {
+      render(<SearchBar isLoading={true} />)
+      
+      // Should show loading spinner instead of search icon
+      expect(screen.getByRole('textbox')).toBeDisabled()
+      expect(screen.getByLabelText('Search')).toBeDisabled()
+      
+      // Should have loading spinner
+      const loadingSpinner = screen.getByLabelText('Search').querySelector('.animate-spin')
+      expect(loadingSpinner).toBeInTheDocument()
+    })
+
+    it('should disable input and search button when loading', () => {
+      render(<SearchBar isLoading={true} />)
+      
+      const input = screen.getByRole('textbox') as HTMLInputElement
+      const searchButton = screen.getByLabelText('Search') as HTMLButtonElement
+      
+      expect(input).toBeDisabled()
+      expect(searchButton).toBeDisabled()
+    })
+
+    it('should not call onSearch when loading', () => {
+      const mockOnSearch = jest.fn()
+      render(<SearchBar onSearch={mockOnSearch} isLoading={true} />)
+      
+      const input = screen.getByRole('textbox')
+      const searchButton = screen.getByLabelText('Search')
+      
+      // Type some text
+      fireEvent.change(input, { target: { value: 'test' } })
+      
+      // Click search button
+      fireEvent.click(searchButton)
+      
+      expect(mockOnSearch).not.toHaveBeenCalled()
     })
   })
 
