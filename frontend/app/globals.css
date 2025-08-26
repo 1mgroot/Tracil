@@ -103,9 +103,6 @@
   --accent-tlf: oklch(0.60 0.16 320);
   --accent-tlf-bg: oklch(0.96 0.03 320);
   --accent-tlf-hover: oklch(0.55 0.16 320);
-  --accent-protocol: oklch(0.60 0.16 200);
-  --accent-protocol-bg: oklch(0.96 0.03 200);
-  --accent-protocol-hover: oklch(0.55 0.16 200);
 }
 
 .dark {
@@ -165,9 +162,6 @@
   --accent-tlf: oklch(0.80 0.16 320);
   --accent-tlf-bg: oklch(0.30 0.03 320);
   --accent-tlf-hover: oklch(0.75 0.16 320);
-  --accent-protocol: oklch(0.80 0.16 200);
-  --accent-protocol-bg: oklch(0.30 0.03 200);
-  --accent-protocol-hover: oklch(0.75 0.16 200);
 
   /* Variables Browser UI tokens */
   --text-primary: var(--text);
