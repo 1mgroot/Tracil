@@ -19,11 +19,10 @@ const mockDagreGraph = {
 // Mock dagre at module level
 jest.mock('dagre', () => ({
   __esModule: true,
-  default: {
-    graphlib: {
-      Graph: jest.fn(() => mockDagreGraph)
-    }
-  }
+  graphlib: {
+    Graph: jest.fn(() => mockDagreGraph)
+  },
+  layout: jest.fn()
 }))
 
 // Mock React Flow to avoid canvas rendering issues in tests
