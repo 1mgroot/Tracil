@@ -3,7 +3,7 @@ import type { SourceAgnosticProcessFilesResponse } from '@/types/variables'
 
 // Configuration
 const PYTHON_BACKEND_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
-const API_TIMEOUT_MS = parseInt(process.env.NEXT_PUBLIC_API_TIMEOUT_MS || '30000')
+const API_TIMEOUT_MS = parseInt(process.env.NEXT_PUBLIC_API_TIMEOUT_MS || '120000') // Increased to 2 minutes
 
 /**
  * Next.js API route for processing files
@@ -25,16 +25,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       )
     }
 
-    console.log(`📁 Processing ${files.length} files:`, files.map(f => f.name))
-    console.log(`🔗 Backend URL: ${PYTHON_BACKEND_URL}`)
-
-    // Forward to Python backend
+    // Create FormData and send files to backend
     const backendFormData = new FormData()
     files.forEach(file => {
       backendFormData.append('files', file)
-      console.log(`📎 Appending file: ${file.name} (${file.size} bytes)`)
     })
-
+    
+    // Forward to Python backend
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS)
 
@@ -48,11 +45,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       clearTimeout(timeoutId)
 
       if (!response.ok) {
-        throw new Error(`Backend error: ${response.statusText}`)
+        const errorText = await response.text()
+        throw new Error(`Backend error: ${response.statusText} - ${errorText}`)
       }
 
-      const data: SourceAgnosticProcessFilesResponse = await response.json()
-      console.log('✅ Files processed successfully by backend')
+      const data = await response.json()
+      
       return NextResponse.json(data)
     } catch (error) {
       clearTimeout(timeoutId)

@@ -6,7 +6,7 @@ import type {
 
 // Configuration
 const PYTHON_BACKEND_URL = process.env.NEXT_PUBLIC_PYTHON_BACKEND_URL || 'http://localhost:8000'
-const API_TIMEOUT_MS = 30000
+const API_TIMEOUT_MS = parseInt(process.env.NEXT_PUBLIC_API_TIMEOUT_MS || '120000') // Increased to 2 minutes
 
 // Error handling
 class APIError extends Error {

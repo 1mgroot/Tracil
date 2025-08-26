@@ -196,22 +196,24 @@ export interface AnalyzeVariableResponse {
   readonly dataset: string
   readonly summary: string
   readonly lineage: {
-    readonly summary: string
     readonly nodes: readonly {
       readonly id: string
-      readonly title: string
-      readonly dataset?: string
-      readonly variable?: string
-      readonly group: 'ADaM' | 'SDTM' | 'aCRF' | 'TLF' | 'Protocol'
-      readonly kind: 'source' | 'intermediate' | 'target'
-      readonly meta?: { file?: string; notes?: string }
+      readonly type: string
+      readonly file?: string
+      readonly label: string
+      readonly description: string
+      readonly explanation: string
     }[]
     readonly edges: readonly {
       readonly from: string
       readonly to: string
-      readonly confidence?: number
-      readonly label?: string
+      readonly label: string
+      readonly explanation: string
     }[]
-    readonly gaps?: { readonly notes?: string[] }
+    readonly gaps?: readonly {
+      readonly source: string
+      readonly target: string
+      readonly explanation: string
+    }[]
   }
 }

@@ -79,7 +79,6 @@ const getNodeStyle = (node: LineageNode) => {
 const getConfidenceColor = (confidence: unknown): string => {
   // Handle cases where confidence might not be a string
   if (typeof confidence !== 'string') {
-    console.warn('Confidence is not a string:', confidence)
     return '#6b7280' // Default gray color
   }
   
@@ -224,7 +223,6 @@ export function LineageGraphReactFlow({ lineage }: LineageGraphProps) {
   // Create lineage-based layout
   const layoutPositions = useMemo(() => {
     const positions = createLineageLayout(lineage.nodes)
-    console.log('Layout positions:', positions)
     return positions
   }, [lineage.nodes])
   
@@ -268,13 +266,8 @@ export function LineageGraphReactFlow({ lineage }: LineageGraphProps) {
   }, [lineage.nodes, layoutPositions])
 
   const initialEdges: Edge[] = useMemo(() => {
-    // Debug: Log the actual edge data
-    console.log('Lineage edges data:', lineage.edges)
-    
     // Note: Data is already deduplicated at the API level
     return lineage.edges.map((edge) => {
-      console.log('Processing edge:', edge, 'confidence type:', typeof edge.confidence, 'value:', edge.confidence)
-      
       return {
         id: `${edge.from}-${edge.to}`,
         source: edge.from,
