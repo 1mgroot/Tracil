@@ -1,8 +1,7 @@
-import { useCallback, useMemo } from 'react'
+import { useMemo } from 'react'
 import ReactFlow, {
   Node,
   Edge,
-  Controls,
   Background,
   useNodesState,
   useEdgesState,
@@ -49,7 +48,7 @@ const getNodeStyle = (node: LineageNode) => {
   }
   
   // Get colors from centralized system, with fallback for unknown types
-  const nodeType = (node.type || 'SDTM') as ArtifactType
+  const nodeType = (node.group || 'SDTM') as ArtifactType
   const colors = getTypeColors(nodeType)
   
   return {
@@ -132,16 +131,16 @@ function LineageGraphInner({ lineage }: LineageGraphProps) {
       id: node.id,
       type: 'default',
       position: node.position,
-      data: {
-        label: (
-          <div className="text-center px-6 py-3">
-            <div className="font-black text-white text-xl leading-tight tracking-wide">
-              {node.label || node.title}
+              data: {
+          label: (
+            <div className="text-center px-6 py-3">
+              <div className="font-black text-white text-xl leading-tight tracking-wide">
+                {node.title}
+              </div>
             </div>
-          </div>
-        ),
-        group: node.group,
-        type: node.type,
+          ),
+          group: node.group,
+          type: node.group,
       },
       style: getNodeStyle(node),
       sourcePosition: Position.Right,
@@ -169,36 +168,10 @@ function LineageGraphInner({ lineage }: LineageGraphProps) {
     }))
   }, [layoutedEdges])
 
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
+  const [nodes, , onNodesChange] = useNodesState(initialNodes)
   const [edges, , onEdgesChange] = useEdgesState(initialEdges)
 
-  // Simple re-layout function using official React Flow methods
-  const onLayout = useCallback(() => {
-    const { nodes: newLayoutedNodes } = getLayoutedElements(lineage.nodes, lineage.edges)
-    const updatedNodes = newLayoutedNodes.map((node) => ({
-      id: node.id,
-      type: 'default',
-      position: node.position,
-      data: {
-        label: (
-          <div className="text-center px-6 py-3">
-            <div className="font-black text-white text-xl leading-tight tracking-wide">
-              {node.label || node.title}
-            </div>
-          </div>
-        ),
-        group: node.group,
-        type: node.type,
-      },
-      style: getNodeStyle(node),
-      sourcePosition: Position.Right,
-      targetPosition: Position.Left,
-    }))
-    setNodes(updatedNodes)
-    
-    // Use official fitView method
-    setTimeout(() => fitView(), 100)
-  }, [lineage.nodes, lineage.edges, setNodes, fitView])
+
 
   // Initial fit view using official method
   useMemo(() => {
@@ -210,16 +183,10 @@ function LineageGraphInner({ lineage }: LineageGraphProps) {
       {/* Inject CSS to hide React Flow attribution */}
       <style dangerouslySetInnerHTML={{ __html: hideAttributionCSS }} />
       
-      <div className="flex items-center justify-between mb-6">
+      <div className="mb-6">
         <h2 className="text-lg font-semibold text-gray-900">
           Lineage flow chart
         </h2>
-        <button
-          onClick={onLayout}
-          className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-        >
-          Re-layout
-        </button>
       </div>
       
       <div className="h-[700px] w-full border border-gray-200 rounded-lg overflow-hidden">
@@ -260,7 +227,7 @@ function LineageGraphInner({ lineage }: LineageGraphProps) {
                 <div key={node.id} className="bg-white rounded-lg p-3 border border-gray-200 hover:border-gray-300 transition-colors">
                   <div className="flex items-center space-x-2 mb-1">
                     <div className="flex-shrink-0 w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span className="text-sm font-semibold text-gray-900">{node.label || node.title}</span>
+                    <span className="text-sm font-semibold text-gray-900">{node.title}</span>
                   </div>
                   
                   {node.dataset && (

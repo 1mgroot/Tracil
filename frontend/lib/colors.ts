@@ -25,7 +25,7 @@
  *    - Emotional connection to data types and functions
  */
 
-export type ArtifactType = 'ADaM' | 'SDTM' | 'CRF' | 'TLF' | 'Protocol' | 'target'
+export type ArtifactType = 'ADaM' | 'SDTM' | 'CRF' | 'TLF' | 'Protocol' | 'Unknown' | 'target'
 
 /**
  * COLOR SEMANTICS & PSYCHOLOGY:
@@ -68,9 +68,11 @@ export function getTypeColor(type: ArtifactType): string {
     case 'Protocol':
       return 'var(--accent-protocol)'
     case 'target':
-      return 'oklch(0.60 0.16 60)' // Orange for target nodes
+      return 'oklch(0.50 0.10 30)' // Orange for target nodes
+    case 'Unknown':
+      return 'oklch(0.50 0.10 30)' // Dark gray for unknown types
     default:
-      return 'var(--accent-sdtm)' // Fallback to SDTM color
+      return 'oklch(0.50 0.10 30)' //  Dark gray
   }
 }
 
@@ -92,6 +94,8 @@ export function getTypeHoverColor(type: ArtifactType): string {
       return 'var(--accent-protocol-hover)'
     case 'target':
       return 'oklch(0.55 0.16 60)' // Darker orange for hover
+    case 'Unknown':
+      return 'oklch(0.45 0.10 30)' // Darker gray for hover
     default:
       return 'var(--accent-sdtm-hover)' // Fallback to SDTM hover color
   }
@@ -115,6 +119,8 @@ export function getTypeBackgroundColor(type: ArtifactType): string {
       return 'var(--accent-protocol-bg)'
     case 'target':
       return 'oklch(0.96 0.03 60)' // Light orange background
+    case 'Unknown':
+      return 'oklch(0.95 0.02 30)' // Light gray background
     default:
       return 'var(--accent-sdtm-bg)' // Fallback to SDTM background color
   }
@@ -147,6 +153,8 @@ export function getTypeBorderColor(type: ArtifactType): string {
       return 'var(--accent-protocol-hover)'
     case 'target':
       return 'oklch(0.55 0.16 60)' // Darker orange for border
+    case 'Unknown':
+      return 'oklch(0.40 0.08 30)' // Dark gray for border
     default:
       return 'var(--accent-sdtm-hover)' // Fallback to SDTM hover color
   }
