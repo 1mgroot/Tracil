@@ -1,5 +1,5 @@
 export type LineageNodeKind = 'source' | 'intermediate' | 'target'
-export type ArtifactGroup = 'ADaM' | 'SDTM' | 'aCRF' | 'TLF' | 'Protocol'
+export type ArtifactGroup = 'ADaM' | 'SDTM' | 'aCRF' | 'TLF' | 'Protocol' | 'Unknown' | 'target'
 
 export interface LineageNode {
   readonly id: string            // e.g., "SDTM.DM.SEX"

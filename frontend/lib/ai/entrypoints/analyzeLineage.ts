@@ -6,6 +6,53 @@ interface AnalyzeLineageRequest {
   variable: string
 }
 
+// Type normalization system for backend response types
+type NormalizedType = "ADaM" | "SDTM" | "CRF" | "TLF" | "Protocol" | "Unknown" | "target"
+
+/**
+ * Normalize backend type strings to standardized CDISC categories
+ * Uses "contains" logic for flexible matching
+ */
+function normalizeNodeType(backendType: string): NormalizedType {
+  const typeLower = backendType.toLowerCase()
+  
+  // Check for target type first
+  if (typeLower === 'target') {
+    return "target"
+  }
+  
+  // ADaM types - look for "adam" or "analysis" in the type
+  if (typeLower.includes('adam') || typeLower.includes('analysis') || typeLower.includes('analysis dataset')) {
+    return "ADaM"
+  }
+  
+  // SDTM types - look for "sdtm" or "standard" in the type
+  if (typeLower.includes('sdtm') || typeLower.includes('standard')) {
+    return "SDTM"
+  }
+  
+  // CRF types - look for "crf" or "case report" in the type
+  if (typeLower.includes('crf') || typeLower.includes('case report') || typeLower.includes('form')) {
+    return "CRF"
+  }
+  
+  // TLF types - look for "tlf" or "table" or "figure" or "display" in the type
+  if (typeLower.includes('tlf') || typeLower.includes('table') || typeLower.includes('figure') || 
+      typeLower.includes('display') || typeLower.includes('listing')) {
+    return "TLF"
+  }
+  
+  // Protocol types - look for "protocol" or "sap" in the type
+  if (typeLower.includes('protocol') || typeLower.includes('sap') || typeLower.includes('study plan')) {
+    return "Protocol"
+  }
+  
+  // Default to Unknown for unrecognized types
+  return "Unknown"
+}
+
+
+
 /**
  * Analyze lineage for a specific variable
  * Calls the real API endpoint that proxies to Python backend
@@ -46,22 +93,59 @@ export async function analyzeLineage(request: AnalyzeLineageRequest): Promise<Li
         const nodeId = node.id || `${data.dataset}.${data.variable}`
         const nodeType = node.type || 'target'
         
-        // Determine group based on node type
-        let group: 'ADaM' | 'SDTM' | 'aCRF' | 'TLF' | 'Protocol' = 'ADaM'
-        if (nodeType === 'SDTM') group = 'SDTM'
-        else if (nodeType === 'CRF') group = 'aCRF'
-        else if (nodeType === 'TLF') group = 'TLF'
-        else if (nodeType === 'Protocol') group = 'Protocol'
+        // Normalize the backend type to our standardized categories
+        const normalizedType = normalizeNodeType(nodeType)
         
-        // Determine kind based on type and position in flow
-        let kind: 'source' | 'intermediate' | 'target' = 'target'
-        if (nodeType === 'Protocol' || nodeType === 'CRF') kind = 'source'
-        else if (nodeType === 'SDTM') kind = 'intermediate'
-        else if (nodeType === 'target') kind = 'target'
+        // Log the type normalization for debugging
+        console.log(`🔍 Type normalization: "${nodeType}" → "${normalizedType}"`)
+        
+        // Determine group based on normalized type
+        let group: 'ADaM' | 'SDTM' | 'aCRF' | 'TLF' | 'Protocol' | 'Unknown'
+        switch (normalizedType) {
+          case 'ADaM':
+            group = 'ADaM'
+            break
+          case 'SDTM':
+            group = 'SDTM'
+            break
+          case 'CRF':
+            group = 'aCRF'
+            break
+          case 'TLF':
+            group = 'TLF'
+            break
+          case 'Protocol':
+            group = 'Protocol'
+            break
+          case 'target':
+            group = 'ADaM' // Target nodes are typically ADaM
+            break
+          case 'Unknown':
+            // For unknown types, try to infer from context
+            if (nodeType.toLowerCase().includes('variable')) {
+              group = 'ADaM' // Assume variables are ADaM if we can't determine
+              console.log(`🔍 Inferred group from context: "${nodeType}" → "ADaM" (contains 'variable')`)
+            } else if (nodeType.toLowerCase().includes('dataset')) {
+              group = 'ADaM' // Assume datasets are ADaM if we can't determine
+              console.log(`🔍 Inferred group from context: "${nodeType}" → "ADaM" (contains 'dataset')`)
+            } else {
+              group = 'Unknown' // Keep as unknown if we can't infer
+              console.log(`🔍 Could not infer group for: "${nodeType}", keeping as "Unknown"`)
+            }
+            break
+        }
+        
+        // Determine kind based on group - Protocol and CRF are sources, others are intermediate
+        let kind: 'source' | 'intermediate' | 'target' = 'intermediate'
+        if (group === 'Protocol' || group === 'aCRF') {
+          kind = 'source'
+        } else if (group === 'Unknown') {
+          kind = 'target'
+        }
         
         return {
           id: nodeId,
-          title: node.label || nodeId.split('.').pop() || data.variable,
+          title: node.label || nodeId || data.variable,
           dataset: data.dataset,
           variable: data.variable,
           group,
