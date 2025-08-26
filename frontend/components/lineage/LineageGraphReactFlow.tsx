@@ -321,7 +321,7 @@ export function LineageGraphReactFlow({ lineage }: LineageGraphProps) {
       {/* Accessible fallback list */}
       <div className="mt-8 pt-6 border-t border-gray-200">
         <h3 className="text-sm font-medium text-gray-900 mb-3">
-          Lineage Details (Accessibility)
+          Lineage Details
         </h3>
         <div className="space-y-4">
           <div>

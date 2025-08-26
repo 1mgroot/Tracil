@@ -138,7 +138,7 @@ describe('LineageGraphReactFlow', () => {
   it('renders accessibility information', () => {
     render(<LineageGraphReactFlow lineage={mockLineageData} />)
     
-    expect(screen.getByText('Lineage Details (Accessibility)')).toBeInTheDocument()
+    expect(screen.getByText('Lineage Details')).toBeInTheDocument()
     expect(screen.getByText('Nodes:')).toBeInTheDocument()
     expect(screen.getByText('Connections:')).toBeInTheDocument()
   })

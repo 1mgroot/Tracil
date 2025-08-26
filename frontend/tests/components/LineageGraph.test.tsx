@@ -89,7 +89,7 @@ describe('LineageGraph', () => {
   it('renders accessibility information', () => {
     render(<LineageGraph lineage={mockLineageData} />)
     
-    expect(screen.getByText('Lineage Details (Accessibility)')).toBeInTheDocument()
+    expect(screen.getByText('Lineage Details')).toBeInTheDocument()
     expect(screen.getByText('Nodes:')).toBeInTheDocument()
     expect(screen.getByText('Connections:')).toBeInTheDocument()
   })
