@@ -14,9 +14,44 @@ export interface Variable {
   readonly comment?: string            // Additional comments
 }
 
+// Protocol Design Types (New)
+export interface ProtocolEndpoint {
+  readonly id: string
+  readonly name: string
+  readonly type: 'Primary Endpoint' | 'Secondary Endpoint'
+  readonly description: string
+  readonly population?: string | null
+}
+
+export interface ProtocolObjective {
+  readonly id: string
+  readonly name: string
+  readonly description: string
+  readonly type?: string
+}
+
+export interface ProtocolPopulation {
+  readonly id: string
+  readonly name: string
+  readonly description: string
+  readonly type?: string
+}
+
+export interface ProtocolSOA {
+  readonly forms: readonly { readonly id: string; readonly name: string }[]
+  readonly schedule: readonly { readonly id: string; readonly name: string }[]
+}
+
+export interface ProtocolDesign {
+  readonly endpoints: readonly ProtocolEndpoint[]
+  readonly objectives: readonly ProtocolObjective[]
+  readonly populations: readonly ProtocolPopulation[]
+  readonly soa: ProtocolSOA
+}
+
 // Source-Agnostic Data Structure Types (New)
 export type StandardType = "ADaM" | "SDTM" | "CRF" | "TLF" | "Protocol"
-export type EntityType = "domain" | "analysis_dataset" | "crf_form" | "tlf_item" | "protocol_document" | "tlf_document"
+export type EntityType = "domain" | "analysis_dataset" | "crf_form" | "tlf_item" | "protocol_document" | "tlf_document" | "protocol_design"
 export type SourceFileType = "define_xml" | "dataset_xpt" | "dataset_sas7bdat" | "spec_xlsx" | "acrf_pdf" | "tlf_rtf" | "tlf_pdf" | "protocol_pdf" | "protocol_txt"
 export type FileRole = "primary" | "supplementary" | "validation"
 export type ProcessingStatus = "pending" | "processing" | "completed" | "error"
@@ -49,6 +84,15 @@ export interface EntityMetadata {
   readonly varIndexCount?: number
   readonly titles?: readonly { readonly id: string; readonly title: string }[]
   readonly titleCount?: number
+  // Protocol design metadata
+  readonly design?: ProtocolDesign
+  readonly stats?: {
+    readonly objectiveCount?: number
+    readonly populationCount?: number
+    readonly endpointCount?: number
+    readonly visitCount?: number
+    readonly formCount?: number
+  }
 }
 
 export interface DatasetEntity {
@@ -144,6 +188,121 @@ export function transformSourceAgnosticToUI(response: SourceAgnosticProcessFiles
             sourceFiles: entity.sourceFiles
           })
         })
+      } else if (standardType === 'Protocol' && entity.type === 'protocol_design' && entity.metadata?.design) {
+        // Special handling for Protocol design - create individual items for each design component
+        const design = entity.metadata.design
+        
+        // Create Endpoints dataset
+        if (design.endpoints && design.endpoints.length > 0) {
+          const endpointVariables = design.endpoints.map((endpoint: ProtocolEndpoint) => ({
+            name: endpoint.id,
+            label: endpoint.description,
+            type: 'character' as VariableType,
+            comment: `${endpoint.type}: ${endpoint.name}`
+          }))
+          
+          datasets.push({
+            name: 'Endpoints',
+            label: `Protocol Endpoints (${design.endpoints.length})`,
+            variables: endpointVariables,
+            metadata: {
+              records: design.endpoints.length,
+              structure: 'One record per endpoint',
+              validationStatus: entity.metadata.validationStatus
+            },
+            id: 'Protocol-Endpoints',
+            group: 'Protocol' as FileGroupKind,
+            fileId: entity.sourceFiles?.[0]?.fileId || 'Protocol-Endpoints',
+            sourceFiles: entity.sourceFiles
+          })
+        }
+        
+        // Create Objectives dataset
+        if (design.objectives && design.objectives.length > 0) {
+          const objectiveVariables = design.objectives.map((objective: ProtocolObjective) => ({
+            name: objective.id,
+            label: objective.description,
+            type: 'character' as VariableType,
+            comment: objective.name
+          }))
+          
+          datasets.push({
+            name: 'Objectives',
+            label: `Protocol Objectives (${design.objectives.length})`,
+            variables: objectiveVariables,
+            metadata: {
+              records: design.objectives.length,
+              structure: 'One record per objective',
+              validationStatus: entity.metadata.validationStatus
+            },
+            id: 'Protocol-Objectives',
+            group: 'Protocol' as FileGroupKind,
+            fileId: entity.sourceFiles?.[0]?.fileId || 'Protocol-Objectives',
+            sourceFiles: entity.sourceFiles
+          })
+        }
+        
+        // Create Populations dataset
+        if (design.populations && design.populations.length > 0) {
+          const populationVariables = design.populations.map((population: ProtocolPopulation) => ({
+            name: population.id,
+            label: population.description,
+            type: 'character' as VariableType,
+            comment: population.name
+          }))
+          
+          datasets.push({
+            name: 'Populations',
+            label: `Protocol Populations (${design.populations.length})`,
+            variables: populationVariables,
+            metadata: {
+              records: design.populations.length,
+              structure: 'One record per population',
+              validationStatus: entity.metadata.validationStatus
+            },
+            id: 'Protocol-Populations',
+            group: 'Protocol' as FileGroupKind,
+            fileId: entity.sourceFiles?.[0]?.fileId || 'Protocol-Populations',
+            sourceFiles: entity.sourceFiles
+          })
+        }
+        
+        // Create SOA dataset
+        if (design.soa) {
+          const soaVariables = [
+            ...design.soa.forms.map((form: { readonly id: string; readonly name: string }) => ({
+              name: form.id,
+              label: form.name,
+              type: 'character' as VariableType,
+              comment: 'SOA Form'
+            })),
+            ...design.soa.schedule.map((schedule: { readonly id: string; readonly name: string }) => ({
+              name: schedule.id,
+              label: schedule.name,
+              type: 'character' as VariableType,
+              comment: 'SOA Schedule'
+            }))
+          ]
+          
+          if (soaVariables.length > 0) {
+            datasets.push({
+              name: 'SOA',
+              label: `Protocol SOA (${design.soa.forms.length} forms, ${design.soa.schedule.length} schedules)`,
+              variables: soaVariables,
+              metadata: {
+                records: soaVariables.length,
+                structure: 'Forms and schedules',
+                validationStatus: entity.metadata.validationStatus
+              },
+              id: 'Protocol-SOA',
+              group: 'Protocol' as FileGroupKind,
+              fileId: entity.sourceFiles?.[0]?.fileId || 'Protocol-SOA',
+              sourceFiles: entity.sourceFiles
+            })
+          }
+        }
+        
+        return // Skip the original entity since we've created individual design components
       } else {
         // Standard handling for other entity types
         datasets.push({
