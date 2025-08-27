@@ -10,8 +10,8 @@ LLM-driven lineage builder for:
   3) Table lineage:
         (1) Titles-only (combined TLF; dataset-level inference)
         (2) define.xml Analysis Results present (variable-level)
-        (3) ARS/ARD cell query → deterministic ADaM extraction + LLM backtrace
-            (ADaM → SDTM → CRF → Protocol) while preserving ARS TLF→ADaM edges
+        (3) ARS/ARD cell query → ARS-only LLM matching of the requested cell/output,
+            then LLM backtrace from identified ADaM parents to SDTM → CRF → Protocol.
 
 Unified output schema (all builders):
 {
@@ -31,7 +31,7 @@ Notes
   [reasoned] brief reasoning from nearby evidence
   [general] general CDISC knowledge / conventions
 - Evidence assembly reads: define/spec (XML/HTML/XLSX), protocol text,
-  aCRF index CSV, TLF titles, USDM design, and ARS/ARD JSONs (for retrieval only).
+  aCRF index CSV, TLF titles, USDM design, and ARS/ARD JSONs.
 """
 
 from __future__ import annotations
@@ -45,8 +45,11 @@ import numpy as np
 from openai import OpenAI
 from openai import APIError, RateLimitError
 
-# deterministic ARS → TLF cell service (situation #3)
-from services.delete_later.tlf_lineage_from_ars import build_table_lineage_from_ars
+# deterministic ARS → TLF cell service (legacy; not used in new LLM path)
+try:
+    from services.tlf_lineage_from_ars import build_table_lineage_from_ars  # noqa: F401
+except Exception:
+    build_table_lineage_from_ars = None  # type: ignore
 
 try:
     import pandas as pd
@@ -69,6 +72,9 @@ RETRY_BASE_WAIT = 1.5
 
 BASE_DIR   = Path(__file__).resolve().parents[1]
 OUTPUT_DIR = BASE_DIR / "output"
+
+# Toggle for ARS ADaM literal validator (disabled per request)
+VALIDATOR_ENABLED = False
 
 # ---------------- utils ----------------
 
@@ -333,6 +339,21 @@ def _collect_table_evidence(sess_dir: Path, summary: Dict[str, Any], display_id:
 
     return out
 
+# ---------------- ARS-only helpers (NEW) ----------------
+
+def _is_cell_spec(s: str) -> bool:
+    """Treat any '|' separated string as a user-specified TLF cell/output spec (flexible arity)."""
+    return isinstance(s, str) and ("|" in s)
+
+def _collect_ars_texts_only(sess_dir: Path) -> List[Tuple[str, str]]:
+    """Collect only ARS/ARD JSONs from the current session."""
+    out = []
+    for p in sorted(sess_dir.glob("*.json")):
+        nm = p.name.lower()
+        if nm.endswith(("-ars.json", "-ard.json")):
+            out.append((f"ARS::{p.name}", _read_json_file_text(p)))
+    return out
+
 # ---------------- prompt schemas ----------------
 
 def _variable_prompt_schema() -> str:
@@ -539,6 +560,140 @@ def _build_messages_for_ars_backtrace(
     )
     return [{"role":"system","content":SYSTEM},{"role":"user","content":USER}]
 
+# ---------------- ARS-only LLM cell matcher (NEW) ----------------
+
+def _build_messages_for_ars_cell(cell_spec: str, retrieved: List[Dict[str,str]]) -> List[Dict[str,str]]:
+    SYSTEM = (
+        "You are an expert reading ARS/ARD JSON for clinical TLF outputs. "
+        "Your ONLY source of truth is the ARS text provided. Do not invent content. "
+        "Task: locate the single best-matching output/cell for the user's spec string, "
+        "then extract the ADaM parents (dataset.variable), filters/slices (where clauses), "
+        "populations/denominators, parameters, and statistical method actually shown in ARS. "
+        "Return a lineage graph with:\n"
+        "- a TLF cell target node whose id is exactly the input spec string,\n"
+        "- one node per ADaM parent (type='adam variable', id like 'ADSL.SAFFL'),\n"
+        "- edges from the TLF cell to each ADaM variable with '[direct]' explanations that cite ARS anchors "
+        "(e.g., analysisId, outputId, dataset/variable names, whereClause labels). "
+        "If multiple candidates remain, pick the strongest and add others under 'gaps' as ambiguity notes. "
+        "STRICT JSON only in this schema:\n"
+        "{\n"
+        "  'variable': '<cell spec>',\n"
+        "  'dataset': 'table',\n"
+        "  'summary': '<short sentence of what was matched and which ARS anchors>',\n"
+        "  'lineage': {\n"
+        "    'nodes': [ {id, type, label?, description?, explanation?} ],\n"
+        "    'edges': [ {from, to, label?, explanation?} ],\n"
+        "    'gaps':  [ {explanation} ]\n"
+        "  }\n"
+        "}\n"
+    )
+    EVIDENCE = "\n\n--- EVIDENCE (ARS/ARD ONLY) ---\n"
+    for c in retrieved:
+        EVIDENCE += f"\n[CHUNK {c['id']}]\n{c['text'][:2400]}\n"
+    USER = f"Cell spec to locate and extract from ARS: {cell_spec}\nReturn STRICT JSON now.\n{EVIDENCE}"
+    return [{"role":"system","content":SYSTEM},{"role":"user","content":USER}]
+
+def _validate_adam_vars_against_ars_evidence(adam_vars: List[str], retrieved: List[Dict[str, str]]) -> List[str]:
+    """
+    Best-effort literal validation (DISABLED via VALIDATOR_ENABLED flag).
+    When enabled, confirms each ADaM var (e.g., 'ADAE.AESDTH') appears in the ARS evidence.
+    Returns the list of ADaM vars that could NOT be validated literally.
+    """
+    text = "\n".join([c["text"] for c in retrieved]).lower()
+    missing = []
+    for v in adam_vars:
+        vv = (v or "").strip()
+        if not vv or "." not in vv:
+            missing.append(vv or "(empty)")
+            continue
+        ds, var = vv.split(".", 1)
+        ds_l, var_l = ds.lower(), var.lower()
+        literal = f"{ds_l}.{var_l}" in text
+        ds_json = re.search(rf'\"dataset\"\s*:\s*\"{re.escape(ds_l)}\"', text) is not None
+        var_json = re.search(rf'\"variable\"\s*:\s*\"{re.escape(var_l)}\"', text) is not None
+        if not (literal or (ds_json and var_json)):
+            missing.append(vv)
+    return missing
+
+def _build_ars_cell_base_graph_llm(cell_spec: str, *, model: str, embed_model: str) -> Dict[str, Any]:
+    """
+    ARS-only LLM matcher for a flexible cell spec string like:
+      "FDA-DS-T04 | Discontinued study drug | Xanomeline Low Dose | n (%) | Safety population"
+    1) Retrieves ARS/ARD JSON from current session and embeds/retrieves by query.
+    2) Asks LLM to locate the best match and extract ADaM parents and rules.
+    3) (Validator disabled) Do NOT add gaps for literal-matching checks.
+    """
+    sess = _latest_session()
+    pairs = _collect_ars_texts_only(sess)
+    if not pairs:
+        return {
+            "variable": cell_spec,
+            "dataset": "table",
+            "summary": "No ARS/ARD files found in the current session.",
+            "lineage": {
+                "nodes": [{"id": cell_spec, "type": "target",
+                           "explanation": "[general] Target only; no ARS evidence available."}],
+                "edges": [],
+                "gaps": ["No ARS/ARD files present."]
+            }
+        }
+
+    client = _make_client()
+    chunks=[]
+    for doc_id, text in pairs:
+        chunks += _chunk_text(doc_id, text, MAX_CHARS, OVERLAP)
+
+    query = f"Find the ARS output/cell matching: {cell_spec}. Extract ADaM parents and rules."
+    with _use_embed_model(embed_model or EMBED_MODEL):
+        top = _retrieve(client, chunks, query, k=TOP_K)
+
+    messages = _build_messages_for_ars_cell(cell_spec, top)
+
+    def _chat(m: str):
+        resp = _retry(client.chat.completions.create, model=m, temperature=0.0,
+                      response_format={"type": "json_object"},
+                      messages=messages, max_tokens=MAX_TOKENS)
+        return json.loads(resp.choices[0].message.content.strip())
+
+    try:
+        raw = _chat(model)
+    except Exception:
+        raw = _chat(FALLBACK_MODEL)
+
+    out = {
+        "variable": raw.get("variable") or cell_spec,
+        "dataset":  "table",
+        "summary":  (raw.get("summary") or "").strip(),
+        "lineage": {
+            "nodes": list(raw.get("lineage", {}).get("nodes", [])),
+            "edges": list(raw.get("lineage", {}).get("edges", [])),
+            "gaps":  list(raw.get("lineage", {}).get("gaps",  [])),
+        }
+    }
+
+    # Ensure explicit target node exists
+    if not any((n.get("id") or "").strip().lower() == cell_spec.strip().lower()
+               for n in out["lineage"]["nodes"]):
+        out["lineage"]["nodes"].append({
+            "id": cell_spec,
+            "type": "target",
+            "explanation": "[general] Added explicit target node for the requested cell spec."
+        })
+
+    # (Validator disabled) Skip adding gaps based on literal checks
+    if VALIDATOR_ENABLED:
+        adam_vars = _extract_adam_vars_from_nodes(out.get("lineage", {}).get("nodes", []))
+        missing = _validate_adam_vars_against_ars_evidence(adam_vars, top)
+        if missing:
+            gaps = out["lineage"].setdefault("gaps", [])
+            for mv in missing:
+                gaps.append({
+                    "explanation": f"Validator: ADaM variable '{mv}' not found literally in ARS evidence used for the match. "
+                                   f"Refine the spec or verify the ARS mapping."
+                })
+
+    return _validate_and_fix_graph(out)
+
 # ---------------- graph utilities ----------------
 
 def _validate_and_fix_graph(graph: Dict[str, Any]) -> Dict[str, Any]:
@@ -619,8 +774,8 @@ def _merge_graphs(base: Dict[str, Any], aug: Dict[str, Any]) -> Dict[str, Any]:
 
 def _parse_table_cell_query(s: str) -> Optional[Tuple[str, str, str, str]]:
     """
-    Accepts strings like:
-      "FDA_AE_T06 | Results in Death | Xanomeline Low Dose | n"
+    LEGACY FORMAT (kept for backward compatibility):
+      Accepts strings like "FDA_AE_T06 | Results in Death | Xanomeline Low Dose | n"
     Returns: (display_id, section_label, treatment_label, measure)
     """
     parts = [p.strip() for p in (s or "").split("|")]
@@ -866,51 +1021,41 @@ def build_table_lineage_from_session(
 ) -> Dict[str, Any]:
     """
     Table lineage router:
-      - If display_spec looks like a cell "Display | Row | Treatment | Measure" → deterministic ARS call,
-        then LLM backtrace from the extracted ADaM vars to SDTM → CRF → Protocol and merge results.
+      - If display_spec looks like a flexible cell spec (contains '|'):
+          → ARS-only LLM matcher builds base TLF cell → ADaM parent graph,
+            then LLM backtrace to SDTM → CRF → Protocol; merge results.
       - Else decide mode by evidence: ars_display / define_ar / titles_only → LLM builder.
     """
-    sess = _latest_session()
-    summary = _load_session_summary(sess)
-
-    # --- Situation #3: ARS deterministic CELL (then LLM upstream augmentation) ---
-    parsed = _parse_table_cell_query(display_spec)
-    if parsed:
-        disp_id, section_label, treatment_label, measure = parsed
-
-        # base graph from ARS: TLF cell → ADaM vars (deterministic, generalized)
-        base_graph = build_table_lineage_from_ars(
-            display_id=disp_id,
-            section_label=section_label,
-            treatment_label=treatment_label,
-            measure=measure,
+    # --- ARS-only LLM cell-matcher (flexible spec; ARS-only evidence) ---
+    if _is_cell_spec(display_spec):
+        base_graph = _build_ars_cell_base_graph_llm(
+            display_spec, model=model, embed_model=embed_model
         )
 
-        # collect ADaM vars to backtrace
-        adam_vars = _extract_adam_vars_from_nodes(base_graph.get("lineage",{}).get("nodes",[]))
-
-        # If none found, just return base graph
+        # Use backtrace to add SDTM → CRF → Protocol for the ADaM parents
+        adam_vars = _extract_adam_vars_from_nodes(base_graph.get("lineage", {}).get("nodes", []))
         if not adam_vars:
             return _validate_and_fix_graph(base_graph)
 
-        # Build evidence pool (define/spec, CRF, protocol, USDM, ARS) for backtrace
-        pairs = _collect_evidence_texts(sess, summary)
+        # Build broader evidence (define/spec, CRF, protocol, USDM, ARS) and backtrace
         client = _make_client()
+        sess = _latest_session()
+        summary = _load_session_summary(sess)
+        pairs = _collect_evidence_texts(sess, summary)
+
         chunks=[]
         for doc_id, text in pairs:
             chunks += _chunk_text(doc_id, text, MAX_CHARS, OVERLAP)
 
         query = (
             f"Backtrace ADaM vars {', '.join(adam_vars)} to SDTM→CRF→Protocol "
-            f"for TLF cell '{disp_id} | {section_label} | {treatment_label} | {measure}'."
+            f"for TLF cell '{display_spec}'."
         )
         with _use_embed_model(embed_model or EMBED_MODEL):
             top_chunks = _retrieve(client, chunks, query, k=TOP_K)
 
         messages = _build_messages_for_ars_backtrace(
-            tlf_cell_id=f"{disp_id} | {section_label} | {treatment_label} | {measure}",
-            adam_vars=adam_vars,
-            retrieved=top_chunks
+            tlf_cell_id=display_spec, adam_vars=adam_vars, retrieved=top_chunks
         )
 
         def _chat_call(m: str):
@@ -934,13 +1079,11 @@ def build_table_lineage_from_session(
                 "gaps":  list(aug_raw.get("lineage", {}).get("gaps",  [])),
             }
         }
-
-        merged = _merge_graphs(base_graph, aug_graph)
-        if not merged.get("summary"):
-            merged["summary"] = base_graph.get("summary","")
-        return merged
+        return _merge_graphs(base_graph, aug_graph)
 
     # --- LLM display-level (situations #1 or #2 or ARS summary) ---
+    sess = _latest_session()
+    summary = _load_session_summary(sess)
     display_id = display_spec
     mode = _table_mode_for_display(sess, summary, display_id)
     pairs = _collect_table_evidence(sess, summary, display_id)
@@ -994,7 +1137,7 @@ def build_table_lineage_from_session(
         }
         # ensure target display node exists
         if not any(str(n.get("id","")).lower()==_norm(display_id) for n in out["lineage"]["nodes"]):
-            out["lineage"]["nodes"].append({"id": display_id, "type":"target",
+            out["lineage"]["nodes"].append({"id": display_id, "type": "target",
                                             "explanation":"[general] Target display node added by post-processor."})
 
         out = _validate_and_fix_graph(out)
@@ -1012,7 +1155,7 @@ def build_table_lineage_from_session(
             "dataset": "table",
             "summary": "",
             "lineage": {
-                "nodes": [ {"id": display_id, "type":"target",
+                "nodes": [ {"id": display_id, "type": "target",
                             "explanation":"[general] Post-processing error; returning target display only."} ],
                 "edges": [],
                 "gaps":  [f"Post-processing error: {e}"]

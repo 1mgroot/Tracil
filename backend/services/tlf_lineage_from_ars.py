@@ -1,74 +1,62 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
-"""
-services/tlf_lineage_from_ars.py
-
-Generalized, deterministic lineage for a specific TLF cell using ARS/ARD + session_summary.json.
-- Works for AE/LB/TTE/RS/QS/etc. because it asks an LLM to parse ARS/ARD structure and normalize
-  ADaM signals (dataset, value variables, filters, PARAM/PARAMCD, AVISIT, denominator source).
-- Produces *only* TLF -> ADaM graph (no SDTM/CRF/Protocol heuristics). Your llm_lineage_define.py
-  can then backfill ADaM -> SDTM -> CRF -> Protocol via LLM.
-
-Inputs
-------
-display_id : e.g., "FDA_AE_T06" or "ARS_LB_T01"
-section_label : row/section label, e.g., "Week 8 Change from Baseline"
-treatment_label : column/arm label, e.g., "Xanomeline Low Dose"
-measure : statistic label, e.g., "Mean", "%", "n", "Median", etc.
-
-Output (unified shape)
-----------------------
-{
-  "variable": "<display_id | section_label | treatment_label | measure>",
-  "dataset": "table",
-  "summary": "<1-line summary>",
-  "lineage": {
-    "nodes": [ { id, type, file?, label?, description?, explanation? } ],
-    "edges": [ { from, to, label?, explanation? } ],
-    "gaps":  [ { source?, target?, explanation } ]
-  }
-}
-"""
+# services/tlf_lineage_from_ars_llm.py
+# LLM-only ARS cell resolver with Protocol/CRF-first anchoring and synonym support.
 
 from __future__ import annotations
-
-import os
-import re
-import json
-import time
+import os, re, json, time
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple, Optional, Iterable
+import numpy as np
 
-# LLM client
-from openai import OpenAI
-from openai import APIError, RateLimitError
+try:
+    from openai import OpenAI
+    from openai import APIError, RateLimitError
+except Exception:
+    OpenAI = None
+    APIError = Exception
+    RateLimitError = Exception
 
-# --------- Paths ---------
-BASE_DIR   = Path(__file__).resolve().parents[1]   # backend/
+# ---------------- config ----------------
+BASE_DIR   = Path(__file__).resolve().parents[1]
 OUTPUT_DIR = BASE_DIR / "output"
 
-# --------- LLM config (ars parser) ---------
-DEFAULT_MODEL = "gpt-4o-mini"
-MAX_TOKENS    = 900
-RETRY_TRIES   = 5
-RETRY_BASE    = 1.5
+DEFAULT_MODEL   = os.getenv("TRACE_LLM_MODEL", "gpt-4o")
+FALLBACK_MODEL  = os.getenv("TRACE_LLM_FALLBACK_MODEL", "gpt-4o-mini")
+EMBED_MODEL     = os.getenv("TRACE_EMBED_MODEL", "text-embedding-3-small")
 
+MAX_CHARS       = 900
+OVERLAP         = 100
+TOP_K           = 14
+EMBED_BATCH     = 64
+MAX_TOKENS      = 1400
+RETRY_TRIES     = 5
+RETRY_BASE_WAIT = 1.5
 
-# =======================
-# Utilities
-# =======================
+# ---------------- utils ----------------
+def _retry(fn, *args, **kwargs):
+    tries = RETRY_TRIES; delay = RETRY_BASE_WAIT; last = None
+    for _ in range(tries):
+        try:
+            return fn(*args, **kwargs)
+        except (RateLimitError, APIError) as e:
+            last = e; time.sleep(delay); delay *= 2
+        except Exception as e:
+            last = e; break
+    if last: raise last
+
+def _make_client() -> OpenAI:
+    if OpenAI is None:
+        raise RuntimeError("openai client not available")
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise RuntimeError("OPENAI_API_KEY environment variable is not set.")
+    return OpenAI(api_key=api_key)
 
 def _latest_session() -> Path:
-    sessions = sorted(
-        [p for p in OUTPUT_DIR.glob("session_*") if p.is_dir()],
-        key=lambda p: p.stat().st_mtime,
-        reverse=True
-    )
+    sessions = sorted([p for p in OUTPUT_DIR.glob("session_*") if p.is_dir()],
+                      key=lambda p: p.stat().st_mtime, reverse=True)
     if not sessions:
         raise RuntimeError("No session_* folder found under backend/output.")
     return sessions[0]
-
 
 def _load_session_summary(sess_dir: Path) -> Dict[str, Any]:
     ss = sess_dir / "session_summary.json"
@@ -76,429 +64,317 @@ def _load_session_summary(sess_dir: Path) -> Dict[str, Any]:
         raise RuntimeError(f"session_summary.json not found in {sess_dir}")
     return json.loads(ss.read_text(encoding="utf-8", errors="ignore"))
 
+def _read_text_file(p: Path) -> str:
+    try:
+        return p.read_text(encoding="utf-8", errors="ignore")
+    except Exception:
+        return p.read_text(errors="ignore")
 
-def _norm(s: str) -> str:
-    return re.sub(r"[^a-z0-9]+", " ", (s or "").lower()).strip()
+def _read_json_file_text(p: Path) -> str:
+    try:
+        return json.dumps(json.loads(p.read_text(encoding="utf-8", errors="ignore")), indent=2)
+    except Exception:
+        return p.read_text(encoding="utf-8", errors="ignore")
 
+def _chunk_text(docid: str, text: str, max_chars=MAX_CHARS, overlap=OVERLAP) -> List[Dict[str, str]]:
+    chunks=[]; i=0; n=len(text)
+    while i < n:
+        j = min(n, i+max_chars)
+        if j < n:
+            k = text.rfind("\n", i, j)
+            if k > -1 and (j-k) < 200: j = k
+        chunks.append({"id": f"{docid}#{len(chunks)}", "text": text[i:j]})
+        i = max(j-overlap, j)
+    return chunks
 
-def _dedup_nodes(nodes: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    out, seen = [], set()
+def _prefilter_chunks(chunks: List[Dict[str, str]], target: str) -> List[Dict[str, str]]:
+    target_u = (target or "").upper()
+    toks = set([t for t in re.split(r"[^A-Z0-9]+", target_u.replace(".", " ")) if len(t) >= 3])
+    # Always include these anchors
+    toks |= {"ARS","ADAM","ADSL","ADAE","ADVS","PARAM","AVAL","BASE","TRT","TRT01A","TRT01AN","AVISIT","VISIT","CHG","CHANGE"}
+    scored=[]
+    for c in chunks:
+        T = c["text"].upper()
+        score = sum(1 for tok in toks if tok in T)
+        scored.append((score, c))
+    scored.sort(key=lambda x: x[0], reverse=True)
+    keep = min(1200, max(300, len(scored)))
+    return [c for _, c in scored[:keep]]
+
+def _batch(xs: List[Any], n: int) -> Iterable[List[Any]]:
+    for i in range(0, len(xs), n):
+        yield xs[i:i+n]
+
+def _embed(client: OpenAI, texts: List[str]) -> np.ndarray:
+    vecs=[]
+    for group in _batch(texts, EMBED_BATCH):
+        resp = _retry(client.embeddings.create, model=EMBED_MODEL, input=group)
+        vecs.extend([np.array(d.embedding, dtype=np.float32) for d in resp.data])
+    return np.vstack(vecs)
+
+def _cosine(a: np.ndarray, b: np.ndarray) -> np.ndarray:
+    a = a/(np.linalg.norm(a, axis=1, keepdims=True)+1e-8)
+    b = b/(np.linalg.norm(b, axis=1, keepdims=True)+1e-8)
+    return a @ b.T
+
+def _retrieve(client: OpenAI, chunks: List[Dict[str,str]], query: str, k:int=TOP_K) -> List[Dict[str,str]]:
+    chunks = _prefilter_chunks(chunks, query)
+    texts  = [c["text"] for c in chunks]
+    if not texts:
+        return []
+    C = _embed(client, texts)
+    q = _embed(client, [query])
+    sims = _cosine(q, C).ravel()
+    idx = sims.argsort()[::-1][:k]
+    return [chunks[i] for i in idx]
+
+def _validate_and_fix_graph(graph: Dict[str, Any]) -> Dict[str, Any]:
+    """Lightweight structural hygiene only (no literal-evidence validator)."""
+    lineage = graph.setdefault("lineage", {"nodes": [], "edges": [], "gaps": []})
+    nodes   = lineage.setdefault("nodes", [])
+    edges   = lineage.setdefault("edges", [])
+    gaps    = lineage.setdefault("gaps", [])
+
+    # De-duplicate nodes by id, keep first
+    node_map: Dict[str, Dict[str, Any]] = {}
+    order: List[str] = []
     for n in nodes:
-        nid = n.get("id")
-        if nid and nid not in seen:
-            seen.add(nid)
-            out.append(n)
+        nid = str(n.get("id") or "").strip()
+        if not nid:
+            continue
+        if nid not in node_map:
+            node_map[nid] = dict(n); order.append(nid)
+        else:
+            # shallow merge extras
+            for k, v in n.items():
+                if k not in node_map[nid] or node_map[nid][k] in (None, "", []):
+                    node_map[nid][k] = v
+
+    nodes_fixed = [node_map[nid] for nid in order]
+
+    # Normalize edges, drop structurally invalid ones
+    edges_fixed = []
+    for e in edges:
+        if "from" not in e and "source" in e: e["from"] = e.pop("source")
+        if "to"   not in e and "target" in e: e["to"]   = e.pop("target")
+        frm = str(e.get("from") or "").strip()
+        to  = str(e.get("to")   or "").strip()
+        if not frm or not to:
+            continue
+        if frm not in node_map or to not in node_map:
+            continue
+        edges_fixed.append(e)
+
+    lineage["nodes"] = nodes_fixed
+    lineage["edges"] = edges_fixed
+    lineage["gaps"]  = [g for g in gaps if isinstance(g, (str, dict))]
+    return graph
+
+# ---------------- evidence collection ----------------
+def _collect_evidence_prioritized(sess_dir: Path, summary: Dict[str, Any]) -> List[Tuple[str,str]]:
+    """
+    Priority order:
+      1) CRF index CSV (derived text)
+      2) Protocol text
+      3) USDM design JSON (endpoints/SoA)
+      4) ARS/ARD JSONs (all uploaded for this session)
+      5) TLF titles (if any)
+    """
+    out: List[Tuple[str,str]] = []
+    file_index: Dict[str, Path] = {}
+    for sf in summary.get("metadata",{}).get("sourceFiles", []):
+        fid = sf.get("filename") or sf.get("id")
+        if fid: file_index[fid] = sess_dir / fid
+
+    # 1) CRF index (text csv)
+    crf = summary.get("standards",{}).get("CRF",{}).get("datasetEntities",{}).get("aCRF")
+    if crf:
+        md = crf.get("metadata",{})
+        fid = md.get("varIndexCsv")
+        if fid and (sess_dir / fid).exists():
+            txt = _read_text_file(sess_dir / fid)
+            out.append((f"CRF_INDEX::{fid}", txt))
+
+    # 2) Protocol text
+    proto = summary.get("standards",{}).get("Protocol",{}).get("datasetEntities",{}).get("Protocol")
+    if proto:
+        md = proto.get("metadata",{})
+        fid = md.get("textFile")
+        if fid and (sess_dir / fid).exists():
+            txt = _read_text_file(sess_dir / fid)
+            out.append((f"PROTOCOL::{fid}", txt))
+
+    # 3) USDM design
+    usdm = summary.get("standards",{}).get("Protocol",{}).get("datasetEntities",{}).get("StudyDesign_USDM")
+    if usdm:
+        design = usdm.get("metadata",{}).get("design") or {}
+        out.append(("USDM::design", json.dumps(design, indent=2)))
+
+    # 4) ARS/ARD JSONs
+    for p in sorted(sess_dir.glob("*.json")):
+        nm = p.name.lower()
+        if nm.endswith(("-ars.json","-ard.json")):
+            out.append((f"ARS::{p.name}", _read_json_file_text(p)))
+
+    # 5) TLF titles blocks
+    for key, ent in (summary.get("standards",{}).get("TLF",{}).get("datasetEntities") or {}).items():
+        meta = ent.get("metadata",{})
+        titles = meta.get("titles") or []
+        if titles:
+            joined = "\n".join([f"{t.get('id')}: {t.get('title')}" for t in titles[:200]])
+            out.append((f"TLF_TITLES::{key}", "[TLF_TITLES]\n"+joined))
+
     return out
 
+# ---------------- synonym map ----------------
+_SYNONYMS = {
+    # treatment
+    "treatment": ["arm", "group", "trt", "trt01a", "trt01an", "treatment arm", "dose", "drug"],
+    # visit
+    "visit": ["avisit", "avisitn", "week", "timepoint", "visit week", "visit number"],
+    # change
+    "chg": ["change", "chg from baseline", "change from baseline", "delta", "difference", "chgbl", "chg_from_baseline"],
+    # parameter
+    "param": ["parameter", "paramcd", "paramn", "vstest", "vstestcd", "endpoint", "measure"],
+    # population/flags (do not inject unless present, but help match phrasing)
+    "pop": ["safety population", "itt", "pp", "saffl", "efffl", "fas", "analysis set"],
+    # stats
+    "min": ["minimum", "lowest"], "max": ["maximum", "highest"], "mean": ["average"],
+}
 
-def _ensure_edge_nodes_exist(edges: List[Dict[str, Any]], nodes: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    node_ids = {n["id"] for n in nodes if "id" in n}
-    clean = [e for e in edges if e.get("from") in node_ids and e.get("to") in node_ids]
-    return clean
+def _synonym_guidance() -> str:
+    lines = []
+    for canon, alts in _SYNONYMS.items():
+        lines.append(f"{canon}: {', '.join(alts)}")
+    return "\n".join(lines)
 
-
-def _retry(fn, *args, **kwargs):
-    last = None; delay = RETRY_BASE
-    for _ in range(RETRY_TRIES):
-        try:
-            return fn(*args, **kwargs)
-        except (APIError, RateLimitError) as e:
-            last = e; time.sleep(delay); delay *= 2
-        except Exception as e:
-            last = e; break
-    if last: raise last
-
-
-def _make_client() -> OpenAI:
-    key = os.getenv("OPENAI_API_KEY")
-    if not key:
-        raise RuntimeError("OPENAI_API_KEY not set")
-    return OpenAI(api_key=key)
-
-
-def _safe_json_dumps(obj: Any, max_len: int = 20000) -> str:
-    try:
-        s = json.dumps(obj, indent=2)
-    except Exception:
-        s = str(obj)
-    return s[:max_len]
-
-
-# =======================
-# LLM ARS/ARD PARSER
-# =======================
-
-def _llm_extract_ars_signals(
-    *,
-    ars_texts: List[str],
-    analysis_map_text: Optional[str],
-    display_id: str,
-    section_label: str,
-    treatment_label: str,
-    measure: str,
-    model: str = DEFAULT_MODEL
-) -> Dict[str, Any]:
-    """
-    Ask the LLM to read ARS/ARD JSON fragments + the specific display's analysisMap
-    and normalize what powers THIS cell.
-
-    Returns a dict like:
-    {
-      "dataset": "ADLB",
-      "value_vars": ["ADLB.CHG", "ADLB.AVAL"],
-      "filters": {
-        "analysis_set": "ADSL.SAFFL='Y'",
-        "treatment_var": "ADSL.TRT01AN",
-        "subset": ["PARAMCD=ALT", "AVISIT=Week 8"]
-      },
-      "row_logic": ["CHG from baseline", "Baseline=AVAL at Visit=Week 0"],
-      "denominator": {"type": "%", "source": "An_30"},
-      "evidence": {
-        "methods": ["An_82","An_85"],
-        "groupings": ["AnlsGrouping_51_Chg","AnlsGrouping_47_Trt01An"],
-        "quotes": ["short literal cites from ARS..."]
-      }
-    }
-    """
-    # Trim big blobs to keep tokens sane
-    limited_ars = [txt[:18000] for txt in (ars_texts or [])]
-    am_txt = (analysis_map_text or "")[:10000]
-
-    client = _make_client()
-
+# ---------------- prompt ----------------
+def _build_messages_for_ars_cell(
+    cell_spec: str,
+    retrieved: List[Dict[str,str]]
+) -> List[Dict[str,str]]:
     SYSTEM = (
-        "You are a senior CDISC/ADaM expert. Read ARS/ARD JSON fragments and the display's analysisMap "
-        "to identify ADaM signals for a single TLF cell. Be literal and grounded in the given texts; "
-        "do not invent variables that are not implied. Prefer PARAM/PARAMCD, AVISIT/AVISITN, TRTxxAN, "
-        "SAFFL, analysis method ids (An_xx), grouping ids, and short literal quotes for evidence. "
-        "If not enough evidence exists, return best candidates and mark ambiguity with short quotes."
+        "You are a CDISC lineage assistant. Build a lineage graph for ONE TLF cell using ONLY evidence from:\n"
+        "  (a) ARS/ARD JSON uploaded in this session for ADaM variables, filters, slices, operations;\n"
+        "  (b) Protocol text and USDM design for endpoint/SoA anchoring;\n"
+        "  (c) aCRF variable index text for CRF anchors.\n"
+        "Rules:\n"
+        "- Do NOT invent variables. Prefer exact dataset.variable identifiers seen in ARS (e.g., ADVS.AVISIT, ADVS.CHG, ADSL.TRT01AN, ADAE.AESER).\n"
+        "- If ARS uses numeric or coded fields (e.g., TRT01AN), include them as-is and add human-readable labels from the same evidence when possible.\n"
+        "- Protocol/CRF nodes and edges should be [direct] only if you can cite text from Protocol/USDM or CRF index; otherwise use [general].\n"
+        "- Output STRICT JSON only in this schema:\n"
+        "{\n"
+        "  'variable': '<original cell spec>',\n"
+        "  'dataset': 'table',\n"
+        "  'summary': '<one sentence>',\n"
+        "  'lineage': {\n"
+        "    'nodes': [ {id, type, label?, description?, explanation?} ],\n"
+        "    'edges': [ {from, to, label?, explanation?} ],\n"
+        "    'gaps':  [ {explanation} ]\n"
+        "  }\n"
+        "}\n"
+        "- Node types to use: 'tlf cell', 'adam variable', 'sdtm variable', 'crf', 'protocol'.\n"
+        "- Ensure all edges refer to existing node ids and use 'from'/'to'.\n"
+        "- Prefer the ARS vocabulary (e.g., AVISIT/CHG/TRT01AN) over friendly aliases (VISIT/CHANGE/TRT01A).\n"
+        "- If multiple ARS matches exist, choose the slice that best fits ALL segments of the user spec.\n"
+        "- If nothing matches, return a minimal graph with one 'tlf cell' node and add a gap explaining why.\n"
+        "\n"
+        "Synonym hints to match user phrasing to ARS terms:\n" + _synonym_guidance() + "\n"
     )
 
-    SCHEMA = (
-        "{"
-        "  'dataset': '<ADaM dataset name or null>',"
-        "  'value_vars': ['<DS.VAR>', ...],"
-        "  'filters': {"
-        "     'analysis_set': '<ADSL flag expr or null>',"
-        "     'treatment_var': '<ADSL.TRTxxAN or null>',"
-        "     'subset': ['<key=value or expr>', ...]"
-        "  },"
-        "  'row_logic': ['<expr>', ...],"
-        "  'denominator': {'type': '<N|%|other|null>', 'source': '<An_xx/description or null>'},"
-        "  'evidence': {"
-        "     'methods': ['An_xx', ...],"
-        "     'groupings': ['<GroupingId>', ...],"
-        "     'quotes': ['<short literal cites from ARS/ARD or analysisMap>', ...]"
-        "  }"
-        "}"
-    )
+    EVIDENCE = "\n\n--- EVIDENCE (prioritized: CRF, Protocol, USDM, ARS, TLF titles) ---\n"
+    for c in retrieved:
+        EVIDENCE += f"\n[CHUNK {c['id']}]\n{c['text'][:2400]}\n"
 
     USER = (
-        f"Display: {display_id}\n"
-        f"Row/Section: {section_label}\n"
-        f"Column/Treatment: {treatment_label}\n"
-        f"Measure/Statistic: {measure}\n\n"
-        f"analysisMap (for this display):\n{am_txt}\n\n"
-        f"ARS/ARD FRAGMENTS (each truncated):\n" +
-        "\n\n".join(f"[ARS_{i}]\n{t}" for i, t in enumerate(limited_ars))
+        f"User TLF cell spec (flexible segments with '|'): {cell_spec}\n"
+        f"Find the best matching ARS slice(s) and build the lineage graph now.\n"
+        f"{EVIDENCE}"
     )
+    return [{"role":"system","content":SYSTEM},{"role":"user","content":USER}]
 
-    resp = _retry(
-        client.chat.completions.create,
-        model=model,
-        temperature=0.0,
-        response_format={"type": "json_object"},
-        messages=[
-            {"role": "system", "content": SYSTEM},
-            {"role": "user", "content": "Return ONLY JSON matching this schema:\n" + SCHEMA + "\n\n" + USER}
-        ],
-        max_tokens=MAX_TOKENS,
-    )
-
-    parsed = json.loads(resp.choices[0].message.content)
-
-    # light normalization
-    parsed["dataset"] = (parsed.get("dataset") or "").strip() or None
-    parsed["value_vars"] = [v.strip() for v in (parsed.get("value_vars") or []) if v and isinstance(v, str)]
-    flt = parsed.get("filters") or {}
-    parsed["filters"] = {
-        "analysis_set": (flt.get("analysis_set") or "").strip() or None,
-        "treatment_var": (flt.get("treatment_var") or "").strip() or None,
-        "subset": [s.strip() for s in (flt.get("subset") or []) if s and isinstance(s, str)]
-    }
-    den = parsed.get("denominator") or {}
-    parsed["denominator"] = {
-        "type": (den.get("type") or "").strip() or None,
-        "source": (den.get("source") or "").strip() or None
-    }
-    ev = parsed.get("evidence") or {}
-    parsed["evidence"] = {
-        "methods": [m.strip() for m in (ev.get("methods") or []) if m],
-        "groupings": [g.strip() for g in (ev.get("groupings") or []) if g],
-        "quotes": [q.strip() for q in (ev.get("quotes") or []) if q]
-    }
-    parsed["row_logic"] = [r.strip() for r in (parsed.get("row_logic") or []) if r]
-
-    return parsed
-
-
-# =======================
-# Main builder
-# =======================
-
-def build_table_lineage_from_ars(
+# ---------------- main entry ----------------
+def build_table_lineage_from_ars_llm(
+    display_spec: str,
     *,
-    display_id: str,
-    section_label: str,
-    treatment_label: str,
-    measure: str,
-    session_dir: Optional[Path] = None,
-    model: str = DEFAULT_MODEL
+    model: str = DEFAULT_MODEL,
+    embed_model: str = EMBED_MODEL
 ) -> Dict[str, Any]:
     """
-    Deterministic lineage for a TLF cell using ARS/ARD + tlfIndex.displays.
-
-    Returns unified lineage JSON where TLF→ADaM nodes/edges are grounded by ARS/ARD.
-    No SDTM/CRF/Protocol bridges are added here (LLM backfill handles that later).
+    LLM-only ARS cell lineage:
+      - display_spec: 'tablename/number | row | column | param1 | ...'
+      - evidence: CRF/Protocol/USDM prioritized, then ARS/ARD JSON from this session
+      - output: lineage graph with TLF cell, ADaM variables (from ARS), and Protocol/CRF anchors
     """
-    sess = session_dir or _latest_session()
+    sess = _latest_session()
     summary = _load_session_summary(sess)
 
-    tlf_meta = (summary.get("standards", {})
-                      .get("TLF", {})
-                      .get("metadata", {}) or {})
-    displays = (tlf_meta.get("tlfIndex", {}) or {}).get("displays", []) or []
+    # Build evidence chunks (prioritized)
+    pairs = _collect_evidence_prioritized(sess, summary)
 
-    # 1) locate display
-    did_norm = _norm(display_id)
-    disp = None
-    for d in displays:
-        if _norm(d.get("id", "")) == did_norm:
-            disp = d; break
-    if not disp:
-        for d in displays:
-            if did_norm in _norm(d.get("id", "")) or did_norm in _norm(d.get("title", "")):
-                disp = d; break
-    if not disp:
-        raise RuntimeError(f"Display '{display_id}' not found in tlfIndex.displays.")
+    # Chunk & retrieve
+    client = _make_client()
+    chunks=[]
+    for doc_id, text in pairs:
+        chunks += _chunk_text(doc_id, text, MAX_CHARS, OVERLAP)
 
-    # 2) collect ARS/ARD texts that mention this display and the display's analysisMap
-    ars_texts: List[str] = []
-    for p in sorted(sess.glob("*.json")):
-        nm = p.name.lower()
-        if nm.endswith(("-ars.json", "-ard.json")):
-            txt = p.read_text(encoding="utf-8", errors="ignore")
-            if did_norm in _norm(txt):
-                ars_texts.append(txt)
-
-    analysis_map = (disp.get("analysisMap") or {})
-    analysis_map_text = _safe_json_dumps(analysis_map)
-
-    # 3) LLM normalize signals from ARS/ARD
-    try:
-        signals = _llm_extract_ars_signals(
-            ars_texts=ars_texts,
-            analysis_map_text=analysis_map_text,
-            display_id=disp.get("id"),
-            section_label=section_label,
-            treatment_label=treatment_label,
-            measure=measure,
-            model=model
-        )
-    except Exception as e:
-        # fall back: return minimal cell with gap
-        cell_label = f"{disp.get('id')} | {section_label} | {treatment_label} | {measure}"
+    if not chunks:
         return {
-            "variable": cell_label,
+            "variable": display_spec,
             "dataset": "table",
-            "summary": f"{cell_label}: ARS/ARD parsing error.",
+            "summary": "No session evidence (ARS/Protocol/CRF/USDM) available.",
             "lineage": {
-                "nodes": [
-                    {
-                        "id": "tlf_cell",
-                        "type": "display",
-                        "file": "TLF",
-                        "label": cell_label,
-                        "explanation": "[direct] Cell defined by display id, row/section, column/treatment, and measure."
-                    },
-                    { "id": cell_label, "type": "target" }
-                ],
+                "nodes": [ {"id": display_spec, "type":"tlf cell",
+                            "explanation":"[general] Target cell only; no artifacts to trace against."} ],
                 "edges": [],
-                "gaps": [ { "explanation": f"ARS/ARD parse error: {e}" } ]
+                "gaps":  [{"explanation":"No evidence found in session."}]
             }
         }
 
-    # 4) Build nodes/edges deterministically from signals
-    nodes: List[Dict[str, Any]] = []
-    edges: List[Dict[str, Any]] = []
-    gaps : List[Dict[str, Any]] = []
+    query = f"Locate ARS slice for: {display_spec}. Map ADaM vars, operations, filters; anchor to Protocol/CRF if possible."
+    # embeddings model selection
+    global EMBED_MODEL
+    old_embed = EMBED_MODEL
+    if embed_model: EMBED_MODEL = embed_model
+    try:
+        top_chunks = _retrieve(client, chunks, query, k=TOP_K)
+    finally:
+        EMBED_MODEL = old_embed
 
-    cell_label = f"{disp.get('id')} | {section_label} | {treatment_label} | {measure}"
-    nodes.append({
-        "id": "tlf_cell",
-        "type": "display",
-        "file": "TLF",
-        "label": cell_label,
-        "explanation": "[direct] Cell defined by display id, row/section, column/treatment, and measure."
-    })
+    messages = _build_messages_for_ars_cell(display_spec, top_chunks)
 
-    # Evidence node (optional, for UI transparency)
-    ev = signals.get("evidence") or {}
-    ev_methods   = ", ".join(ev.get("methods") or [])
-    ev_groupings = ", ".join(ev.get("groupings") or [])
-    ev_quotes    = "; ".join(ev.get("quotes") or [])[:600]
-    if ev_methods or ev_groupings or ev_quotes:
-        nodes.append({
-            "id": "ars_context",
-            "type": "source",
-            "file": "ARS",
-            "label": f"Methods: {ev_methods} | Groupings: {ev_groupings}",
-            "explanation": "[direct] Evidence from ARS/ARD and analysisMap: " + (ev_quotes or "no quotes")
-        })
-        edges.append({
-            "from": "ars_context",
-            "to": "tlf_cell",
-            "label": "Planned analysis/evidence",
-            "explanation": "[direct] Methods/groupings referenced by ARS/ARD for this display."
-        })
+    def _chat_call(m: str):
+        resp = _retry(client.chat.completions.create, model=m, temperature=0.0,
+                      response_format={"type":"json_object"},
+                      messages=messages, max_tokens=MAX_TOKENS)
+        return json.loads(resp.choices[0].message.content.strip())
 
-    # Value variables
-    value_vars = signals.get("value_vars") or []
-    for vv in value_vars:
-        nodes.append({
-            "id": vv,
-            "type": "ADaM variable",
-            "file": "ADaM",
-            "label": vv,
-            "explanation": "[direct] Referenced by ARS/ARD for this cell."
-        })
-        edges.append({
-            "from": vv,
-            "to": "tlf_cell",
-            "label": f"Compute {measure}",
-            "explanation": "[direct] Aggregation/statistic applied to the value variable."
-        })
+    try:
+        raw = _chat_call(model)
+    except Exception:
+        raw = _chat_call(FALLBACK_MODEL)
 
-    # Filters: analysis set flag, treatment var, subset selectors
-    flt = signals.get("filters") or {}
-    if flt.get("analysis_set"):
-        # If it mentions ADSL.SAFFL='Y', add node ADSL.SAFFL (not the whole expr)
-        if "adsl.saffl" in _norm(flt["analysis_set"]):
-            nodes.append({
-                "id": "ADSL.SAFFL",
-                "type": "ADaM variable",
-                "file": "ADaM",
-                "label": "ADSL.SAFFL",
-                "explanation": "[direct] Analysis set specified in ARS/ARD."
-            })
-            for vv in value_vars or ["tlf_cell"]:
-                edges.append({
-                    "from": "ADSL.SAFFL",
-                    "to": vv if vv != "tlf_cell" else "tlf_cell",
-                    "label": "Population filter",
-                    "explanation": "[direct] From ARS AnalysisSet."
-                })
-        else:
-            # keep generic analysis_set expression as its own node
-            nid = f"analysis_set::{flt['analysis_set']}"
-            nodes.append({
-                "id": nid,
-                "type": "ADaM subset",
-                "file": "ADaM",
-                "label": flt["analysis_set"],
-                "explanation": "[direct] Analysis set specification from ARS/ARD."
-            })
-            for vv in value_vars or ["tlf_cell"]:
-                edges.append({"from": nid, "to": vv, "label": "Population filter",
-                              "explanation": "[direct] From ARS AnalysisSet."})
-
-    if flt.get("treatment_var"):
-        tvar = flt["treatment_var"]
-        nodes.append({
-            "id": tvar,
-            "type": "ADaM variable",
-            "file": "ADaM",
-            "label": tvar,
-            "explanation": "[direct] Treatment grouping used by ARS/ARD."
-        })
-        for vv in value_vars or ["tlf_cell"]:
-            edges.append({
-                "from": tvar,
-                "to": vv,
-                "label": "Treatment subset",
-                "explanation": "[direct] From ARS grouping."
-            })
-
-    for sel in (flt.get("subset") or []):
-        nid = f"subset::{sel}"
-        nodes.append({
-            "id": nid,
-            "type": "ADaM subset",
-            "file": "ADaM",
-            "label": sel,
-            "explanation": "[direct] Selector derived from ARS/ARD (e.g., PARAMCD/AVISIT)."
-        })
-        for vv in value_vars or ["tlf_cell"]:
-            edges.append({
-                "from": nid,
-                "to": vv,
-                "label": "Subset",
-                "explanation": "[direct] From ARS/ARD grouping."
-            })
-
-    # Denominator (for %)
-    den = signals.get("denominator") or {}
-    meas_norm = (measure or "").strip()
-    if (meas_norm == "%") or (den.get("type") == "%"):
-        nodes.append({
-            "id": "denominator",
-            "type": "calc",
-            "label": f"N source={den.get('source') or 'unspecified'}",
-            "explanation": "[direct] Denominator source per ARS/ARD (e.g., An_30)."
-        })
-        # show relation n -> N -> cell
-        for vv in value_vars or []:
-            edges.append({
-                "from": vv,
-                "to": "denominator",
-                "label": "n feeds N",
-                "explanation": "[reasoned] For percent, numerator contributes to denominator context."
-            })
-        edges.append({
-            "from": "denominator",
-            "to": "tlf_cell",
-            "label": "Compute %",
-            "explanation": "[reasoned] % = n / N."
-        })
-
-    # Target id (for unified schema)
-    nodes.append({
-        "id": cell_label,
-        "type": "target"
-    })
-
-    nodes = _dedup_nodes(nodes)
-    edges = _ensure_edge_nodes_exist(edges, nodes)
-
-    # 5) Summary & gaps
-    if not value_vars:
-        gaps = [{"explanation": "No ADaM variables referenced by ARS/ARD for this row were detected."}]
-
-    ds = signals.get("dataset") or "ADaM"
-    vv_txt = ", ".join(value_vars) if value_vars else "unspecified"
-    methods_txt = ", ".join(ev.get("methods") or []) or "not specified"
-    summary_txt = (
-        f"{cell_label}: ARS/ARD indicate the cell is computed using {ds} variable(s) [{vv_txt}] "
-        f"with measure '{measure}'. Methods: {methods_txt}."
-    )
-
-    return {
-        "variable": cell_label,
-        "dataset": "table",
-        "summary": summary_txt,
+    # Shape the output and add the explicit target node if missing
+    out = {
+        "variable": raw.get("variable") or display_spec,
+        "dataset":  "table",
+        "summary":  (raw.get("summary") or "").strip(),
         "lineage": {
-            "nodes": nodes,
-            "edges": edges,
-            "gaps": gaps
+            "nodes": list(raw.get("lineage", {}).get("nodes", [])),
+            "edges": list(raw.get("lineage", {}).get("edges", [])),
+            "gaps":  list(raw.get("lineage", {}).get("gaps",  [])),
         }
     }
+    # Ensure a target cell node exists
+    if not any(str(n.get("id","")).strip().lower()==str(display_spec).strip().lower()
+               for n in out["lineage"]["nodes"]):
+        out["lineage"]["nodes"].append({
+            "id": display_spec,
+            "type":"tlf cell",
+            "explanation":"[general] Target cell node added by post-processor."
+        })
+
+    out = _validate_and_fix_graph(out)
+    if not out.get("summary"):
+        out["summary"] = "Lineage assembled from ARS with Protocol/CRF/USDM anchors (session evidence)."
+    return out
