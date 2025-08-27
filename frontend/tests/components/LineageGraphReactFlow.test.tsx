@@ -113,7 +113,7 @@ describe('LineageGraphReactFlow', () => {
   it('renders chart title', () => {
     render(<LineageGraphReactFlow lineage={mockLineageData} />)
     
-    expect(screen.getByText('Lineage flow chart')).toBeInTheDocument()
+    expect(screen.getByText('Lineage Flow Chart')).toBeInTheDocument()
   })
 
   it('renders React Flow with proper configuration', () => {

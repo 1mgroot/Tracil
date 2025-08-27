@@ -219,7 +219,7 @@ function LineageGraphInner({ lineage }: LineageGraphProps) {
       
       <div className="p-4 md:p-6 pb-3 flex-shrink-0">
         <h2 className="text-lg font-semibold text-gray-900">
-          Lineage flow chart
+          Lineage Flow Chart
         </h2>
       </div>
       

@@ -274,7 +274,7 @@ export function LineageGraph({ lineage }: LineageGraphProps) {
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
       <h2 className="text-lg font-semibold text-gray-900 mb-6">
-        Lineage flow chart
+        Lineage Flow Chart
       </h2>
       
       <div className="relative min-h-[600px] overflow-auto" style={{ width: '100%', minWidth: '1200px' }}>
