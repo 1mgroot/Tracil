@@ -351,13 +351,6 @@ export function MainScreenClient(): ReactNode {
 							</button>
 						)}
 						
-						{/* Header */}
-						<div className="flex items-center justify-center mb-6">
-							<h1 className="text-2xl md:text-3xl text-balance text-center">
-								What can I help with?
-							</h1>
-						</div>
-
 						{/* Main content */}
 						<div className="flex-1 flex flex-col items-center justify-center gap-6">
 							<SearchForm 
@@ -366,28 +359,7 @@ export function MainScreenClient(): ReactNode {
 								error={searchError}
 							/>
 							
-							{/* Upload instructions */}
-							<div className="max-w-2xl text-center">
-								<div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-									<h3 className="text-lg font-semibold text-blue-800 mb-3">
-										🚀 Get Started with File Upload
-									</h3>
-									<p className="text-blue-700 mb-4">
-										Use the upload button in the left sidebar to add your clinical data files.
-									</p>
-									<div className="bg-white p-4 rounded border text-sm font-mono text-left">
-										<span className="text-gray-600"># Upload files to backend</span><br/>
-										curl -X POST http://localhost:8000/process-files \<br/>
-										&nbsp;&nbsp;-F &quot;files=@your_file.xpt&quot;<br/>
-										&nbsp;&nbsp;-F &quot;files=@your_define.xml&quot;<br/>
-										&nbsp;&nbsp;-F &quot;files=@your_crf.pdf&quot;<br/>
-										&nbsp;&nbsp;-F &quot;files=@your_data.json&quot;
-									</div>
-									<p className="text-sm text-blue-600 mt-3">
-										After uploading, your datasets will appear in the sidebar.
-									</p>
-								</div>
-							</div>
+
 						</div>
 					</main>
 				</div>
