@@ -36,9 +36,6 @@ export const VariablesBrowser = memo(function VariablesBrowser({
             className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-gray-600 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             aria-label="Click to search for variable lineage"
           >
-            <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
             <span className="text-gray-500">Search variables...</span>
           </button>
         </div>

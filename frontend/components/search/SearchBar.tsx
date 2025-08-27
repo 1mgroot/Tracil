@@ -73,15 +73,6 @@ export function SearchBar({
 					'focus-within:outline focus-within:outline-2 focus-within:outline-[--focus]'
 				}
 			>
-				<button 
-					type="button" 
-					aria-label="Filters" 
-					className="p-1 rounded-md hover:bg-[--surface-muted] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-					disabled={isLoading}
-				>
-					<Settings2 className="h-4 w-4 text-[--text-muted]" />
-				</button>
-				
 				<input
 					ref={inputRef}
 					type="text"
