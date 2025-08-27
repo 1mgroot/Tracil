@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { useMemo } from 'react'
-import { AlertCircle, CheckCircle, XCircle, Info } from 'lucide-react'
+import { AlertCircle, XCircle, Info } from 'lucide-react'
 import type { LineageGraph } from '@/types/lineage'
 import { LineageGraphReactFlow } from '@/components/lineage/LineageGraphReactFlow'
 
@@ -46,7 +46,7 @@ export function SearchResults({
 					</button>
 					<div className="h-6 w-px bg-gray-300" />
 					<h1 className="text-xl font-semibold text-gray-900">
-						Analyzing lineage for "{query}"
+													Analyzing lineage for &ldquo;{query}&rdquo;
 					</h1>
 				</div>
 
@@ -163,7 +163,7 @@ export function SearchResults({
 				</button>
 				<div className="h-6 w-px bg-gray-300" />
 				<h1 className="text-xl font-semibold text-gray-900">
-					Lineage for "{query}"
+					Lineage for &ldquo;{query}&rdquo;
 				</h1>
 			</div>
 
@@ -180,19 +180,19 @@ export function SearchResults({
 							{/* Search details */}
 							<div className="space-y-4">
 								<div>
-									<label className="block text-sm font-medium text-gray-700 mb-1">
+									<label htmlFor="search-variable" className="block text-sm font-medium text-gray-700 mb-1">
 										Variable
 									</label>
-									<p className="text-sm text-gray-900 bg-gray-50 p-2 rounded border">
+									<p id="search-variable" className="text-sm text-gray-900 bg-gray-50 p-2 rounded border">
 										{query}
 									</p>
 								</div>
 								
 								<div>
-									<label className="block text-sm font-medium text-gray-700 mb-1">
+									<label htmlFor="search-dataset" className="block text-sm font-medium text-gray-700 mb-1">
 										Dataset
 									</label>
-									<p className="text-sm text-gray-900 bg-gray-50 p-2 rounded border">
+									<p id="search-dataset" className="text-sm text-gray-900 bg-gray-50 p-2 rounded border">
 										{dataset}
 									</p>
 								</div>
@@ -239,8 +239,8 @@ export function SearchResults({
 									</h4>
 									
 									<div className="space-y-2">
-										{lineage.gaps.notes.map((gap, index) => (
-											<div key={index} className="text-sm text-yellow-700 bg-yellow-50 p-2 rounded border">
+										{lineage.gaps.notes.map((gap, gapIndex) => (
+											<div key={`gap-${gapIndex}-${gap.slice(0, 20)}`} className="text-sm text-yellow-700 bg-yellow-50 p-2 rounded border">
 												{gap}
 											</div>
 										))}

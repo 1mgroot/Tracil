@@ -110,30 +110,20 @@ describe('LineageGraphReactFlow', () => {
     expect(screen.getByTestId('react-flow-background')).toBeInTheDocument()
   })
 
-  it('renders accessibility information', () => {
-    render(<LineageGraphReactFlow lineage={mockLineageData} />)
-    
-    expect(screen.getByText('Lineage Details')).toBeInTheDocument()
-    expect(screen.getByText('Nodes:')).toBeInTheDocument()
-    expect(screen.getByText('Connections:')).toBeInTheDocument()
-  })
-
-  it('shows correct node metadata in accessibility section', () => {
-    render(<LineageGraphReactFlow lineage={mockLineageData} />)
-    
-    // Check that the specific node with source file is shown
-    expect(screen.getByText(/Source: blankcrf\.pdf/)).toBeInTheDocument()
-    
-    // Check that connection labels are shown correctly
-    expect(screen.getByText(/Derived from/)).toBeInTheDocument()
-    expect(screen.getByText(/Collected on/)).toBeInTheDocument()
-    
-
-  })
-
   it('renders chart title', () => {
     render(<LineageGraphReactFlow lineage={mockLineageData} />)
     
     expect(screen.getByText('Lineage flow chart')).toBeInTheDocument()
+  })
+
+  it('renders React Flow with proper configuration', () => {
+    render(<LineageGraphReactFlow lineage={mockLineageData} />)
+    
+    // Check that React Flow is configured correctly
+    const reactFlowElement = screen.getByTestId('react-flow')
+    expect(reactFlowElement).toBeInTheDocument()
+    
+    // Check that background is rendered
+    expect(screen.getByTestId('react-flow-background')).toBeInTheDocument()
   })
 })

@@ -21,7 +21,6 @@ describe('SearchBar', () => {
       render(<SearchBar />)
       
       expect(screen.getByRole('textbox')).toBeInTheDocument()
-      expect(screen.getByLabelText('Filters')).toBeInTheDocument()
       expect(screen.getByLabelText('Search')).toBeInTheDocument()
     })
   })
@@ -32,9 +31,6 @@ describe('SearchBar', () => {
       
       const input = screen.getByRole('textbox')
       expect(input).toHaveAttribute('aria-label', 'Search variables')
-      
-      const filtersButton = screen.getByLabelText('Filters')
-      expect(filtersButton).toHaveAttribute('aria-label', 'Filters')
       
       const searchButton = screen.getByLabelText('Search')
       expect(searchButton).toHaveAttribute('aria-label', 'Search')
@@ -47,20 +43,16 @@ describe('SearchBar', () => {
       expect(input).toBeInTheDocument()
       
       const buttons = screen.getAllByRole('button')
-      expect(buttons).toHaveLength(2)
+      expect(buttons).toHaveLength(1) // Only search button by default
     })
 
     it('should support keyboard navigation', () => {
       render(<SearchBar />)
       
       const input = screen.getByRole('textbox')
-      const filtersButton = screen.getByLabelText('Filters')
       const searchButton = screen.getByLabelText('Search')
       
-      // Test that all elements are focusable
-      filtersButton.focus()
-      expect(filtersButton).toHaveFocus()
-      
+      // Test that input is focusable
       input.focus()
       expect(input).toHaveFocus()
       
@@ -68,9 +60,7 @@ describe('SearchBar', () => {
       // Instead, test that it has the proper disabled state
       expect(searchButton).toBeDisabled()
       
-      // Test that elements have proper tab order by checking they're all focusable
-      // The actual tab order will be determined by the DOM structure
-      expect(filtersButton).toHaveAttribute('type', 'button')
+      // Test that elements have proper attributes
       expect(input).toHaveAttribute('aria-label', 'Search variables')
       expect(searchButton).toHaveAttribute('type', 'button')
     })
@@ -89,12 +79,10 @@ describe('SearchBar', () => {
     it('should handle button clicks', () => {
       render(<SearchBar />)
       
-      const filtersButton = screen.getByLabelText('Filters')
       const searchButton = screen.getByLabelText('Search')
       
-      // Buttons should be clickable (even if no functionality implemented yet)
+      // Button should be clickable (even if no functionality implemented yet)
       expect(() => {
-        fireEvent.click(filtersButton)
         fireEvent.click(searchButton)
       }).not.toThrow()
     })
@@ -102,13 +90,10 @@ describe('SearchBar', () => {
     it('should handle button hover states', () => {
       render(<SearchBar />)
       
-      const filtersButton = screen.getByLabelText('Filters')
       const searchButton = screen.getByLabelText('Search')
       
       // Hover should not throw errors
       expect(() => {
-        fireEvent.mouseEnter(filtersButton)
-        fireEvent.mouseLeave(filtersButton)
         fireEvent.mouseEnter(searchButton)
         fireEvent.mouseLeave(searchButton)
       }).not.toThrow()
@@ -174,20 +159,16 @@ describe('SearchBar', () => {
     it('should have proper button types', () => {
       render(<SearchBar />)
       
-      const filtersButton = screen.getByLabelText('Filters')
       const searchButton = screen.getByLabelText('Search')
       
-      expect(filtersButton).toHaveAttribute('type', 'button')
       expect(searchButton).toHaveAttribute('type', 'button')
     })
 
     it('should have proper button styling', () => {
       render(<SearchBar />)
       
-      const filtersButton = screen.getByLabelText('Filters')
       const searchButton = screen.getByLabelText('Search')
       
-      expect(filtersButton).toHaveClass('p-1', 'rounded-md', 'hover:bg-[--surface-muted]')
       expect(searchButton).toHaveClass('p-1', 'rounded-md', 'hover:bg-[--surface-muted]')
     })
   })
@@ -233,11 +214,11 @@ describe('SearchBar', () => {
   })
 
   describe('Icon Rendering', () => {
-    it('should render Settings2 icon for filters', () => {
-      render(<SearchBar />)
+    it('should render clear button when there is input', () => {
+      render(<SearchBar searchValue="test" />)
       
-      const filtersButton = screen.getByLabelText('Filters')
-      const icon = filtersButton.querySelector('svg')
+      const clearButton = screen.getByLabelText('Clear search')
+      const icon = clearButton.querySelector('svg')
       expect(icon).toBeInTheDocument()
     })
 

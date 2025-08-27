@@ -69,7 +69,9 @@ export function LineageGraph({ lineage }: LineageGraphProps) {
     const visited = new Set<string>()
     
     while (queue.length > 0) {
-      const { id, level } = queue.shift()!
+      const item = queue.shift()
+      if (!item) continue
+      const { id, level } = item
       
       if (visited.has(id)) continue
       visited.add(id)
@@ -92,7 +94,6 @@ export function LineageGraph({ lineage }: LineageGraphProps) {
     })
     
     // Position nodes level by level
-    const maxLevel = Math.max(...Object.keys(nodesByLevel).map(Number))
     
     Object.entries(nodesByLevel).forEach(([levelStr, nodeIds]) => {
       const level = parseInt(levelStr)
@@ -133,9 +134,6 @@ export function LineageGraph({ lineage }: LineageGraphProps) {
     // Normalize the direction vector
     const length = Math.sqrt(dx * dx + dy * dy)
     if (length === 0) return null
-    
-    const normalizedDx = dx / length
-    const normalizedDy = dy / length
     
     // For better visual flow, prefer connecting from bottom of upper node to top of lower node
     let fromEdgeX, fromEdgeY, toEdgeX, toEdgeY
@@ -180,13 +178,12 @@ export function LineageGraph({ lineage }: LineageGraphProps) {
 
   // Create curved paths for better visual flow
   const createPath = (from: { x: number; y: number }, to: { x: number; y: number }) => {
-    const dx = to.x - from.x
-    const dy = to.y - from.y
+    const pathDy = to.y - from.y
     
     // For hierarchical layout, use smooth curves
-    if (Math.abs(dy) > 20) {
+    if (Math.abs(pathDy) > 20) {
       // Vertical flow - use curved path
-      const midY = from.y + dy * 0.6
+      const midY = from.y + pathDy * 0.6
       return `M ${from.x} ${from.y} Q ${from.x} ${midY} ${to.x} ${to.y}`
     } else {
       // Horizontal flow - use straight line

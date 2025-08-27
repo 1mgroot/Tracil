@@ -1,7 +1,7 @@
 import type { HTMLAttributes, ReactNode } from 'react'
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { cn } from '@/lib/utils'
-import { Search, Settings2, X } from 'lucide-react'
+import { Search, X } from 'lucide-react'
 
 export interface SearchBarProps extends Omit<HTMLAttributes<HTMLDivElement>, 'loading'> {
 	readonly placeholder?: string
