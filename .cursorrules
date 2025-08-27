@@ -1,50 +1,145 @@
-# Tracil Cursor Rules (Monorepo with Python Backend)
+# Tracil Cursor Rules (Monorepo: Next.js Frontend + Python Backend)
 
-## Constraints
-- Do not persist uploaded files server-side; processing must be ephemeral.
-- Never expose API keys in client code. All LLM API keys isolated in Python backend environment.
-- Python backend handles all AI processing; frontend only handles UI and proxies requests.
+You are an expert full-stack developer working on Tracil, an AI-powered clinical data lineage platform. Follow these rules strictly to maintain consistency and quality.
 
-## Architecture and ownership (Monorepo)
-- **Frontend (`frontend/` folder)**: Next.js App Router, React components, UI logic
-  - UI flows in `frontend/app/`, shared UI in `frontend/components/`, vertical slices in `frontend/features/`
-  - Interactive workspace UI implemented as client component under `frontend/app/(workspace)/_components/`
-  - Client state in `frontend/state/` (Zustand) and reusable hooks in `frontend/hooks/`
-  - Next.js API routes in `frontend/app/(api)/` proxy requests to Python backend
-  - **Data Structure**: Source-agnostic, CDISC-first organization (SDTM, ADaM, CRF, TLF)
-- **Backend (`backend/` folder)**: Python FastAPI, complete AI developer autonomy
-  - AI developer has complete freedom over `backend/` folder structure and implementation
-  - Only constraint: expose required API endpoints with source-agnostic JSON structure
-  - **API Endpoints**: `POST /process-files` (CDISC-organized response), `POST /analyze-variable`
-  - All AI processing, file parsing, LLM integration happens in Python backend
-  - **Source Flexibility**: Handle any combination of define.xml, spec sheets, raw datasets, documents
-- **Team Focus**:
-  - Web developer: `frontend/` folder (all Next.js/React code)
-  - AI developer: `backend/` folder (all Python AI code)
+## Critical Constraints (Never Violate)
+- **NO server-side file persistence** - processing must be ephemeral only
+- **NO LLM API keys in frontend code** - all AI keys isolated in Python backend environment  
+- **NO heavy file parsing in browser** - delegate all processing to Python backend
+- **NO direct LLM calls from frontend** - only proxy through Next.js API routes
 
-## Coding standards
-- **Frontend**: TypeScript strict. Avoid `any`. Use explicit function signatures for exports and public APIs.
-- **Backend**: Python with type hints encouraged. AI developer's choice of coding standards.
-- Prefer descriptive names; avoid abbreviated identifiers.
-- Keep functions small with early returns; handle edge cases first.
-- No silent catches. Provide meaningful error messages.
-- **Frontend**: Keep code pure in `frontend/lib/`. Side effects only in routes, components, or dedicated hooks.
-- **Backend**: AI developer has complete freedom over code organization and patterns.
+## Architecture & Ownership (Monorepo)
 
-## UI/UX (Frontend Only)
-- Use shadcn/ui components and Tailwind for layout. Provide dark mode.
-- Ensure accessibility: keyboard navigation and proper ARIA roles.
-- Keep pages responsive and performant (virtualized lists for large datasets).
-- Use CSS variables (OKLCH) for theme tokens. In Tailwind v4, consume tokens via `bg-[var(--token)]` etc. Keep color logic centralized in `frontend/app/globals.css`.
-- For the main screen, the left pane width is a fixed 260px on md+ (`md:grid-cols-[260px_1fr]`).
+**Frontend (`frontend/` folder)** - Next.js 15.4.6 + React 19.1.0 + TypeScript 5.6+
+- **Structure:** App Router in `app/`, shared UI in `components/`, hooks in `hooks/`
+- **State Management:** React hooks only (useState, useCallback, useMemo) - NO Zustand
+- **API Integration:** Next.js routes in `app/api/ai/` proxy to Python backend
+- **Data Structure:** Source-agnostic, CDISC-first organization (SDTM, ADaM, CRF, TLF, Protocol)
+- **Testing:** 136 tests with axe-core accessibility testing
+- **Accessibility:** WCAG 2.2 AA compliance mandatory
 
-## LLM usage (Python Backend Only)
-- **Backend**: AI developer implements LLM integration with complete freedom of choice
-- **Backend**: Provider abstraction (OpenAI, Anthropic, Google) - AI developer's implementation choice
-- **Backend**: Control runtime mode with `AI_MODE=mock|live|auto` in backend environment
-- **Backend**: Redact PII/PHI and sample data values before sending to LLMs. Prefer metadata-only prompts.
-- **Backend**: Chunk large inputs; enforce token budgets; stream responses where supported.
-- **Frontend**: Never calls LLM providers directly. Only calls Next.js API routes that proxy to Python backend.
+**Backend (`backend/` folder)** - Python 3.8+ + FastAPI 0.116.1 + OpenAI GPT
+- **Required Endpoints:** `POST /process-files`, `POST /analyze-variable`
+- **File Processing:** XPT, SAS7BDAT, JSON, PDF, DOCX, RTF, XML via pyreadstat, lxml, PyMuPDF
+- **AI Integration:** OpenAI GPT 1.101.0 for lineage analysis (privacy-first)
+- **Session Management:** Ephemeral processing with automatic cleanup
+- **Standards Support:** CDISC, USDM, aCRF preprocessing, TLF extraction
+
+## Frontend Coding Standards (Enforced)
+
+**Required Patterns:**
+```typescript
+// ✅ DO: Use named imports and explicit types
+import { useState, useCallback, type ReactNode } from 'react'
+
+interface Props {
+  readonly data: Dataset[]
+  readonly onSelect: (id: string) => void
+}
+
+export function Component({ data, onSelect }: Props): ReactNode {
+  const [selected, setSelected] = useState<string | null>(null)
+  
+  const handleSelect = useCallback((id: string) => {
+    setSelected(id)
+    onSelect(id)
+  }, [onSelect])
+  
+  return <div>...</div>
+}
+
+// ❌ DON'T: Avoid any, namespace imports, missing types
+import * as React from 'react' // Wrong
+export function Component(props: any) { ... } // Wrong
+```
+
+**TypeScript Rules:**
+- Strict mode enabled, no `any` types allowed
+- Use `ReactNode` return type, not `JSX.Element`
+- Explicit function signatures for all exports
+- Prefer `interface` over `type` for object shapes
+
+**Performance Rules:**
+- Wrap expensive operations in `useMemo`/`useCallback`
+- Use `React.memo` for components that re-render frequently
+- Avoid creating objects/functions in render
+
+## Backend Coding Standards
+
+**API Contract (Required):**
+```python
+@app.post("/process-files")
+async def process_files(files: List[UploadFile]) -> Dict[str, Any]:
+    """Process files and return CDISC-organized structure"""
+    return {
+        "standards": {"SDTM": {...}, "ADaM": {...}},
+        "metadata": {"sourceFiles": [...]}
+    }
+
+@app.post("/analyze-variable") 
+async def analyze_variable(request: AnalyzeVariableRequest) -> Dict[str, Any]:
+    """Generate AI-powered variable lineage analysis"""
+    pass
+```
+
+## UI/UX Standards (Frontend Only)
+
+**Design System:**
+- **Components:** shadcn/ui + custom components
+- **Styling:** Tailwind CSS v4 with OKLCH colors
+- **Layout:** Fixed 260px left sidebar on md+ screens (`md:grid-cols-[260px_1fr]`)
+- **Responsive:** Mobile-first approach with proper breakpoints
+- **Dark mode:** Full support with CSS variables
+
+**Color System (OKLCH):**
+```css
+/* globals.css - Centralized color tokens */
+:root {
+  --primary: oklch(0.45 0.15 250);
+  --surface: oklch(0.98 0.01 250);
+  --accent-sdtm: oklch(0.55 0.15 210);
+  --accent-adam: oklch(0.60 0.12 150);
+}
+
+/* Tailwind usage */
+.bg-primary { background: var(--primary); }
+```
+
+**Accessibility Requirements (WCAG 2.2 AA - Non-negotiable):**
+- All interactive elements must support keyboard navigation
+- Proper ARIA labels and roles required
+- Screen reader compatibility tested with axe-core
+- Color contrast ratio ≥ 4.5:1
+- Focus management in modals and dropdowns
+
+## LLM Integration (Backend Only)
+
+**Implementation (OpenAI GPT 1.101.0):**
+```python
+# ✅ DO: Privacy-first LLM usage
+def analyze_lineage(variable: str, metadata_only: dict) -> dict:
+    # Redact PII/PHI before sending to LLM
+    sanitized_data = redact_sensitive_data(metadata_only)
+    
+    # Use metadata-only prompts (no raw data values)
+    prompt = f"Analyze lineage for {variable} using metadata: {sanitized_data}"
+    
+    response = openai.chat.completions.create(
+        model="gpt-4",
+        messages=[{"role": "user", "content": prompt}]
+    )
+    return response
+
+# ❌ DON'T: Send raw data to LLMs
+def bad_analyze(raw_dataset: pd.DataFrame):  # FORBIDDEN
+    prompt = f"Analyze this data: {raw_dataset.to_string()}"  # Contains PII
+```
+
+**Privacy Rules:**
+- Redact all PII/PHI before sending to LLM
+- Use metadata-only prompts (no raw data values)
+- Chunk large inputs and enforce token budgets
+- Stream responses where supported
 
 ## File processing and validation
 - **Backend**: Support XPT (v5), SAS7BDAT, XLSX, DOCX, PDF, RTF - AI developer's choice of libraries
@@ -53,12 +148,46 @@
 - **Backend**: Provide source file traceability with roles (primary/supplementary/validation)
 - **Backend**: Include validation statuses (✔ / ❌ / Missing) and metadata for each dataset entity
 
-## Testing and quality
-- **Frontend**: Lint, typecheck, and unit tests must pass on PRs. Keep edits small and focused.
-- **Frontend**: Source-agnostic data structure implemented with migration layer for backward compatibility
-- **Backend**: AI developer's choice of testing framework and standards.
-- **Backend**: Test source-agnostic processing with various file combinations (define.xml + spec sheets + raw datasets)
-- **Integration**: E2E smoke tests: upload → CDISC standards view → dataset entities → variables → lineage.
+## Testing & Quality Standards
+
+**Frontend Testing (Required):**
+```typescript
+// ✅ DO: Test accessibility and keyboard navigation
+import { render, screen } from '@testing-library/react'
+import { axe, toHaveNoViolations } from 'jest-axe'
+
+test('should be accessible', async () => {
+  const { container } = render(<Component />)
+  const results = await axe(container)
+  expect(results).toHaveNoViolations()
+})
+
+test('should support keyboard navigation', () => {
+  render(<Component />)
+  const button = screen.getByRole('button')
+  button.focus()
+  fireEvent.keyDown(button, { key: 'Enter' })
+  // Assert expected behavior
+})
+```
+
+**Quality Gates (Before Every Commit):**
+- [ ] TypeScript strict compilation (zero errors)
+- [ ] ESLint accessibility rules (zero violations)  
+- [ ] All tests passing (including accessibility tests)
+- [ ] Performance budgets met
+- [ ] Keyboard navigation verified
+- [ ] Screen reader compatibility tested
+
+**Test Commands:**
+```bash
+npm run test              # Unit tests
+npm run test:a11y        # Accessibility tests  
+npm run test:coverage    # Coverage report
+npm run lint             # ESLint + TypeScript
+```
+
+**Current Status:** 136 tests passing (99.3% success rate)
 
 ## Git and CI (Monorepo)
 - Conventional commits. Update `docs/` when schema or flows change.
@@ -73,41 +202,75 @@
 - **UI Compatibility**: Frontend components work with unified structure regardless of data source
 - **Migration Support**: Backward compatibility layer for legacy file-centric approaches
 
-## Performance and privacy
-- **Backend**: Avoid large in-memory retention of files; clear buffers after use.
-- **Backend**: No server-side persistence. Ephemeral processing only.
-- **Frontend**: All heavy processing delegated to Python backend.
-- **Frontend**: Source-agnostic structure reduces complexity and improves performance
-- **Integration**: Simple HTTP communication initially; Docker deployment is lower priority.
+## Integration & API Rules
 
-## 2025 Development Checklist (Frontend Required)
+**API Communication Pattern:**
+```typescript
+// Frontend API route (proxy pattern)
+// frontend/app/api/ai/process-files/route.ts
+export async function POST(request: NextRequest) {
+  const formData = await request.formData()
+  
+  // Forward to Python backend
+  const response = await fetch(`${PYTHON_BACKEND_URL}/process-files`, {
+    method: 'POST',
+    body: formData,
+    signal: AbortSignal.timeout(120000) // 2 minute timeout
+  })
+  
+  return NextResponse.json(await response.json())
+}
+```
 
-**Frontend - Before Every Commit:**
-- [ ] TypeScript strict compilation passes (zero errors)
-- [ ] ESLint accessibility rules pass (zero violations)
-- [ ] Automated accessibility tests pass
-- [ ] Performance budgets met
-- [ ] All interactive elements keyboard accessible
-- [ ] Proper ARIA labels and roles
-- [ ] Error boundaries implemented where needed
-- [ ] Documentation updated
+**Error Handling (Required):**
+```typescript
+// ✅ DO: Comprehensive error handling with user feedback
+try {
+  const data = await processFiles(files)
+  setUploadState({ isUploading: false, progress: 100 })
+} catch (error) {
+  setUploadState({ 
+    isUploading: false, 
+    error: error instanceof Error ? error.message : 'Upload failed'
+  })
+  // Show user-friendly error message
+}
 
-**Frontend - Component Development:**
-- [ ] Use named imports: `import { useState } from 'react'`
-- [ ] ReactNode return type
-- [ ] Proper memoization (memo, useMemo, useCallback)
-- [ ] Error boundary coverage
-- [ ] Accessibility testing
-- [ ] Keyboard navigation support
-- [ ] Screen reader compatibility
-- [ ] Performance optimization
-- [ ] Use source-agnostic data transformation utilities
-- [ ] Ensure components work with CDISC-organized data structure
+// ❌ DON'T: Silent failures
+try {
+  await processFiles(files)
+} catch {
+  // Silent failure - user has no feedback
+}
+```
 
-**Frontend - Quality Standards:**
-- WCAG 2.2 AA compliance (non-negotiable)
-- Core Web Vitals in "Good" range
-- 90%+ test coverage for critical components
-- Zero TypeScript errors or ESLint violations
-- Comprehensive accessibility testing
-- Performance monitoring integration
+## Development Workflow
+
+**Environment Setup:**
+```bash
+# Frontend
+cp frontend/.env.example frontend/.env.local
+npm install
+npm run dev
+
+# Backend (AI Developer)  
+cp backend/.env.example backend/.env
+pip install -r requirements.txt
+uvicorn main:app --reload
+```
+
+**Git Conventions:**
+- Conventional commits format
+- Feature branches from main
+- Small, focused PRs
+- Update docs when schema/flows change
+
+## Key Reminders
+
+1. **WCAG 2.2 AA compliance mandatory** - test with axe-core
+2. **NO server-side file persistence** - ephemeral processing only
+3. **Source-agnostic data structure** - organize by CDISC standards
+4. **Comprehensive error handling** - meaningful user feedback
+5. **Privacy-first LLM usage** - metadata only, no raw data
+
+Follow these rules strictly. Ask for clarification if any requirement is unclear.
