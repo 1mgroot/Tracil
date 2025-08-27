@@ -74,9 +74,7 @@ export async function analyzeLineage(request: AnalyzeLineageRequest): Promise<Li
     
     // Debug: Log the raw backend response
     console.log('🔍 Debug - Raw backend response:', data)
-    console.log('🔍 Debug - Summary from backend:', data.summary)
     console.log('🔍 Debug - Lineage data:', data.lineage)
-    console.log('🔍 Debug - Gaps data:', data.lineage?.gaps)
     
     // Transform the API response to match LineageGraph type
     // The backend returns a different structure, so we need to transform it
@@ -96,9 +94,6 @@ export async function analyzeLineage(request: AnalyzeLineageRequest): Promise<Li
         
         // Normalize the backend type to our standardized categories
         const normalizedType = normalizeNodeType(nodeType)
-        
-        // Log the type normalization for debugging
-        console.log(`🔍 Type normalization: "${nodeType}" → "${normalizedType}"`)
         
         // Determine group based on normalized type
         let group: 'ADaM' | 'SDTM' | 'CRF' | 'TLF' | 'Protocol' | 'Unknown'
@@ -125,13 +120,10 @@ export async function analyzeLineage(request: AnalyzeLineageRequest): Promise<Li
             // For unknown types, try to infer from context
             if (nodeType.toLowerCase().includes('variable')) {
               group = 'ADaM' // Assume variables are ADaM if we can't determine
-              console.log(`🔍 Inferred group from context: "${nodeType}" → "ADaM" (contains 'variable')`)
             } else if (nodeType.toLowerCase().includes('dataset')) {
               group = 'ADaM' // Assume datasets are ADaM if we can't determine
-              console.log(`🔍 Inferred group from context: "${nodeType}" → "ADaM" (contains 'dataset')`)
             } else {
               group = 'Unknown' // Keep as unknown if we can't infer
-              console.log(`🔍 Could not infer group for: "${nodeType}", keeping as "Unknown"`)
             }
             break
         }
@@ -170,22 +162,16 @@ export async function analyzeLineage(request: AnalyzeLineageRequest): Promise<Li
       })),
       gaps: { 
         notes: (() => {
-          // Debug: Log the gaps transformation
-          console.log('🔍 Debug - Processing gaps:', data.lineage.gaps)
-          
           if (Array.isArray(data.lineage.gaps)) {
             const processedGaps = data.lineage.gaps.map((gap: { source: string; target: string; explanation: string }) => {
               const explanation = gap.explanation || 'Gap identified'
-              console.log('🔍 Debug - Processing gap:', gap, '→ explanation:', explanation)
               return explanation
             }).filter(Boolean)
             
             // Remove duplicate explanations to prevent React key conflicts
             const uniqueGaps = [...new Set(processedGaps)]
-            console.log('🔍 Debug - Final processed gaps (unique):', uniqueGaps)
             return uniqueGaps
           } else {
-            console.log('🔍 Debug - Gaps is not an array, using default')
             return ['No gaps identified']
           }
         })()
