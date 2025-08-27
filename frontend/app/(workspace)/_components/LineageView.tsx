@@ -5,7 +5,6 @@ import { TraceabilitySummary } from '@/components/lineage/TraceabilitySummary'
 import { LineageGraphReactFlow } from '@/components/lineage/LineageGraphReactFlow'
 import { analyzeLineage } from '@/lib/ai/entrypoints/analyzeLineage'
 import type { LineageGraph as LineageGraphType } from '@/types/lineage'
-import { mockLineage } from '@/features/lineage/mocks'
 
 interface LineageViewProps {
   dataset: string
@@ -111,31 +110,35 @@ export function LineageView({ dataset, variable, onBack }: LineageViewProps) {
   }
 
   return (
-    <div className="flex-1 overflow-hidden p-6">
-      {/* Breadcrumb and Back control */}
-      <div className="flex items-center gap-4 mb-6">
-        <button
-          onClick={onBack}
-          className="px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
-        >
-          ← Back to Variables
-        </button>
-        <div className="h-6 w-px bg-gray-300" />
-        <h1 className="text-xl font-semibold text-gray-900">
-          Lineage for {dataset}.{variable}
-        </h1>
+    <div className="flex flex-col h-full">
+      {/* Fixed header - breadcrumb and back control */}
+      <div className="flex-shrink-0 px-6 pt-6 pb-4">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={onBack}
+            className="px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
+          >
+            ← Back to Variables
+          </button>
+          <div className="h-6 w-px bg-gray-300" />
+          <h1 className="text-xl font-semibold text-gray-900">
+            Lineage for {dataset}.{variable}
+          </h1>
+        </div>
       </div>
 
-      {/* Layout: summary card (left/top on small screens), graph canvas (main) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Summary card - left side on large screens, top on small screens */}
-        <div className="lg:col-span-1">
-          <TraceabilitySummary lineage={lineage} />
-        </div>
-        
-        {/* Graph canvas - main area */}
-        <div className="lg:col-span-2">
-          <LineageGraphReactFlow lineage={lineage} />
+      {/* Main content area - fills remaining viewport height */}
+      <div className="flex-1 px-6 pb-6 overflow-hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 h-full">
+          {/* Summary card - left side on large screens, top on small screens */}
+          <div className="lg:col-span-2 flex flex-col">
+            <TraceabilitySummary lineage={lineage} />
+          </div>
+          
+          {/* Graph canvas - main area */}
+          <div className="lg:col-span-3 flex flex-col">
+            <LineageGraphReactFlow lineage={lineage} />
+          </div>
         </div>
       </div>
     </div>
