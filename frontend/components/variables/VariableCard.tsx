@@ -93,7 +93,7 @@ export const VariableCard = memo(function VariableCard({
         ${isFocused ? 'ring-2 ring-[var(--focus-ring)] ring-offset-2' : ''}
       `}
       style={{
-        '--accent-color': `var(--accent-${group.toLowerCase()})`
+        '--accent-color': `var(--accent-${group === 'CRF' ? 'acrf' : group.toLowerCase()})`
       } as React.CSSProperties & { [key: string]: string }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
