@@ -350,6 +350,7 @@ async def process_files(files: List[UploadFile] = File(...)) -> Dict[str, Any]:
                 stats = dict(stats or {})
                 stats["objectiveCount"] = len(design.get("objectives", []))
                 stats["endpointCount"]  = len(design.get("endpoints", []))
+
                 protocol_entities["StudyDesign_USDM"] = {
                     "name": "USDM_Design",
                     "label": "USDM Study Design",
@@ -548,11 +549,6 @@ class AnalyzeVariableIn(BaseModel):
     variable: str
     dataset: str
     files: List[Dict[str, Any]] = []
-
-from services.llm_lineage_define import (
-    build_lineage_with_llm_from_session,
-    build_endpoint_lineage_with_llm_from_session
-)
 
 @app.post("/analyze-variable")
 def analyze_variable(payload: AnalyzeVariableIn):
