@@ -364,7 +364,7 @@ export function MainScreenClient(): ReactNode {
 				</div>
 			) : (
 				<div 
-					className={`min-h-screen w-full grid grid-cols-1 ${
+					className={`h-screen w-full grid grid-cols-1 ${
 						sidebarVisible ? 'md:grid-cols-[260px_1fr]' : 'md:grid-cols-[0px_1fr]'
 					}`}
 				>
@@ -518,7 +518,7 @@ export function MainScreenClient(): ReactNode {
 				)}
 
 				{viewState === 'search-results' && (
-					<div className="relative">
+					<div className="relative flex flex-col min-h-0 h-full">
 						{/* Left edge restore hint when sidebar is hidden */}
 						{!sidebarVisible && (
 							<button
@@ -529,7 +529,7 @@ export function MainScreenClient(): ReactNode {
 										setSidebarVisible(true)
 									}
 								}}
-								className="absolute left-0 top-0 bottom-0 w-1 group cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset"
+								className="absolute left-0 top-0 bottom-0 w-1 group cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset z-10"
 								aria-label="Click to restore sidebar"
 								tabIndex={0}
 							>

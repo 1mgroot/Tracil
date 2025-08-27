@@ -152,9 +152,9 @@ export function SearchResults({
 
 	// Results state
 	return (
-		<div className="flex-1 overflow-hidden p-6">
+		<div className="flex-1 overflow-hidden flex flex-col">
 			{/* Header with back button */}
-			<div className="flex items-center gap-4 mb-6">
+			<div className="flex items-center gap-4 p-6 pb-0 flex-shrink-0">
 				<button
 					onClick={onBack}
 					className="px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
@@ -168,15 +168,15 @@ export function SearchResults({
 			</div>
 
 			{/* Layout: summary card (left/top on small screens), graph canvas (main) */}
-			<div className="grid grid-cols-1 lg:grid-cols-5 gap-6 h-full">
+			<div className="flex-1 grid grid-cols-1 lg:grid-cols-5 gap-4 md:gap-6 p-4 md:p-6 pt-6 min-h-0">
 				{/* Summary card - left side on large screens, top on small screens */}
-				<div className="lg:col-span-2 flex flex-col">
-					<div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm h-full flex flex-col">
+				<div className="lg:col-span-2 flex flex-col min-h-0 h-64 lg:h-auto">
+					<div className="bg-white rounded-lg border border-gray-200 p-4 md:p-6 shadow-sm h-full flex flex-col min-h-0">
 						<h3 className="text-lg font-semibold text-gray-900 mb-4 flex-shrink-0">
 							Search Summary
 						</h3>
 						
-						<div className="flex-1 overflow-y-auto">
+						<div className="flex-1 overflow-y-auto min-h-0">
 							{/* Search details */}
 							<div className="space-y-4">
 								<div>
@@ -252,7 +252,7 @@ export function SearchResults({
 				</div>
 				
 				{/* Graph canvas - main area */}
-				<div className="lg:col-span-3 flex flex-col">
+				<div className="lg:col-span-3 flex flex-col min-h-0 min-h-96 lg:min-h-0">
 					<LineageGraphReactFlow lineage={lineage} />
 				</div>
 			</div>

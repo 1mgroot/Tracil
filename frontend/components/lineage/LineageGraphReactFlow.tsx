@@ -179,26 +179,26 @@ function LineageGraphInner({ lineage }: LineageGraphProps) {
   }, [fitView])
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm h-full flex flex-col">
+    <div className="bg-white rounded-lg border border-gray-200 shadow-sm h-full flex flex-col min-h-0">
       {/* Inject CSS to hide React Flow attribution */}
       <style dangerouslySetInnerHTML={{ __html: hideAttributionCSS }} />
       
-      <div className="mb-6 flex-shrink-0">
+      <div className="p-4 md:p-6 pb-3 flex-shrink-0">
         <h2 className="text-lg font-semibold text-gray-900">
           Lineage flow chart
         </h2>
       </div>
       
-      <div className="flex-1 w-full border border-gray-200 rounded-lg overflow-hidden">
+      <div className="flex-1 mx-4 md:mx-6 mb-4 md:mb-6 border border-gray-200 rounded-lg overflow-hidden min-h-0">
         <ReactFlow
           nodes={nodes}
           edges={edges}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           fitView
-          fitViewOptions={{ padding: 0.15, includeHiddenNodes: false }}
-          minZoom={0.2}
-          maxZoom={1.5}
+          fitViewOptions={{ padding: 0.1, includeHiddenNodes: false }}
+          minZoom={0.1}
+          maxZoom={2.0}
           attributionPosition="bottom-left"
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
