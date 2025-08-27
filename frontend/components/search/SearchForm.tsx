@@ -57,7 +57,7 @@ export function SearchForm({
 						type="text"
 						value={variable}
 						onChange={handleVariableChange}
-						placeholder="e.g., FDA-AE-T06 | SAE Results in Death | Xanomeline Low Dose | n"
+						placeholder="e.g., ars-vs-t01| Diastolic Blood Pressure (mmHg) | Week 2 Change from Baseline | Xanomeline High Dose | mean"
 						className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
 						disabled={loading}
 						required
@@ -124,7 +124,7 @@ export function SearchForm({
 			<div className="mt-6 p-4 bg-gray-50 rounded-lg">
 				<h4 className="text-sm font-medium text-gray-700 mb-2">Example Search</h4>
 				<div className="text-xs text-gray-600 space-y-1">
-					<p><strong>Variable:</strong> FDA-AE-T06 | SAE Results in Death | Xanomeline Low Dose | n</p>
+					<p><strong>Variable:</strong> ars-vs-t01| Diastolic Blood Pressure (mmHg) | Week 2 Change from Baseline | Xanomeline High Dose | mean</p>
 					<p><strong>Dataset:</strong> table</p>
 				</div>
 			</div>
