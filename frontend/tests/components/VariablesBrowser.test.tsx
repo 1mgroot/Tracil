@@ -104,7 +104,7 @@ describe('VariablesBrowser', () => {
     it('should render all child components correctly', () => {
       render(<VariablesBrowser dataset={mockDataset} />)
       
-      expect(screen.getByTestId('search-bar')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Click to search for variable lineage' })).toBeInTheDocument()
       expect(screen.getByTestId('dataset-header')).toBeInTheDocument()
       expect(screen.getByTestId('variables-grid')).toBeInTheDocument()
       expect(screen.getByTestId('variables-error-boundary')).toBeInTheDocument()
@@ -127,11 +127,27 @@ describe('VariablesBrowser', () => {
   })
 
   describe('Search Functionality', () => {
-    it('should render search bar with correct placeholder', () => {
+    it('should render search button with correct text and aria-label', () => {
       render(<VariablesBrowser dataset={mockDataset} />)
       
-      const searchBar = screen.getByTestId('search-bar')
-      expect(searchBar).toHaveAttribute('aria-label', 'Search variables...')
+      const searchButton = screen.getByRole('button', { name: 'Click to search for variable lineage' })
+      expect(searchButton).toHaveAttribute('aria-label', 'Click to search for variable lineage')
+      expect(searchButton).toHaveTextContent('Search variables...')
+    })
+
+    it('should call onSearchClick when search button is clicked', () => {
+      const mockOnSearchClick = jest.fn()
+      render(
+        <VariablesBrowser 
+          dataset={mockDataset} 
+          onSearchClick={mockOnSearchClick} 
+        />
+      )
+      
+      const searchButton = screen.getByRole('button', { name: 'Click to search for variable lineage' })
+      fireEvent.click(searchButton)
+      
+      expect(mockOnSearchClick).toHaveBeenCalledTimes(1)
     })
   })
 
@@ -224,7 +240,7 @@ describe('VariablesBrowser', () => {
     it('should have proper spacing and padding', () => {
       render(<VariablesBrowser dataset={mockDataset} />)
       
-      const searchContainer = screen.getByTestId('search-bar').parentElement
+      const searchContainer = screen.getByRole('button', { name: 'Click to search for variable lineage' }).parentElement
       const headerContainer = screen.getByTestId('dataset-header').parentElement
       
       expect(searchContainer).toHaveClass('px-6', 'pt-6', 'pb-4')

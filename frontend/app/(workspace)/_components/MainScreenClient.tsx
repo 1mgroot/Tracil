@@ -3,16 +3,19 @@
 import { useMemo, useState, useCallback, type ReactNode, useEffect } from 'react'
 import { Sidebar, SidebarGroup, SidebarItem } from '@/components/ui/sidebar/Sidebar'
 import { SearchBar } from '@/components/search/SearchBar'
+import { SearchForm } from '@/components/search/SearchForm'
+import { SearchResults } from '@/components/search/SearchResults'
 import { VariablesBrowser } from '@/components/variables'
 import { LineageView } from './LineageView'
 import { useVariablesBrowser } from '@/hooks/useVariablesBrowser'
+import { useSearch } from '@/hooks/useSearch'
 import { useSidebarKeyboardNav } from '@/hooks/useSidebarKeyboardNav'
 import { FileUploadButton } from '@/components/ui/FileUploadButton'
 import { SidebarToggle } from '@/components/ui/sidebar/SidebarToggle'
 import { FileUploadModal } from '@/components/ui/FileUploadModal'
 import type { UploadState } from '@/types/upload'
 
-type ViewState = 'search' | 'variables' | 'lineage'
+type ViewState = 'search' | 'variables' | 'lineage' | 'search-results'
 type SelectedItem = { type: 'dataset'; datasetId: string } | null
 
 export function MainScreenClient(): ReactNode {
@@ -26,6 +29,18 @@ export function MainScreenClient(): ReactNode {
 		setHasUploadedFiles,
 		setDataDirectly
 	} = useVariablesBrowser()
+	
+	const {
+		query: searchQuery,
+		dataset: searchDataset,
+		lineage: searchLineage,
+		loading: searchLoading,
+		error: searchError,
+		search: performSearch,
+		clear: clearSearch,
+		reset: resetSearch
+	} = useSearch()
+	
 	const [selectedItem, setSelectedItem] = useState<SelectedItem>(null)
 	const [selectedId, setSelectedId] = useState<string | null>(null)
 	const [lineageState, setLineageState] = useState<{ dataset: string; variable: string } | null>(null)
@@ -69,7 +84,7 @@ export function MainScreenClient(): ReactNode {
 	}, [])
 
 	// Determine current view state
-	const viewState: ViewState = lineageState ? 'lineage' : selectedItem?.type === 'dataset' ? 'variables' : 'search'
+	const viewState: ViewState = searchLineage ? 'search-results' : lineageState ? 'lineage' : selectedItem?.type === 'dataset' ? 'variables' : 'search'
 	
 	// Get the selected dataset for variables view
 	const selectedDataset = selectedItem?.type === 'dataset' 
@@ -104,6 +119,7 @@ export function MainScreenClient(): ReactNode {
 		setSelectedId(datasetId)
 		setSelectedItem({ type: 'dataset', datasetId })
 		setLineageState(null) // Clear lineage when switching datasets
+		resetSearch() // Clear search results when switching datasets
 		
 		// Auto-trigger lineage analysis for TLF items
 		const selectedDataset = getDatasetById(datasetId)
@@ -116,7 +132,7 @@ export function MainScreenClient(): ReactNode {
 		}
 		// Note: Protocol datasets don't auto-trigger lineage analysis
 		// Users must click on individual variables (forms, endpoints, etc.) to analyze
-	}, [getDatasetById])
+	}, [getDatasetById, resetSearch])
 
 	// Handle variable selection - open lineage view
 	const handleVariableSelect = useCallback((variable: { name: string }) => {
@@ -136,6 +152,20 @@ export function MainScreenClient(): ReactNode {
 	const handleLineageBack = useCallback(() => {
 		setLineageState(null)
 	}, [])
+
+	// Handle search submission
+	const handleSearch = useCallback(async (query: string, dataset: string) => {
+		try {
+			await performSearch(query, dataset)
+		} catch (error) {
+			console.error('Search failed:', error)
+		}
+	}, [performSearch])
+
+	// Handle back from search results
+	const handleSearchBack = useCallback(() => {
+		clearSearch()
+	}, [clearSearch])
 
 	// Handle upload button click
 	const handleUploadClick = useCallback(() => {
@@ -232,6 +262,14 @@ export function MainScreenClient(): ReactNode {
 		)
 	}
 
+	const navigateToSearch = useCallback(() => {
+		setSelectedItem(null)
+		setSelectedId(null)
+		setLineageState(null)
+		clearSearch()
+		resetSearch()
+	}, [clearSearch, resetSearch])
+
 	return (
 		<>
 			{/* Floating restore button - always visible when sidebar is hidden */}
@@ -313,39 +351,15 @@ export function MainScreenClient(): ReactNode {
 							</button>
 						)}
 						
-						{/* Header */}
-						<div className="flex items-center justify-center mb-6">
-							<h1 className="text-2xl md:text-3xl text-balance text-center">
-								What can I help with?
-							</h1>
-						</div>
-
 						{/* Main content */}
 						<div className="flex-1 flex flex-col items-center justify-center gap-6">
-							<SearchBar className="w-full max-w-2xl" />
+							<SearchForm 
+								onSearch={handleSearch}
+								loading={searchLoading}
+								error={searchError}
+							/>
 							
-							{/* Upload instructions */}
-							<div className="max-w-2xl text-center">
-								<div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-									<h3 className="text-lg font-semibold text-blue-800 mb-3">
-										🚀 Get Started with File Upload
-									</h3>
-									<p className="text-blue-700 mb-4">
-										Use the upload button in the left sidebar to add your clinical data files.
-									</p>
-									<div className="bg-white p-4 rounded border text-sm font-mono text-left">
-										<span className="text-gray-600"># Upload files to backend</span><br/>
-										curl -X POST http://localhost:8000/process-files \<br/>
-										&nbsp;&nbsp;-F &quot;files=@your_file.xpt&quot;<br/>
-										&nbsp;&nbsp;-F &quot;files=@your_define.xml&quot;<br/>
-										&nbsp;&nbsp;-F &quot;files=@your_crf.pdf&quot;<br/>
-										&nbsp;&nbsp;-F &quot;files=@your_data.json&quot;
-									</div>
-									<p className="text-sm text-blue-600 mt-3">
-										After uploading, your datasets will appear in the sidebar.
-									</p>
-								</div>
-							</div>
+
 						</div>
 					</main>
 				</div>
@@ -371,6 +385,7 @@ export function MainScreenClient(): ReactNode {
 								className="flex-shrink-0"
 							/>
 						</div>
+						
 						<SidebarGroup label="ADaM" accentVar="--accent-adam">
 							{groupedDatasets.ADaM.map((dataset, i) => (
 								<SidebarItem 
@@ -467,13 +482,17 @@ export function MainScreenClient(): ReactNode {
 						{/* Header */}
 						<div className="flex items-center justify-center mb-6">
 							<h1 className="text-2xl md:text-3xl text-balance text-center">
-								What can I help with?
+								Search Variable Lineage
 							</h1>
 						</div>
 
 						{/* Main content */}
 						<div className="flex-1 flex flex-col items-center justify-center gap-6">
-							<SearchBar className="w-full max-w-2xl" />
+							<SearchForm 
+								onSearch={handleSearch}
+								loading={searchLoading}
+								error={searchError}
+							/>
 							
 							{/* Show upload instructions if no datasets */}
 							{datasets.length === 0 && (
@@ -511,6 +530,42 @@ export function MainScreenClient(): ReactNode {
 					</main>
 				)}
 
+				{viewState === 'search-results' && (
+					<div className="relative">
+						{/* Left edge restore hint when sidebar is hidden */}
+						{!sidebarVisible && (
+							<button
+								onClick={() => setSidebarVisible(true)}
+								onKeyDown={(e) => {
+									if (e.key === 'Enter' || e.key === ' ') {
+										e.preventDefault()
+										setSidebarVisible(true)
+									}
+								}}
+								className="absolute left-0 top-0 bottom-0 w-1 group cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset"
+								aria-label="Click to restore sidebar"
+								tabIndex={0}
+							>
+								<div className="absolute left-0 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity duration-200 pointer-events-none">
+									<div className="bg-blue-500 text-white text-xs px-2 py-1 rounded-r whitespace-nowrap shadow-lg">
+										Click to restore sidebar
+									</div>
+									<div className="absolute left-0 top-1/2 -translate-y-1/2 w-0 h-0 border-l-4 border-l-blue-500 border-t-4 border-t-transparent border-b-4 border-b-transparent"></div>
+								</div>
+							</button>
+						)}
+						
+						<SearchResults
+							query={searchQuery}
+							dataset={searchDataset}
+							lineage={searchLineage}
+							loading={searchLoading}
+							error={searchError}
+							onBack={handleSearchBack}
+						/>
+					</div>
+				)}
+
 				{viewState === 'variables' && selectedDataset && (
 					<div className="flex-1 overflow-hidden relative">
 						{/* Left edge restore hint when sidebar is hidden */}
@@ -543,6 +598,7 @@ export function MainScreenClient(): ReactNode {
 								setSelectedItem(null)
 								setSelectedId(null)
 							}}
+							onSearchClick={navigateToSearch}
 						/>
 					</div>
 				)}
