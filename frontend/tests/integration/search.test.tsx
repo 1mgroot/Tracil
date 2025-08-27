@@ -23,20 +23,19 @@ jest.mock('@/components/lineage/LineageGraphReactFlow', () => ({
 }))
 
 const mockLineageData: LineageGraph = {
+  summary: 'Test lineage graph',
   nodes: [
     {
       id: 'source',
-      type: 'source',
-      label: 'Source Variable',
-      description: 'Original variable',
-      explanation: 'This is the source'
+      title: 'Source Variable',
+      group: 'SDTM',
+      kind: 'source',
     },
     {
       id: 'target',
-      type: 'target',
-      label: 'Target Variable',
-      description: 'Final variable',
-      explanation: 'This is the target'
+      title: 'Target Variable',
+      group: 'ADaM',
+      kind: 'target',
     }
   ],
   edges: [

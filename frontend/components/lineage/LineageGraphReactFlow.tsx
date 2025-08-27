@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, memo } from 'react'
 import ReactFlow, {
   Node,
   Edge,
@@ -9,6 +9,8 @@ import ReactFlow, {
   MarkerType,
   ReactFlowProvider,
   useReactFlow,
+  Handle,
+  NodeProps,
 } from 'reactflow'
 import * as dagre from 'dagre'
 import 'reactflow/dist/style.css'
@@ -22,42 +24,81 @@ const hideAttributionCSS = `
   }
 `
 
+// Custom node component with group tag following React Flow best practices
+const CustomLineageNode = memo<NodeProps>(({ data }) => {
+  const nodeType = (data.group || 'SDTM') as ArtifactType
+  const colors = getTypeColors(nodeType)
+  
+  return (
+    <div 
+      className="relative"
+      style={{
+        border: `3px solid ${colors.border}`,
+        borderRadius: '20px',
+        width: 280,
+        height: 160,
+        background: colors.background,
+        color: colors.text,
+        fontSize: '20px',
+        fontWeight: 700,
+        boxShadow: '0 10px 25px -6px rgba(0, 0, 0, 0.25)',
+        padding: '12px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      {/* Main node content */}
+      <div className="text-center px-6 py-3">
+        <div className="font-black text-white text-xl leading-tight tracking-wide">
+          {data.title || data.label}
+        </div>
+      </div>
+      
+      {/* Group tag - positioned as a small badge in the top-right corner */}
+      <div 
+        className="absolute -top-2 -right-2 px-2 py-1 text-xs font-semibold rounded-md"
+        style={{
+          backgroundColor: colors.border,
+          color: colors.text,
+          fontSize: '11px',
+          minWidth: '32px',
+          textAlign: 'center',
+          border: '2px solid white',
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+        }}
+      >
+        {data.group}
+      </div>
+      
+      {/* React Flow handles for connections */}
+      <Handle 
+        type="target" 
+        position={Position.Left}
+        style={{ background: colors.border, border: '2px solid white' }}
+      />
+      <Handle 
+        type="source" 
+        position={Position.Right}
+        style={{ background: colors.border, border: '2px solid white' }}
+      />
+    </div>
+  )
+})
+
+CustomLineageNode.displayName = 'CustomLineageNode'
+
 // Move nodeTypes and edgeTypes outside component to prevent recreation on every render
-const nodeTypes = {}
+const nodeTypes = {
+  lineageNode: CustomLineageNode,
+}
 const edgeTypes = {}
 
 interface LineageGraphProps {
   lineage: LineageGraphType
 }
 
-// Simplified node styling based on type using centralized color system
-const getNodeStyle = (node: LineageNode) => {
-  const baseStyle = {
-    border: '4px solid white', // Optimal border: 2.5% of node width for visual definition
-    borderRadius: '20px', // Optimal radius: 12.5% of node height for modern aesthetics
-    width: 280, // Match layout calculation for consistency
-    height: 160, // Match layout calculation for consistency
-    color: 'white',
-    fontSize: '20px', // Optimal: 12.5% of node height for perfect readability
-    fontWeight: 700, // Bold weight for maximum contrast and readability
-    boxShadow: '0 10px 25px -6px rgba(0, 0, 0, 0.25)', // Enhanced depth perception
-    padding: '12px', // Optimal padding: 7.5% of node dimensions
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  }
-  
-  // Get colors from centralized system, with fallback for unknown types
-  const nodeType = (node.group || 'SDTM') as ArtifactType
-  const colors = getTypeColors(nodeType)
-  
-  return {
-    ...baseStyle,
-    background: colors.background,
-    border: `3px solid ${colors.border}`,
-    color: colors.text,
-  }
-}
+// Node styling is now handled by the custom component
 
 // Enhanced edge styling for better visibility
 const getEdgeStyle = () => {
@@ -129,20 +170,13 @@ function LineageGraphInner({ lineage }: LineageGraphProps) {
   const initialNodes: Node[] = useMemo(() => {
     return layoutedNodes.map((node) => ({
       id: node.id,
-      type: 'default',
+      type: 'lineageNode',
       position: node.position,
-              data: {
-          label: (
-            <div className="text-center px-6 py-3">
-              <div className="font-black text-white text-xl leading-tight tracking-wide">
-                {node.title}
-              </div>
-            </div>
-          ),
-          group: node.group,
-          type: node.group,
+      data: {
+        title: node.title,
+        group: node.group,
+        type: node.group,
       },
-      style: getNodeStyle(node),
       sourcePosition: Position.Right,
       targetPosition: Position.Left,
     }))
