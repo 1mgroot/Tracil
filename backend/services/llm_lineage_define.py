@@ -46,7 +46,7 @@ from openai import OpenAI
 from openai import APIError, RateLimitError
 
 # deterministic ARS → TLF cell service (situation #3)
-from services.tlf_lineage_from_ars import build_table_lineage_from_ars
+from services.delete_later.tlf_lineage_from_ars import build_table_lineage_from_ars
 
 try:
     import pandas as pd
