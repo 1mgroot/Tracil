@@ -344,16 +344,12 @@ async def process_files(files: List[UploadFile] = File(...)) -> Dict[str, Any]:
         try:
             is_usdm, design, stats = sniff_and_extract_usdm(s["path"])
             if is_usdm:
-<<<<<<< HEAD
-=======
                 # Summarize/clean: rename Objective/Endpoint IDs and drop TBD endpoints
                 design = _postprocess_usdm_design(design)
                 # Update counts to reflect any filtering/renaming
                 stats = dict(stats or {})
                 stats["objectiveCount"] = len(design.get("objectives", []))
                 stats["endpointCount"]  = len(design.get("endpoints", []))
-
->>>>>>> feat/backend-tracil-2
                 protocol_entities["StudyDesign_USDM"] = {
                     "name": "USDM_Design",
                     "label": "USDM Study Design",
