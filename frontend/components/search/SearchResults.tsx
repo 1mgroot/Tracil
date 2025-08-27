@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { useMemo } from 'react'
-import { AlertCircle, CheckCircle, XCircle, Info } from 'lucide-react'
+import { AlertCircle, XCircle, Info } from 'lucide-react'
 import type { LineageGraph } from '@/types/lineage'
 import { LineageGraphReactFlow } from '@/components/lineage/LineageGraphReactFlow'
 
@@ -46,7 +46,7 @@ export function SearchResults({
 					</button>
 					<div className="h-6 w-px bg-gray-300" />
 					<h1 className="text-xl font-semibold text-gray-900">
-						Analyzing lineage for "{query}"
+													Analyzing lineage for &ldquo;{query}&rdquo;
 					</h1>
 				</div>
 
@@ -152,9 +152,9 @@ export function SearchResults({
 
 	// Results state
 	return (
-		<div className="flex-1 overflow-hidden p-6">
+		<div className="flex-1 overflow-hidden flex flex-col">
 			{/* Header with back button */}
-			<div className="flex items-center gap-4 mb-6">
+			<div className="flex items-center gap-4 p-6 pb-0 flex-shrink-0">
 				<button
 					onClick={onBack}
 					className="px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
@@ -163,94 +163,96 @@ export function SearchResults({
 				</button>
 				<div className="h-6 w-px bg-gray-300" />
 				<h1 className="text-xl font-semibold text-gray-900">
-					Lineage for "{query}"
+					Lineage for &ldquo;{query}&rdquo;
 				</h1>
 			</div>
 
 			{/* Layout: summary card (left/top on small screens), graph canvas (main) */}
-			<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+			<div className="flex-1 grid grid-cols-1 lg:grid-cols-5 gap-4 md:gap-6 p-4 md:p-6 pt-6 min-h-0">
 				{/* Summary card - left side on large screens, top on small screens */}
-				<div className="lg:col-span-1">
-					<div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-						<h3 className="text-lg font-semibold text-gray-900 mb-4">
+				<div className="lg:col-span-2 flex flex-col min-h-0 h-64 lg:h-auto">
+					<div className="bg-white rounded-lg border border-gray-200 p-4 md:p-6 shadow-sm h-full flex flex-col min-h-0">
+						<h3 className="text-lg font-semibold text-gray-900 mb-4 flex-shrink-0">
 							Search Summary
 						</h3>
 						
-						{/* Search details */}
-						<div className="space-y-4">
-							<div>
-								<label className="block text-sm font-medium text-gray-700 mb-1">
-									Variable
-								</label>
-								<p className="text-sm text-gray-900 bg-gray-50 p-2 rounded border">
-									{query}
-								</p>
-							</div>
-							
-							<div>
-								<label className="block text-sm font-medium text-gray-700 mb-1">
-									Dataset
-								</label>
-								<p className="text-sm text-gray-900 bg-gray-50 p-2 rounded border">
-									{dataset}
-								</p>
-							</div>
-						</div>
-
-						{/* Lineage summary */}
-						{summaryStats && (
-							<div className="mt-6 pt-6 border-t border-gray-200">
-								<h4 className="text-sm font-medium text-gray-700 mb-3">
-									Lineage Overview
-								</h4>
+						<div className="flex-1 overflow-y-auto min-h-0">
+							{/* Search details */}
+							<div className="space-y-4">
+								<div>
+									<label htmlFor="search-variable" className="block text-sm font-medium text-gray-700 mb-1">
+										Variable
+									</label>
+									<p id="search-variable" className="text-sm text-gray-900 bg-gray-50 p-2 rounded border">
+										{query}
+									</p>
+								</div>
 								
-								<div className="space-y-3">
-									<div className="flex items-center justify-between">
-										<span className="text-sm text-gray-600">Total Nodes:</span>
-										<span className="text-sm font-medium text-gray-900">
-											{summaryStats.totalNodes}
-										</span>
-									</div>
-									
-									<div className="flex items-center justify-between">
-										<span className="text-sm text-gray-600">Total Connections:</span>
-										<span className="text-sm font-medium text-gray-900">
-											{summaryStats.totalEdges}
-										</span>
-									</div>
-									
-									<div className="flex items-center justify-between">
-										<span className="text-sm text-gray-600">Documentation Gaps:</span>
-										<span className="text-sm font-medium text-gray-900">
-											{summaryStats.gapsCount}
-										</span>
-									</div>
+								<div>
+									<label htmlFor="search-dataset" className="block text-sm font-medium text-gray-700 mb-1">
+										Dataset
+									</label>
+									<p id="search-dataset" className="text-sm text-gray-900 bg-gray-50 p-2 rounded border">
+										{dataset}
+									</p>
 								</div>
 							</div>
-						)}
 
-						{/* Gaps information */}
-						{lineage.gaps?.notes && lineage.gaps.notes.length > 0 && (
-							<div className="mt-6 pt-6 border-t border-gray-200">
-								<h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
-									<AlertCircle className="h-4 w-4 text-yellow-500" />
-									Documentation Gaps
-								</h4>
-								
-								<div className="space-y-2">
-									{lineage.gaps.notes.map((gap, index) => (
-										<div key={index} className="text-sm text-yellow-700 bg-yellow-50 p-2 rounded border">
-											{gap}
+							{/* Lineage summary */}
+							{summaryStats && (
+								<div className="mt-6 pt-6 border-t border-gray-200">
+									<h4 className="text-sm font-medium text-gray-700 mb-3">
+										Lineage Overview
+									</h4>
+									
+									<div className="space-y-3">
+										<div className="flex items-center justify-between">
+											<span className="text-sm text-gray-600">Total Nodes:</span>
+											<span className="text-sm font-medium text-gray-900">
+												{summaryStats.totalNodes}
+											</span>
 										</div>
-									))}
+										
+										<div className="flex items-center justify-between">
+											<span className="text-sm text-gray-600">Total Connections:</span>
+											<span className="text-sm font-medium text-gray-900">
+												{summaryStats.totalEdges}
+											</span>
+										</div>
+										
+										<div className="flex items-center justify-between">
+											<span className="text-sm text-gray-600">Documentation Gaps:</span>
+											<span className="text-sm font-medium text-gray-900">
+												{summaryStats.gapsCount}
+											</span>
+										</div>
+									</div>
 								</div>
-							</div>
-						)}
+							)}
+
+							{/* Gaps information */}
+							{lineage.gaps?.notes && lineage.gaps.notes.length > 0 && (
+								<div className="mt-6 pt-6 border-t border-gray-200">
+									<h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+										<AlertCircle className="h-4 w-4 text-yellow-500" />
+										Documentation Gaps
+									</h4>
+									
+									<div className="space-y-2">
+										{lineage.gaps.notes.map((gap, gapIndex) => (
+											<div key={`gap-${gapIndex}-${gap.slice(0, 20)}`} className="text-sm text-yellow-700 bg-yellow-50 p-2 rounded border">
+												{gap}
+											</div>
+										))}
+									</div>
+								</div>
+							)}
+						</div>
 					</div>
 				</div>
 				
 				{/* Graph canvas - main area */}
-				<div className="lg:col-span-2">
+				<div className="lg:col-span-3 flex flex-col min-h-0 min-h-96 lg:min-h-0">
 					<LineageGraphReactFlow lineage={lineage} />
 				</div>
 			</div>

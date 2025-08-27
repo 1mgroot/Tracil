@@ -260,7 +260,7 @@ describe('VariableCard', () => {
       let button = screen.getByRole('gridcell')
       expect(button).toHaveAttribute('style', expect.stringContaining('var(--accent-sdtm)'))
       
-      rerender(<VariableCard variable={mockVariable} group="aCRF" />)
+      rerender(<VariableCard variable={mockVariable} group="CRF" />)
       button = screen.getByRole('gridcell')
       expect(button).toHaveAttribute('style', expect.stringContaining('var(--accent-acrf)'))
       

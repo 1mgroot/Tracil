@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 interface FileUploadModalProps {
   isOpen: boolean
   onClose: () => void
-  onUpload: (files: File[]) => Promise<any> // Return the response data
+  onUpload: (files: File[]) => Promise<unknown> // Return the response data
 }
 
 interface UploadState {
@@ -182,9 +182,9 @@ export function FileUploadModal({ isOpen, onClose, onUpload }: FileUploadModalPr
                 Selected Files ({uploadState.selectedFiles.length})
               </h3>
               <div className="space-y-2 max-h-48 overflow-y-auto">
-                {uploadState.selectedFiles.map((file, index) => (
+                {uploadState.selectedFiles.map((file, fileIndex) => (
                   <div
-                    key={`${file.name}-${file.size}-${index}`}
+                    key={`${file.name}-${file.size}-${file.lastModified}-${fileIndex}`}
                     className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
                   >
                     <div className="flex items-center space-x-3">
@@ -201,7 +201,7 @@ export function FileUploadModal({ isOpen, onClose, onUpload }: FileUploadModalPr
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleRemoveFile(index)}
+                      onClick={() => handleRemoveFile(fileIndex)}
                       disabled={uploadState.isUploading}
                       className="p-1 h-8 w-8"
                     >
@@ -232,9 +232,9 @@ export function FileUploadModal({ isOpen, onClose, onUpload }: FileUploadModalPr
           {/* Errors */}
           {uploadState.errors.length > 0 && (
             <div className="space-y-2">
-              {uploadState.errors.map((error, index) => (
+              {uploadState.errors.map((error, errorIndex) => (
                 <div
-                  key={`${error}-${index}`}
+                  key={`error-${errorIndex}-${error.slice(0, 20)}`}
                   className="flex items-center space-x-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg"
                 >
                   <AlertCircle className="w-4 h-4 text-red-500" />

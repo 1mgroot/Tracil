@@ -31,7 +31,8 @@ function normalizeNodeType(backendType: string): NormalizedType {
     return "SDTM"
   }
   
-  // CRF types - look for "crf" or "case report" in the type
+  // CRF types - look for "crf" (including "acrf") or "case report" in the type
+  // This will match "CRF", "aCRF", "acrf", "case report form", etc.
   if (typeLower.includes('crf') || typeLower.includes('case report') || typeLower.includes('form')) {
     return "CRF"
   }
@@ -100,7 +101,7 @@ export async function analyzeLineage(request: AnalyzeLineageRequest): Promise<Li
         console.log(`🔍 Type normalization: "${nodeType}" → "${normalizedType}"`)
         
         // Determine group based on normalized type
-        let group: 'ADaM' | 'SDTM' | 'aCRF' | 'TLF' | 'Protocol' | 'Unknown'
+        let group: 'ADaM' | 'SDTM' | 'CRF' | 'TLF' | 'Protocol' | 'Unknown'
         switch (normalizedType) {
           case 'ADaM':
             group = 'ADaM'
@@ -109,7 +110,7 @@ export async function analyzeLineage(request: AnalyzeLineageRequest): Promise<Li
             group = 'SDTM'
             break
           case 'CRF':
-            group = 'aCRF'
+            group = 'CRF'
             break
           case 'TLF':
             group = 'TLF'
@@ -137,7 +138,7 @@ export async function analyzeLineage(request: AnalyzeLineageRequest): Promise<Li
         
         // Determine kind based on group - Protocol and CRF are sources, others are intermediate
         let kind: 'source' | 'intermediate' | 'target' = 'intermediate'
-        if (group === 'Protocol' || group === 'aCRF') {
+        if (group === 'Protocol' || group === 'CRF') {
           kind = 'source'
         } else if (group === 'Unknown') {
           kind = 'target'
@@ -210,7 +211,7 @@ export async function analyzeLineage(request: AnalyzeLineageRequest): Promise<Li
         {
           id: `CRF.${data.dataset}.${data.variable}`,
           title: `CRF: ${data.variable}`,
-          group: 'aCRF' as const,
+          group: 'CRF' as const,
           kind: 'source' as const,
           meta: { notes: 'Source CRF variable' }
         },
@@ -282,7 +283,7 @@ export async function analyzeLineage(request: AnalyzeLineageRequest): Promise<Li
         {
           id: `CRF.${request.dataset}.${request.variable}`,
           title: `CRF: ${request.variable}`,
-          group: 'aCRF' as const,
+          group: 'CRF' as const,
           kind: 'source',
           meta: { notes: 'Source CRF variable' }
         },

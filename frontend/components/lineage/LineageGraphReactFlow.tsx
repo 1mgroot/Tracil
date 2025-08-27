@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, memo } from 'react'
 import ReactFlow, {
   Node,
   Edge,
@@ -9,6 +9,8 @@ import ReactFlow, {
   MarkerType,
   ReactFlowProvider,
   useReactFlow,
+  Handle,
+  NodeProps,
 } from 'reactflow'
 import * as dagre from 'dagre'
 import 'reactflow/dist/style.css'
@@ -22,42 +24,81 @@ const hideAttributionCSS = `
   }
 `
 
+// Custom node component with group tag following React Flow best practices
+const CustomLineageNode = memo<NodeProps>(({ data }) => {
+  const nodeType = (data.group || 'SDTM') as ArtifactType
+  const colors = getTypeColors(nodeType)
+  
+  return (
+    <div 
+      className="relative"
+      style={{
+        border: `3px solid ${colors.border}`,
+        borderRadius: '20px',
+        width: 280,
+        height: 160,
+        background: colors.background,
+        color: colors.text,
+        fontSize: '20px',
+        fontWeight: 700,
+        boxShadow: '0 10px 25px -6px rgba(0, 0, 0, 0.25)',
+        padding: '12px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      {/* Main node content */}
+      <div className="text-center px-6 py-3">
+        <div className="font-black text-white text-xl leading-tight tracking-wide">
+          {data.title || data.label}
+        </div>
+      </div>
+      
+      {/* Group tag - positioned as a small badge in the top-right corner */}
+      <div 
+        className="absolute -top-2 -right-2 px-2 py-1 text-xs font-semibold rounded-md"
+        style={{
+          backgroundColor: colors.border,
+          color: colors.text,
+          fontSize: '11px',
+          minWidth: '32px',
+          textAlign: 'center',
+          border: '2px solid white',
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+        }}
+      >
+        {data.group}
+      </div>
+      
+      {/* React Flow handles for connections */}
+      <Handle 
+        type="target" 
+        position={Position.Left}
+        style={{ background: colors.border, border: '2px solid white' }}
+      />
+      <Handle 
+        type="source" 
+        position={Position.Right}
+        style={{ background: colors.border, border: '2px solid white' }}
+      />
+    </div>
+  )
+})
+
+CustomLineageNode.displayName = 'CustomLineageNode'
+
 // Move nodeTypes and edgeTypes outside component to prevent recreation on every render
-const nodeTypes = {}
+const nodeTypes = {
+  lineageNode: CustomLineageNode,
+}
 const edgeTypes = {}
 
 interface LineageGraphProps {
   lineage: LineageGraphType
 }
 
-// Simplified node styling based on type using centralized color system
-const getNodeStyle = (node: LineageNode) => {
-  const baseStyle = {
-    border: '4px solid white', // Optimal border: 2.5% of node width for visual definition
-    borderRadius: '20px', // Optimal radius: 12.5% of node height for modern aesthetics
-    width: 280, // Match layout calculation for consistency
-    height: 160, // Match layout calculation for consistency
-    color: 'white',
-    fontSize: '20px', // Optimal: 12.5% of node height for perfect readability
-    fontWeight: 700, // Bold weight for maximum contrast and readability
-    boxShadow: '0 10px 25px -6px rgba(0, 0, 0, 0.25)', // Enhanced depth perception
-    padding: '12px', // Optimal padding: 7.5% of node dimensions
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  }
-  
-  // Get colors from centralized system, with fallback for unknown types
-  const nodeType = (node.group || 'SDTM') as ArtifactType
-  const colors = getTypeColors(nodeType)
-  
-  return {
-    ...baseStyle,
-    background: colors.background,
-    border: `3px solid ${colors.border}`,
-    color: colors.text,
-  }
-}
+// Node styling is now handled by the custom component
 
 // Enhanced edge styling for better visibility
 const getEdgeStyle = () => {
@@ -129,20 +170,13 @@ function LineageGraphInner({ lineage }: LineageGraphProps) {
   const initialNodes: Node[] = useMemo(() => {
     return layoutedNodes.map((node) => ({
       id: node.id,
-      type: 'default',
+      type: 'lineageNode',
       position: node.position,
-              data: {
-          label: (
-            <div className="text-center px-6 py-3">
-              <div className="font-black text-white text-xl leading-tight tracking-wide">
-                {node.title}
-              </div>
-            </div>
-          ),
-          group: node.group,
-          type: node.group,
+      data: {
+        title: node.title,
+        group: node.group,
+        type: node.group,
       },
-      style: getNodeStyle(node),
       sourcePosition: Position.Right,
       targetPosition: Position.Left,
     }))
@@ -179,26 +213,26 @@ function LineageGraphInner({ lineage }: LineageGraphProps) {
   }, [fitView])
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+    <div className="bg-white rounded-lg border border-gray-200 shadow-sm h-full flex flex-col min-h-0">
       {/* Inject CSS to hide React Flow attribution */}
       <style dangerouslySetInnerHTML={{ __html: hideAttributionCSS }} />
       
-      <div className="mb-6">
+      <div className="p-4 md:p-6 pb-3 flex-shrink-0">
         <h2 className="text-lg font-semibold text-gray-900">
-          Lineage flow chart
+          Lineage Flow Chart
         </h2>
       </div>
       
-      <div className="h-[700px] w-full border border-gray-200 rounded-lg overflow-hidden">
+      <div className="flex-1 mx-4 md:mx-6 mb-4 md:mb-6 border border-gray-200 rounded-lg overflow-hidden min-h-0">
         <ReactFlow
           nodes={nodes}
           edges={edges}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           fitView
-          fitViewOptions={{ padding: 0.15, includeHiddenNodes: false }}
-          minZoom={0.2}
-          maxZoom={1.5}
+          fitViewOptions={{ padding: 0.1, includeHiddenNodes: false }}
+          minZoom={0.1}
+          maxZoom={2.0}
           attributionPosition="bottom-left"
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
@@ -212,72 +246,6 @@ function LineageGraphInner({ lineage }: LineageGraphProps) {
         >
           <Background color="#f3f4f6" gap={16} />
         </ReactFlow>
-      </div>
-
-      {/* Accessible fallback list */}
-      <div className="mt-8 pt-6 border-t border-gray-200">
-        <h3 className="text-sm font-medium text-gray-900 mb-3">
-          Lineage Details
-        </h3>
-        <div className="space-y-4">
-          <div>
-            <h4 className="text-sm font-medium text-gray-700 mb-3">Nodes:</h4>
-            <div className="space-y-2">
-              {lineage.nodes.map((node) => (
-                <div key={node.id} className="bg-white rounded-lg p-3 border border-gray-200 hover:border-gray-300 transition-colors">
-                  <div className="flex items-center space-x-2 mb-1">
-                    <div className="flex-shrink-0 w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span className="text-sm font-semibold text-gray-900">{node.title}</span>
-                  </div>
-                  
-                  {node.dataset && (
-                    <div className="text-xs text-gray-500 mb-1">
-                      Dataset: {node.dataset}.{node.variable}
-                    </div>
-                  )}
-                  
-                  {node.meta?.file && (
-                    <div className="text-xs text-gray-500">
-                      Source: {node.meta.file}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-          
-          <div>
-            <h4 className="text-sm font-medium text-gray-700 mb-3">Connections:</h4>
-            <div className="space-y-3">
-              {initialEdges.map((edge) => (
-                <div key={edge.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200 hover:border-gray-300 transition-colors">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <div className="flex-shrink-0 w-2 h-2 bg-blue-500 rounded-full"></div>
-                    <span className="text-sm font-semibold text-gray-900">{edge.source}</span>
-                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                    </svg>
-                    <span className="text-sm font-semibold text-gray-900">{edge.target}</span>
-                  </div>
-                  
-                  {edge.data?.label && (
-                    <div className="mb-2">
-                      <span className="inline-block px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-md">
-                        {edge.data.label}
-                      </span>
-                    </div>
-                  )}
-                  
-                  {edge.data?.explanation && (
-                    <div className="text-sm text-gray-700 leading-relaxed">
-                      {edge.data.explanation}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   )

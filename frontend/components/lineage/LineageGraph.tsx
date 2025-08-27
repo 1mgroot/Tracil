@@ -21,7 +21,7 @@ export function LineageGraph({ lineage }: LineageGraphProps) {
     switch (group) {
       case 'ADaM': return 'bg-[var(--accent-adam)]'
       case 'SDTM': return 'bg-[var(--accent-sdtm)]'
-      case 'aCRF': return 'bg-[var(--accent-acrf)]'
+      case 'CRF': return 'bg-[var(--accent-acrf)]'
       case 'TLF': return 'bg-[var(--accent-tlf)]'
       default: return 'bg-gray-500'
     }
@@ -31,7 +31,7 @@ export function LineageGraph({ lineage }: LineageGraphProps) {
     switch (group) {
       case 'ADaM': return 'hover:bg-[var(--accent-adam-hover)]'
       case 'SDTM': return 'hover:bg-[var(--accent-sdtm-hover)]'
-      case 'aCRF': return 'hover:bg-[var(--accent-acrf-hover)]'
+      case 'CRF': return 'hover:bg-[var(--accent-acrf-hover)]'
       case 'TLF': return 'hover:bg-[var(--accent-tlf-hover)]'
       default: return 'hover:bg-gray-600'
     }
@@ -69,7 +69,9 @@ export function LineageGraph({ lineage }: LineageGraphProps) {
     const visited = new Set<string>()
     
     while (queue.length > 0) {
-      const { id, level } = queue.shift()!
+      const item = queue.shift()
+      if (!item) continue
+      const { id, level } = item
       
       if (visited.has(id)) continue
       visited.add(id)
@@ -92,7 +94,6 @@ export function LineageGraph({ lineage }: LineageGraphProps) {
     })
     
     // Position nodes level by level
-    const maxLevel = Math.max(...Object.keys(nodesByLevel).map(Number))
     
     Object.entries(nodesByLevel).forEach(([levelStr, nodeIds]) => {
       const level = parseInt(levelStr)
@@ -133,9 +134,6 @@ export function LineageGraph({ lineage }: LineageGraphProps) {
     // Normalize the direction vector
     const length = Math.sqrt(dx * dx + dy * dy)
     if (length === 0) return null
-    
-    const normalizedDx = dx / length
-    const normalizedDy = dy / length
     
     // For better visual flow, prefer connecting from bottom of upper node to top of lower node
     let fromEdgeX, fromEdgeY, toEdgeX, toEdgeY
@@ -180,13 +178,12 @@ export function LineageGraph({ lineage }: LineageGraphProps) {
 
   // Create curved paths for better visual flow
   const createPath = (from: { x: number; y: number }, to: { x: number; y: number }) => {
-    const dx = to.x - from.x
-    const dy = to.y - from.y
+    const pathDy = to.y - from.y
     
     // For hierarchical layout, use smooth curves
-    if (Math.abs(dy) > 20) {
+    if (Math.abs(pathDy) > 20) {
       // Vertical flow - use curved path
-      const midY = from.y + dy * 0.6
+      const midY = from.y + pathDy * 0.6
       return `M ${from.x} ${from.y} Q ${from.x} ${midY} ${to.x} ${to.y}`
     } else {
       // Horizontal flow - use straight line
@@ -277,7 +274,7 @@ export function LineageGraph({ lineage }: LineageGraphProps) {
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
       <h2 className="text-lg font-semibold text-gray-900 mb-6">
-        Lineage flow chart
+        Lineage Flow Chart
       </h2>
       
       <div className="relative min-h-[600px] overflow-auto" style={{ width: '100%', minWidth: '1200px' }}>

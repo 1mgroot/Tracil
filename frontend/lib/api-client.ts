@@ -1,6 +1,5 @@
 import type { 
   SourceAgnosticProcessFilesResponse,
-  AnalyzeVariableRequest,
   AnalyzeVariableResponse 
 } from '@/types/variables'
 
@@ -74,7 +73,7 @@ export const apiClient = {
    * Process uploaded files and return CDISC-organized data structure
    * This endpoint is called by the Next.js API route, not directly from frontend
    */
-  async processFiles(files: File[]): Promise<SourceAgnosticProcessFilesResponse> {
+  async processFiles(): Promise<SourceAgnosticProcessFilesResponse> {
     // Note: This function is for future use when we implement file upload
     // Currently, the frontend gets data from the Next.js API route
     throw new Error('Direct file processing not yet implemented. Use Next.js API route.')
@@ -84,7 +83,7 @@ export const apiClient = {
    * Analyze lineage for a specific variable
    * This endpoint is called by the Next.js API route, not directly from frontend
    */
-  async analyzeVariable(request: AnalyzeVariableRequest): Promise<AnalyzeVariableResponse> {
+  async analyzeVariable(): Promise<AnalyzeVariableResponse> {
     // Note: This function is for future use when we implement direct backend calls
     // Currently, the frontend gets data from the Next.js API route
     throw new Error('Direct variable analysis not yet implemented. Use Next.js API route.')

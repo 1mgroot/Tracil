@@ -24,7 +24,7 @@ Frontend (Next.js) ←→ Next.js API Routes ←→ Python Backend (FastAPI)
 **Response**: `SourceAgnosticProcessFilesResponse` with:
 - **SDTM**: 22 domains (TA, TE, TI, TS, TV, DM, SE, SV, CM, EX, AE, DS, MH, LB, QS, SC, VS, RELREC, SUPPAE, SUPPDM, SUPPDS, SUPPLB)
 - **ADaM**: 10 datasets (ADSL, ADAE, ADLBC, ADLBH, ADLBHY, ADQSADAS, ADQSCIBC, ADQSNPIX, ADTTE, ADVS)
-- **CRF**: aCRF with 1088 variables
+- **CRF**: CRF with 1088 variables
 - **TLF**: Combined TLF with 109 tables/figures
 - **Total**: 371 variables processed
 

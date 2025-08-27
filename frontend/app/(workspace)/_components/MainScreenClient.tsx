@@ -2,7 +2,6 @@
 
 import { useMemo, useState, useCallback, type ReactNode, useEffect } from 'react'
 import { Sidebar, SidebarGroup, SidebarItem } from '@/components/ui/sidebar/Sidebar'
-import { SearchBar } from '@/components/search/SearchBar'
 import { SearchForm } from '@/components/search/SearchForm'
 import { SearchResults } from '@/components/search/SearchResults'
 import { VariablesBrowser } from '@/components/variables'
@@ -96,7 +95,7 @@ export function MainScreenClient(): ReactNode {
 		const groups = {
 			ADaM: datasets.filter(d => d.group === 'ADaM'),
 			SDTM: datasets.filter(d => d.group === 'SDTM'),
-			aCRF: datasets.filter(d => d.group === 'aCRF'),
+			CRF: datasets.filter(d => d.group === 'CRF'),
 			TLF: datasets.filter(d => d.group === 'TLF'),
 			Protocol: datasets.filter(d => d.group === 'Protocol')
 		}
@@ -108,7 +107,7 @@ export function MainScreenClient(): ReactNode {
 		return [
 			...groupedDatasets.ADaM.map(d => d.id),
 			...groupedDatasets.SDTM.map(d => d.id),
-			...groupedDatasets.aCRF.map(d => d.id),
+			...groupedDatasets.CRF.map(d => d.id),
 			...groupedDatasets.TLF.map(d => d.id),
 			...groupedDatasets.Protocol.map(d => d.id),
 		]
@@ -231,6 +230,14 @@ export function MainScreenClient(): ReactNode {
 		return Math.round(maxTone - ((maxTone - minTone) * index) / (total - 1))
 	}, [])
 
+	const navigateToSearch = useCallback(() => {
+		setSelectedItem(null)
+		setSelectedId(null)
+		setLineageState(null)
+		clearSearch()
+		resetSearch()
+	}, [clearSearch, resetSearch])
+
 	// Loading state (only show when actively loading after upload)
 	if (loading) {
 		return (
@@ -261,14 +268,6 @@ export function MainScreenClient(): ReactNode {
 			</div>
 		)
 	}
-
-	const navigateToSearch = useCallback(() => {
-		setSelectedItem(null)
-		setSelectedId(null)
-		setLineageState(null)
-		clearSearch()
-		resetSearch()
-	}, [clearSearch, resetSearch])
 
 	return (
 		<>
@@ -365,7 +364,7 @@ export function MainScreenClient(): ReactNode {
 				</div>
 			) : (
 				<div 
-					className={`min-h-screen w-full grid grid-cols-1 ${
+					className={`h-screen w-full grid grid-cols-1 ${
 						sidebarVisible ? 'md:grid-cols-[260px_1fr]' : 'md:grid-cols-[0px_1fr]'
 					}`}
 				>
@@ -412,19 +411,7 @@ export function MainScreenClient(): ReactNode {
 								</SidebarItem>
 							))}
 						</SidebarGroup>
-						<SidebarGroup label="aCRF" accentVar="--accent-acrf">
-							{groupedDatasets.aCRF.map((dataset, i) => (
-								<SidebarItem 
-									key={dataset.id} 
-									active={selectedId === dataset.id} 
-									onClick={() => handleDatasetSelect(dataset.id)} 
-									tone={toneFor(i, groupedDatasets.aCRF.length)}
-									itemId={dataset.id}
-								>
-									{dataset.name}
-								</SidebarItem>
-							))}
-						</SidebarGroup>
+
 						<SidebarGroup label="TLFs" accentVar="--accent-tlf">
 							{groupedDatasets.TLF.map((dataset, i) => (
 								<SidebarItem 
@@ -531,7 +518,7 @@ export function MainScreenClient(): ReactNode {
 				)}
 
 				{viewState === 'search-results' && (
-					<div className="relative">
+					<div className="relative flex flex-col min-h-0 h-full">
 						{/* Left edge restore hint when sidebar is hidden */}
 						{!sidebarVisible && (
 							<button
@@ -542,7 +529,7 @@ export function MainScreenClient(): ReactNode {
 										setSidebarVisible(true)
 									}
 								}}
-								className="absolute left-0 top-0 bottom-0 w-1 group cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset"
+								className="absolute left-0 top-0 bottom-0 w-1 group cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset z-10"
 								aria-label="Click to restore sidebar"
 								tabIndex={0}
 							>

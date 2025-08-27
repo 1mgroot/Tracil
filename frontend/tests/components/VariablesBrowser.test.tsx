@@ -283,7 +283,7 @@ describe('VariablesBrowser', () => {
       const emptyDataset: DatasetWithGroup = {
         id: 'empty-1',
         name: 'EMPTY',
-        group: 'aCRF',
+        group: 'CRF',
         fileId: 'empty-file-1',
         variables: []
       }
