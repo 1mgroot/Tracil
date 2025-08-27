@@ -262,6 +262,14 @@ export function MainScreenClient(): ReactNode {
 		)
 	}
 
+	const navigateToSearch = useCallback(() => {
+		setSelectedItem(null)
+		setSelectedId(null)
+		setLineageState(null)
+		clearSearch()
+		resetSearch()
+	}, [clearSearch, resetSearch])
+
 	return (
 		<>
 			{/* Floating restore button - always visible when sidebar is hidden */}
@@ -405,6 +413,7 @@ export function MainScreenClient(): ReactNode {
 								className="flex-shrink-0"
 							/>
 						</div>
+						
 						<SidebarGroup label="ADaM" accentVar="--accent-adam">
 							{groupedDatasets.ADaM.map((dataset, i) => (
 								<SidebarItem 
@@ -617,6 +626,7 @@ export function MainScreenClient(): ReactNode {
 								setSelectedItem(null)
 								setSelectedId(null)
 							}}
+							onSearchClick={navigateToSearch}
 						/>
 					</div>
 				)}
