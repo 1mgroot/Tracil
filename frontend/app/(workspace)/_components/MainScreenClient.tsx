@@ -2,7 +2,6 @@
 
 import { useMemo, useState, useCallback, type ReactNode, useEffect } from 'react'
 import { Sidebar, SidebarGroup, SidebarItem } from '@/components/ui/sidebar/Sidebar'
-import { SearchBar } from '@/components/search/SearchBar'
 import { SearchForm } from '@/components/search/SearchForm'
 import { SearchResults } from '@/components/search/SearchResults'
 import { VariablesBrowser } from '@/components/variables'
@@ -231,6 +230,14 @@ export function MainScreenClient(): ReactNode {
 		return Math.round(maxTone - ((maxTone - minTone) * index) / (total - 1))
 	}, [])
 
+	const navigateToSearch = useCallback(() => {
+		setSelectedItem(null)
+		setSelectedId(null)
+		setLineageState(null)
+		clearSearch()
+		resetSearch()
+	}, [clearSearch, resetSearch])
+
 	// Loading state (only show when actively loading after upload)
 	if (loading) {
 		return (
@@ -261,14 +268,6 @@ export function MainScreenClient(): ReactNode {
 			</div>
 		)
 	}
-
-	const navigateToSearch = useCallback(() => {
-		setSelectedItem(null)
-		setSelectedId(null)
-		setLineageState(null)
-		clearSearch()
-		resetSearch()
-	}, [clearSearch, resetSearch])
 
 	return (
 		<>
@@ -412,19 +411,7 @@ export function MainScreenClient(): ReactNode {
 								</SidebarItem>
 							))}
 						</SidebarGroup>
-						<SidebarGroup label="aCRF" accentVar="--accent-acrf">
-							{groupedDatasets.aCRF.map((dataset, i) => (
-								<SidebarItem 
-									key={dataset.id} 
-									active={selectedId === dataset.id} 
-									onClick={() => handleDatasetSelect(dataset.id)} 
-									tone={toneFor(i, groupedDatasets.aCRF.length)}
-									itemId={dataset.id}
-								>
-									{dataset.name}
-								</SidebarItem>
-							))}
-						</SidebarGroup>
+
 						<SidebarGroup label="TLFs" accentVar="--accent-tlf">
 							{groupedDatasets.TLF.map((dataset, i) => (
 								<SidebarItem 
