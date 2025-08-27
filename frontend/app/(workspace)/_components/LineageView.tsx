@@ -10,18 +10,38 @@ interface LineageViewProps {
   dataset: string
   variable: string
   onBack: () => void
+  mode?: 'variables' | 'search'
+  backButtonText?: string
+  initialLineage?: LineageGraphType | null
 }
 
-export function LineageView({ dataset, variable, onBack }: LineageViewProps) {
-  const [lineage, setLineage] = useState<LineageGraphType | null>(null)
-  const [loading, setLoading] = useState(true)
+export function LineageView({ 
+  dataset, 
+  variable, 
+  onBack, 
+  mode = 'variables',
+  backButtonText,
+  initialLineage 
+}: LineageViewProps) {
+  const [lineage, setLineage] = useState<LineageGraphType | null>(initialLineage || null)
+  const [loading, setLoading] = useState(!initialLineage)
   const [error, setError] = useState<string | null>(null)
   
   // Prevent duplicate API calls for the same dataset/variable combination
   const lastRequestRef = useRef<string>('')
   const isRequestingRef = useRef(false)
 
+  // Default back button text based on mode
+  const defaultBackText = backButtonText || (mode === 'search' ? '← Back to Search' : '← Back to Variables')
+
   useEffect(() => {
+    // If we have initialLineage, don't make API calls
+    if (initialLineage) {
+      setLineage(initialLineage)
+      setLoading(false)
+      return
+    }
+
     const requestKey = `${dataset}:${variable}`
     
     // Prevent duplicate requests for the same dataset/variable
@@ -52,7 +72,7 @@ export function LineageView({ dataset, variable, onBack }: LineageViewProps) {
     }
 
     loadLineage()
-  }, [dataset, variable])
+  }, [dataset, variable, initialLineage])
 
   if (loading) {
     return (
@@ -62,7 +82,7 @@ export function LineageView({ dataset, variable, onBack }: LineageViewProps) {
             onClick={onBack}
             className="px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
           >
-            ← Back to Variables
+            {defaultBackText}
           </button>
           <div className="h-6 w-px bg-gray-300" />
           <h1 className="text-xl font-semibold text-gray-900">
@@ -84,7 +104,7 @@ export function LineageView({ dataset, variable, onBack }: LineageViewProps) {
             onClick={onBack}
             className="px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
           >
-            ← Back to Variables
+            {defaultBackText}
           </button>
           <div className="h-6 w-px bg-gray-300" />
           <h1 className="text-xl font-semibold text-gray-900">
@@ -118,7 +138,7 @@ export function LineageView({ dataset, variable, onBack }: LineageViewProps) {
             onClick={onBack}
             className="px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
           >
-            ← Back to Variables
+            {defaultBackText}
           </button>
           <div className="h-6 w-px bg-gray-300" />
           <h1 className="text-xl font-semibold text-gray-900">

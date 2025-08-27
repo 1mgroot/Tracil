@@ -135,9 +135,10 @@ describe('Search Integration', () => {
       expect(variableElements.length).toBeGreaterThan(0)
       
       expect(screen.getByText(/test-dataset/i)).toBeInTheDocument()
-      expect(screen.getByTestId('lineage-graph')).toBeInTheDocument()
-      expect(screen.getByText(/Graph with 2 nodes/)).toBeInTheDocument()
-      expect(screen.getByText(/Graph with 1 edges/)).toBeInTheDocument()
+      // LineageView renders the graph, so we check for the lineage content instead
+      expect(screen.getByText(/Lineage for test-dataset\.test-variable/i)).toBeInTheDocument()
+      // Check for TraceabilitySummary content
+      expect(screen.getByText(/AI-Generated Traceability Summary/i)).toBeInTheDocument()
     })
 
     it('should show loading state when loading is true', () => {
@@ -221,10 +222,13 @@ describe('Search Integration', () => {
         />
       )
       
-      expect(screen.getByText(/lineage overview/i)).toBeInTheDocument()
-      expect(screen.getByText(/total nodes/i)).toBeInTheDocument()
-      expect(screen.getByText(/total connections/i)).toBeInTheDocument()
-      expect(screen.getByText(/documentation gaps/i)).toBeInTheDocument()
+      // LineageView now renders TraceabilitySummary which has different structure
+      expect(screen.getByText(/AI-Generated Traceability Summary/i)).toBeInTheDocument()
+      expect(screen.getByText(/Lineage Details/i)).toBeInTheDocument()
+      // Check for the specific Nodes button in TraceabilitySummary
+      expect(screen.getByRole('button', { name: /Nodes/i })).toBeInTheDocument()
+      // Check for the specific Connections button in TraceabilitySummary
+      expect(screen.getByRole('button', { name: /Connections/i })).toBeInTheDocument()
     })
   })
 
@@ -261,7 +265,9 @@ describe('Search Integration', () => {
       expect(variableElements.length).toBeGreaterThan(0)
       
       expect(screen.getByText(/test-dataset/i)).toBeInTheDocument()
-      expect(screen.getByTestId('lineage-graph')).toBeInTheDocument()
+      // LineageView renders the lineage content, so check for that instead
+      expect(screen.getByText(/Lineage for test-dataset\.test-variable/i)).toBeInTheDocument()
+      expect(screen.getByText(/AI-Generated Traceability Summary/i)).toBeInTheDocument()
     })
   })
 })
