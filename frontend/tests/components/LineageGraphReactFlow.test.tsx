@@ -77,7 +77,7 @@ const mockLineageData: LineageGraphType = {
       title: 'CRF Page 121',
       dataset: 'ADAE',
       variable: 'AESCAN',
-      group: 'aCRF',
+      group: 'CRF',
       kind: 'source',
       meta: {
         file: 'blankcrf.pdf',

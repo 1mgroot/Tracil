@@ -21,7 +21,7 @@ export function LineageGraph({ lineage }: LineageGraphProps) {
     switch (group) {
       case 'ADaM': return 'bg-[var(--accent-adam)]'
       case 'SDTM': return 'bg-[var(--accent-sdtm)]'
-      case 'aCRF': return 'bg-[var(--accent-acrf)]'
+      case 'CRF': return 'bg-[var(--accent-acrf)]'
       case 'TLF': return 'bg-[var(--accent-tlf)]'
       default: return 'bg-gray-500'
     }
@@ -31,7 +31,7 @@ export function LineageGraph({ lineage }: LineageGraphProps) {
     switch (group) {
       case 'ADaM': return 'hover:bg-[var(--accent-adam-hover)]'
       case 'SDTM': return 'hover:bg-[var(--accent-sdtm-hover)]'
-      case 'aCRF': return 'hover:bg-[var(--accent-acrf-hover)]'
+      case 'CRF': return 'hover:bg-[var(--accent-acrf-hover)]'
       case 'TLF': return 'hover:bg-[var(--accent-tlf-hover)]'
       default: return 'hover:bg-gray-600'
     }

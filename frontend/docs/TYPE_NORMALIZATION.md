@@ -119,7 +119,7 @@ Based on group, determine visual positioning:
 ```typescript
 // Determine kind based on group - Protocol and CRF are sources, others are intermediate
 let kind: 'source' | 'intermediate' | 'target' = 'intermediate'
-if (group === 'Protocol' || group === 'aCRF') {
+if (group === 'Protocol' || group === 'CRF') {
   kind = 'source'
 } else if (group === 'Unknown') {
   kind = 'target'

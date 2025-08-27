@@ -108,7 +108,7 @@ Note: Free tiers/quotas change; verify before demos or releases and adjust defau
 **Workflow A: File Processing & Dataset Discovery**
 ```
 Input: Frontend receives files from user
-├─ aCRF files (PDF)
+├─ CRF files (PDF)
 ├─ SDTM metadata (define.xml, spec sheets, or raw .xpt)
 ├─ ADaM metadata (define.xml, spec sheets, or raw datasets)
 └─ TLF documents (RTF/PDF)
@@ -285,7 +285,7 @@ Output JSON Structure (Source-Agnostic):
 }
 
 Frontend Usage:
-└─ Generate left pane file and dataset list (ADSL, ADAE, DM, LB, aCRF)
+└─ Generate left pane file and dataset list (ADSL, ADAE, DM, LB, CRF)
 └─ Click dataset → display variables on main screen
 └─ Future: Click variables → display variables source traceability
 ```
@@ -307,15 +307,15 @@ Output JSON Structure:
 {
   "variable": "AEDECOD",
   "dataset": "ADAE", 
-  "summary": "The variable AEDECOD in the ADAE dataset is traced from its source in the aCRF file, through an intermediate transformation in the SDTM dataset, to its final form in the ADaM dataset. The traceability analysis highlights the transformation path and identifies any documentation gaps.",
+  "summary": "The variable AEDECOD in the ADAE dataset is traced from its source in the CRF file, through an intermediate transformation in the SDTM dataset, to its final form in the ADaM dataset. The traceability analysis highlights the transformation path and identifies any documentation gaps.",
   "lineage": {
     "nodes": [
-      {"id": "aCRF.AE_TERM", "type": "source", "file": "aCRF"},
+      {"id": "CRF.AE_TERM", "type": "source", "file": "CRF"},
       {"id": "SDTM.AE.AETERM", "type": "intermediate", "file": "ae.xpt"},
       {"id": "ADaM.ADAE.AEDECOD", "type": "target", "file": "adae.xpt"}
     ],
     "edges": [
-      {"from": "aCRF.AE_TERM", "to": "SDTM.AE.AETERM", "confidence": 0.95},
+      {"from": "CRF.AE_TERM", "to": "SDTM.AE.AETERM", "confidence": 0.95},
       {"from": "SDTM.AE.AETERM", "to": "ADaM.ADAE.AEDECOD", "confidence": 0.87}
     ],
     "gaps": ["Missing transformation logic documentation"]

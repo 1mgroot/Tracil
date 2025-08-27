@@ -95,7 +95,7 @@ export function MainScreenClient(): ReactNode {
 		const groups = {
 			ADaM: datasets.filter(d => d.group === 'ADaM'),
 			SDTM: datasets.filter(d => d.group === 'SDTM'),
-			aCRF: datasets.filter(d => d.group === 'aCRF'),
+			CRF: datasets.filter(d => d.group === 'CRF'),
 			TLF: datasets.filter(d => d.group === 'TLF'),
 			Protocol: datasets.filter(d => d.group === 'Protocol')
 		}
@@ -107,7 +107,7 @@ export function MainScreenClient(): ReactNode {
 		return [
 			...groupedDatasets.ADaM.map(d => d.id),
 			...groupedDatasets.SDTM.map(d => d.id),
-			...groupedDatasets.aCRF.map(d => d.id),
+			...groupedDatasets.CRF.map(d => d.id),
 			...groupedDatasets.TLF.map(d => d.id),
 			...groupedDatasets.Protocol.map(d => d.id),
 		]
