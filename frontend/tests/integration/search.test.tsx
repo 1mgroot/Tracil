@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { SearchForm } from '@/components/search/SearchForm'
-import { SearchResults } from '@/components/search/SearchResults'
+import { LineageView } from '@/app/(workspace)/_components/LineageView'
 import { useSearch } from '@/hooks/useSearch'
 import type { LineageGraph } from '@/types/lineage'
 
@@ -117,16 +117,16 @@ describe('Search Integration', () => {
     })
   })
 
-  describe('SearchResults', () => {
+  describe('LineageView (Search Mode)', () => {
     it('should render search results with lineage graph when data is available', () => {
       render(
-        <SearchResults
-          query="test-variable"
+        <LineageView
+          variable="test-variable"
           dataset="test-dataset"
-          lineage={mockLineageData}
-          loading={false}
-          error={null}
           onBack={jest.fn()}
+          mode="search"
+          backButtonText="← Back to Search"
+          initialLineage={mockLineageData}
         />
       )
       
@@ -141,66 +141,30 @@ describe('Search Integration', () => {
       expect(screen.getByText(/AI-Generated Traceability Summary/i)).toBeInTheDocument()
     })
 
-    it('should show loading state when loading is true', () => {
+    it('should show loading state when no initial lineage provided', () => {
       render(
-        <SearchResults
-          query="test-variable"
+        <LineageView
+          variable="test-variable"
           dataset="test-dataset"
-          lineage={null}
-          loading={true}
-          error={null}
           onBack={jest.fn()}
+          mode="search"
+          backButtonText="← Back to Search"
         />
       )
       
-      expect(screen.getByText(/analyzing variable lineage/i)).toBeInTheDocument()
-      expect(screen.getByText(/this may take a few moments/i)).toBeInTheDocument()
-    })
-
-    it('should show error state when error is provided', () => {
-      const errorMessage = 'Failed to fetch lineage data'
-      render(
-        <SearchResults
-          query="test-variable"
-          dataset="test-dataset"
-          lineage={null}
-          loading={false}
-          error={errorMessage}
-          onBack={jest.fn()}
-        />
-      )
-      
-      expect(screen.getByText(/search error/i)).toBeInTheDocument()
-      expect(screen.getByText(errorMessage)).toBeInTheDocument()
-      expect(screen.getByText(/failed to analyze lineage/i)).toBeInTheDocument()
-    })
-
-    it('should show no results state when lineage is null and not loading', () => {
-      render(
-        <SearchResults
-          query="test-variable"
-          dataset="test-dataset"
-          lineage={null}
-          loading={false}
-          error={null}
-          onBack={jest.fn()}
-        />
-      )
-      
-      expect(screen.getByText(/no results found/i)).toBeInTheDocument()
-      expect(screen.getByText(/no lineage found/i)).toBeInTheDocument()
+      expect(screen.getByText(/Loading lineage for test-dataset\.test-variable/i)).toBeInTheDocument()
     })
 
     it('should call onBack when back button is clicked', () => {
       const mockOnBack = jest.fn()
       render(
-        <SearchResults
-          query="test-variable"
+        <LineageView
+          variable="test-variable"
           dataset="test-dataset"
-          lineage={mockLineageData}
-          loading={false}
-          error={null}
           onBack={mockOnBack}
+          mode="search"
+          backButtonText="← Back to Search"
+          initialLineage={mockLineageData}
         />
       )
       
@@ -212,13 +176,13 @@ describe('Search Integration', () => {
 
     it('should display lineage summary information', () => {
       render(
-        <SearchResults
-          query="test-variable"
+        <LineageView
+          variable="test-variable"
           dataset="test-dataset"
-          lineage={mockLineageData}
-          loading={false}
-          error={null}
           onBack={jest.fn()}
+          mode="search"
+          backButtonText="← Back to Search"
+          initialLineage={mockLineageData}
         />
       )
       
@@ -250,13 +214,13 @@ describe('Search Integration', () => {
       
       // Now render results view
       rerender(
-        <SearchResults
-          query="test-variable"
+        <LineageView
+          variable="test-variable"
           dataset="test-dataset"
-          lineage={mockLineageData}
-          loading={false}
-          error={null}
           onBack={jest.fn()}
+          mode="search"
+          backButtonText="← Back to Search"
+          initialLineage={mockLineageData}
         />
       )
       

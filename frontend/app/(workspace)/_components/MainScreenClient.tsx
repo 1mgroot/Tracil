@@ -3,7 +3,7 @@
 import { useMemo, useState, useCallback, type ReactNode, useEffect } from 'react'
 import { Sidebar, SidebarGroup, SidebarItem } from '@/components/ui/sidebar/Sidebar'
 import { SearchForm } from '@/components/search/SearchForm'
-import { SearchResults } from '@/components/search/SearchResults'
+
 import { VariablesBrowser } from '@/components/variables'
 import { LineageView } from './LineageView'
 import { useVariablesBrowser } from '@/hooks/useVariablesBrowser'
@@ -518,7 +518,7 @@ export function MainScreenClient(): ReactNode {
 				)}
 
 				{viewState === 'search-results' && (
-					<div className="relative flex flex-col min-h-0 h-full">
+					<div className="relative">
 						{/* Left edge restore hint when sidebar is hidden */}
 						{!sidebarVisible && (
 							<button
@@ -542,13 +542,13 @@ export function MainScreenClient(): ReactNode {
 							</button>
 						)}
 						
-						<SearchResults
-							query={searchQuery}
+						<LineageView
 							dataset={searchDataset}
-							lineage={searchLineage}
-							loading={searchLoading}
-							error={searchError}
+							variable={searchQuery}
 							onBack={handleSearchBack}
+							mode="search"
+							backButtonText="← Back to Search"
+							initialLineage={searchLineage}
 						/>
 					</div>
 				)}
