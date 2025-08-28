@@ -32,7 +32,7 @@ export function LineageView({
   const isRequestingRef = useRef(false)
 
   // Default back button text based on mode
-  const defaultBackText = backButtonText || (mode === 'search' ? '← Back to Search' : '← Back to Variables')
+  const defaultBackText = backButtonText || '← Back'
 
   useEffect(() => {
     // If we have initialLineage, don't make API calls
@@ -74,16 +74,16 @@ export function LineageView({
     loadLineage()
   }, [dataset, variable, initialLineage])
 
-  if (loading) {
-    return (
-      <div className="flex-1 overflow-hidden p-6">
-        <div className="flex items-center gap-4 mb-6">
-          <button
-            onClick={onBack}
-            className="px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
-          >
-            {defaultBackText}
-          </button>
+      if (loading) {
+      return (
+        <div className="flex-1 overflow-hidden p-6">
+          <div className="flex items-center gap-4 mb-6">
+            <button
+              onClick={onBack}
+              className="px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors border border-gray-300"
+            >
+              {defaultBackText}
+            </button>
           <div className="h-6 w-px bg-gray-300" />
           <h1 className="text-xl font-semibold text-gray-900">
             Loading lineage for {dataset}.{variable}...
@@ -102,7 +102,7 @@ export function LineageView({
         <div className="flex items-center gap-4 mb-6">
           <button
             onClick={onBack}
-            className="px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
+            className="px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors border border-gray-300"
           >
             {defaultBackText}
           </button>
@@ -136,7 +136,7 @@ export function LineageView({
         <div className="flex items-center gap-4">
           <button
             onClick={onBack}
-            className="px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
+            className="px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors border border-gray-300"
           >
             {defaultBackText}
           </button>

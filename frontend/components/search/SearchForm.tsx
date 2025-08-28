@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils'
 
 export interface SearchFormProps {
 	readonly className?: string
-	readonly onSearch: (query: string, dataset: string) => void
+	readonly onSearch: (query: string) => void
 	readonly loading?: boolean
 	readonly error?: string | null
 }
@@ -16,74 +16,47 @@ export function SearchForm({
 	loading = false, 
 	error = null 
 }: SearchFormProps): ReactNode {
-	const [variable, setVariable] = useState('')
-	const [dataset, setDataset] = useState('')
+	const [query, setQuery] = useState('')
 
 	// Handle form submission
 	const handleSubmit = useCallback((event: React.FormEvent) => {
 		event.preventDefault()
 		
-		const trimmedVariable = variable.trim()
-		const trimmedDataset = dataset.trim()
+		const trimmedQuery = query.trim()
 		
-		if (trimmedVariable && trimmedDataset) {
-			onSearch(trimmedVariable, trimmedDataset)
+		if (trimmedQuery) {
+			onSearch(trimmedQuery)
 		}
-	}, [variable, dataset, onSearch])
+	}, [query, onSearch])
 
-	// Handle variable input change
-	const handleVariableChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-		setVariable(event.target.value)
-	}, [])
-
-	// Handle dataset input change
-	const handleDatasetChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-		setDataset(event.target.value)
+	// Handle query input change
+	const handleQueryChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+		setQuery(event.target.value)
 	}, [])
 
 	// Check if form is valid
-	const isValid = variable.trim() && dataset.trim()
+	const isValid = query.trim()
 
 	return (
 		<div className={cn('w-full max-w-2xl', className)}>
 			<form onSubmit={handleSubmit} className="space-y-4">
-				{/* Variable input */}
+				{/* Natural language query input */}
 				<div>
-					<label htmlFor="variable" className="block text-sm font-medium text-gray-700 mb-2">
-						Variable Name
+					<label htmlFor="query" className="block text-sm font-medium text-gray-700 mb-2">
+						Tracil Request
 					</label>
 					<input
-						id="variable"
+						id="query"
 						type="text"
-						value={variable}
-						onChange={handleVariableChange}
-						placeholder="e.g., ars-vs-t01| Diastolic Blood Pressure (mmHg) | Week 2 Change from Baseline | Xanomeline High Dose | mean"
+						value={query}
+						onChange={handleQueryChange}
+						placeholder="e.g., diastolic blood pressure change from baseline at week 2 for high dose treatment"
 						className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
 						disabled={loading}
 						required
 					/>
 					<p className="mt-1 text-xs text-gray-500">
-						Enter the variable name you want to analyze
-					</p>
-				</div>
-
-				{/* Dataset input */}
-				<div>
-					<label htmlFor="dataset" className="block text-sm font-medium text-gray-700 mb-2">
-						Dataset
-					</label>
-					<input
-						id="dataset"
-						type="text"
-						value={dataset}
-						onChange={handleDatasetChange}
-						placeholder="e.g., table, ADSL, ADAE, DM"
-						className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
-						disabled={loading}
-						required
-					/>
-					<p className="mt-1 text-xs text-gray-500">
-						Enter the dataset name where the variable is located
+						Describe the variable lineage you want to trace
 					</p>
 				</div>
 
@@ -109,12 +82,12 @@ export function SearchForm({
 					{loading ? (
 						<div className="flex items-center justify-center gap-2">
 							<div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-							Analyzing Lineage...
+							Traciling...
 						</div>
 					) : (
 						<div className="flex items-center justify-center gap-2">
 							<Search className="h-4 w-4" />
-							Search Variable Lineage
+							Tracil It
 						</div>
 					)}
 				</button>
@@ -122,10 +95,12 @@ export function SearchForm({
 
 			{/* Example usage */}
 			<div className="mt-6 p-4 bg-gray-50 rounded-lg">
-				<h4 className="text-sm font-medium text-gray-700 mb-2">Example Search</h4>
-				<div className="text-xs text-gray-600 space-y-1">
-					<p><strong>Variable:</strong> ars-vs-t01| Diastolic Blood Pressure (mmHg) | Week 2 Change from Baseline | Xanomeline High Dose | mean</p>
-					<p><strong>Dataset:</strong> table</p>
+				<h4 className="text-sm font-medium text-gray-700 mb-2">Example Requests</h4>
+				<div className="text-xs text-gray-600 space-y-2">
+					<p><strong>•</strong> "diastolic blood pressure change from baseline at week 2 for high dose treatment"</p>
+					<p><strong>•</strong> "hemoglobin mean values in lab data for week 4 by treatment group"</p>
+					<p><strong>•</strong> "adverse events leading to treatment discontinuation"</p>
+					<p><strong>•</strong> "demographics age distribution by treatment arm"</p>
 				</div>
 			</div>
 		</div>

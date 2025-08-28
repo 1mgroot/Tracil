@@ -31,7 +31,6 @@ export function MainScreenClient(): ReactNode {
 	
 	const {
 		query: searchQuery,
-		dataset: searchDataset,
 		lineage: searchLineage,
 		loading: searchLoading,
 		error: searchError,
@@ -153,9 +152,9 @@ export function MainScreenClient(): ReactNode {
 	}, [])
 
 	// Handle search submission
-	const handleSearch = useCallback(async (query: string, dataset: string) => {
+	const handleSearch = useCallback(async (query: string) => {
 		try {
-			await performSearch(query, dataset)
+			await performSearch(query)
 		} catch (error) {
 			console.error('Search failed:', error)
 		}
@@ -466,12 +465,6 @@ export function MainScreenClient(): ReactNode {
 							</button>
 						)}
 						
-						{/* Header */}
-						<div className="flex items-center justify-center mb-6">
-							<h1 className="text-2xl md:text-3xl text-balance text-center">
-								Search Variable Lineage
-							</h1>
-						</div>
 
 						{/* Main content */}
 						<div className="flex-1 flex flex-col items-center justify-center gap-6">
@@ -543,11 +536,11 @@ export function MainScreenClient(): ReactNode {
 						)}
 						
 						<LineageView
-							dataset={searchDataset}
+							dataset="table"
 							variable={searchQuery}
 							onBack={handleSearchBack}
 							mode="search"
-							backButtonText="← Back to Search"
+							backButtonText="← Back"
 							initialLineage={searchLineage}
 						/>
 					</div>

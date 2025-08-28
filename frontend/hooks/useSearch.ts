@@ -4,14 +4,13 @@ import { analyzeLineage } from '@/lib/ai/entrypoints/analyzeLineage'
 
 export interface SearchState {
 	readonly query: string
-	readonly dataset: string
 	readonly lineage: LineageGraph | null
 	readonly loading: boolean
 	readonly error: string | null
 }
 
 export interface SearchActions {
-	readonly search: (query: string, dataset: string) => Promise<void>
+	readonly search: (query: string) => Promise<void>
 	readonly clear: () => void
 	readonly reset: () => void
 }
@@ -19,7 +18,6 @@ export interface SearchActions {
 export function useSearch(): SearchState & SearchActions {
 	const [state, setState] = useState<SearchState>({
 		query: '',
-		dataset: '',
 		lineage: null,
 		loading: false,
 		error: null
@@ -30,8 +28,8 @@ export function useSearch(): SearchState & SearchActions {
 	const isRequestingRef = useRef(false)
 
 	// Perform search
-	const search = useCallback(async (query: string, dataset: string) => {
-		const requestKey = `${dataset}:${query}`
+	const search = useCallback(async (query: string) => {
+		const requestKey = query
 		
 		// Prevent duplicate requests for the same search
 		if (lastRequestRef.current === requestKey && isRequestingRef.current) {
@@ -50,14 +48,13 @@ export function useSearch(): SearchState & SearchActions {
 			setState(prev => ({
 				...prev,
 				query,
-				dataset,
 				loading: true,
 				error: null,
 				lineage: null
 			}))
 
-			// Call the analyze lineage API
-			const result = await analyzeLineage({ dataset, variable: query })
+			// Call the analyze lineage API with natural language query as variable and hardcoded dataset
+			const result = await analyzeLineage({ dataset: 'table', variable: query })
 			
 			setState(prev => ({
 				...prev,
@@ -90,7 +87,6 @@ export function useSearch(): SearchState & SearchActions {
 	const reset = useCallback(() => {
 		setState({
 			query: '',
-			dataset: '',
 			lineage: null,
 			loading: false,
 			error: null
