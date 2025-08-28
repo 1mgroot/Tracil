@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from typing import List, Dict, Any, Tuple, Optional
 from pathlib import Path
 from datetime import datetime
-import os, shutil, json, re
+import os, shutil, json, re, difflib
 
 # --- local services ---
 from services.acrf_preprocess import acrf_preprocess
@@ -506,6 +506,13 @@ def _detect_display_id_from_text(user_text: str, sess_dir: Optional[Path]) -> Op
             return hits[0]
     return None
 
+def _openai_display_ids(sess_dir: Optional[Path]) -> List[str]:
+    ss = _read_session_summary(sess_dir)
+    if not ss:
+        return []
+    displays = (ss.get("standards", {}).get("TLF", {}).get("metadata", {}) or {}).get("tlfIndex", {}).get("displays", []) or []
+    return [d.get("id") for d in displays if d.get("id")]
+
 def _llm_choose_cell_spec(display_id: str, user_text: str, options: Dict[str, List[str]]) -> Optional[str]:
     client = _openai_client()
     if not client:
@@ -584,11 +591,7 @@ def _guess_kind_and_target_with_llm(user_text: str, sess_dir: Optional[Path]) ->
         return None
 
     # gather known display ids to help classification
-    ss = _read_session_summary(sess_dir)
-    displays = []
-    if ss:
-        displays = (ss.get("standards", {}).get("TLF", {}).get("metadata", {}) or {}).get("tlfIndex", {}).get("displays", []) or []
-    display_ids = [d.get("id") for d in displays if d.get("id")]
+    display_ids = _openai_display_ids(sess_dir)
 
     sys = (
         "You are a router. Classify the user's request into one of: ADaM variable, SDTM variable, Table display or Table cell, or Protocol endpoint.\n"
@@ -664,6 +667,52 @@ def _normalize_freeform_request(user_text: str) -> Optional[Tuple[str, str]]:
         return out
     # Fallback heuristics
     return _heuristic_router(user_text, sess)
+
+# -------- Orphan/near-duplicate pruning (new) --------
+def _norm_txt(s: str) -> str:
+    return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9]+", " ", (s or "").lower())).strip()
+
+def prune_orphan_near_duplicates(graph: Dict[str, Any], *, similarity: float = 0.82) -> Dict[str, Any]:
+    """
+    Remove nodes that are completely ORPHAN (degree 0) and look like near-duplicates
+    of the target variable or of any CONNECTED node (case/punct/spacing-insensitive).
+    Adds a 'gaps' note listing removed ids.
+    """
+    lin = graph.get("lineage", {}) or {}
+    nodes = list(lin.get("nodes", []) or [])
+    edges = list(lin.get("edges", []) or [])
+
+    connected_ids = set()
+    for e in edges:
+        frm = str(e.get("from") or "")
+        to  = str(e.get("to") or "")
+        if frm: connected_ids.add(frm)
+        if to:  connected_ids.add(to)
+
+    refs = [_norm_txt(graph.get("variable", ""))]
+    refs += [_norm_txt(n.get("id", "")) for n in nodes if n.get("id") in connected_ids]
+
+    keep, removed = [], []
+    for n in nodes:
+        nid = str(n.get("id") or "")
+        if not nid:
+            continue
+        if nid in connected_ids:
+            keep.append(n)
+            continue  # only prune fully orphan nodes
+        nid_norm = _norm_txt(nid)
+        if any(nid_norm and r and (nid_norm == r or difflib.SequenceMatcher(None, nid_norm, r).ratio() >= similarity) for r in refs):
+            removed.append(nid)
+        else:
+            keep.append(n)
+
+    if removed:
+        lin["nodes"] = keep
+        lin.setdefault("gaps", []).append({
+            "explanation": f"Removed orphan near-duplicate node(s): {', '.join(removed)}."
+        })
+        graph["lineage"] = lin
+    return graph
 
 # ---------------- endpoints ----------------
 @app.post("/process-files")
@@ -912,7 +961,7 @@ def analyze_variable(payload: AnalyzeVariableIn):
             if routed:
                 ds, var = routed
             else:
-                # as a last resort: if it looks like a table mention, try cell normalizer
+                # last resort: if it looks like a table mention, try cell normalizer
                 maybe = _normalize_freeform_to_cell_spec(var, _latest_session_dir())
                 if maybe:
                     ds, var = maybe
@@ -930,11 +979,14 @@ def analyze_variable(payload: AnalyzeVariableIn):
                         }
                     }
 
-        # Route to endpoint lineage if requested
+        # Route and then prune orphan near-duplicates in the final graph
         if (ds or "").lower() in {"endpoint", "soa"}:
-            return build_endpoint_lineage_with_llm_from_session(endpoint_term=var, files_ctx=payload.files)
+            result = build_endpoint_lineage_with_llm_from_session(endpoint_term=var, files_ctx=payload.files)
         else:
-            return build_lineage_with_llm_from_session(dataset=ds, variable=var, files_ctx=payload.files)
+            result = build_lineage_with_llm_from_session(dataset=ds, variable=var, files_ctx=payload.files)
+
+        result = prune_orphan_near_duplicates(result)
+        return result
 
     except Exception as e:
         return {
