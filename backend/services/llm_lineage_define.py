@@ -1030,6 +1030,25 @@ def _validate_and_fix_graph(graph: Dict[str, Any]) -> Dict[str, Any]:
     lineage["nodes"] = nodes_fixed
     lineage["edges"] = edges_fixed
 
+    # --- DROP PLACEHOLDER EXPLICIT ORPHANS (requested) ---
+    # Remove nodes like "[general] Explicit node for the requested/target variable."
+    # when they have no edges connected.
+    used_ids = {str(e.get("from")) for e in edges_fixed} | {str(e.get("to")) for e in edges_fixed}
+
+    def _is_explicit_placeholder(n: Dict[str, Any]) -> bool:
+        expl = (n.get("explanation") or "").lower()
+        # robust match: must be [general] and mention "explicit node" + ("requested" or "target")
+        return ("[general]" in expl) and ("explicit node" in expl) and ("requested" in expl or "target" in expl)
+
+    pruned_nodes = []
+    for n in nodes_fixed:
+        nid = n.get("id")
+        if nid not in used_ids and _is_explicit_placeholder(n):
+            continue  # drop this orphan placeholder
+        pruned_nodes.append(n)
+
+    lineage["nodes"] = pruned_nodes
+
     # Canonicalize node types
     _canonicalize_types_in_graph(graph)
 
