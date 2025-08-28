@@ -255,8 +255,10 @@ const getMarkerEnd = (traceStrength: 'direct' | 'reasoned' | 'general' | null) =
       }
     default:
       return {
-        type: MarkerType.Arrow, // Default to hollow arrow (different from direct)
-        ...baseMarker,
+        type: MarkerType.Arrow, // ⋯ ⋯ ⋯▷ Unknown (smaller hollow arrow)
+        width: 16,
+        height: 16,
+        color: '#374151'
       }
   }
 }
