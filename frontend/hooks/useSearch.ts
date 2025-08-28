@@ -53,8 +53,9 @@ export function useSearch(): SearchState & SearchActions {
 				lineage: null
 			}))
 
-			// Call the analyze lineage API with natural language query as variable and hardcoded dataset
-			const result = await analyzeLineage({ dataset: 'table', variable: query })
+			// Call the analyze lineage API with natural language query as variable
+			// For search-triggered requests, send empty dataset string
+			const result = await analyzeLineage({ dataset: '', variable: query })
 			
 			setState(prev => ({
 				...prev,

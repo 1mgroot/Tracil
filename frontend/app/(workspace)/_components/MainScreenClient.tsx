@@ -504,7 +504,7 @@ export function MainScreenClient(): ReactNode {
 						)}
 						
 						<LineageView
-							dataset="table"
+							dataset=""
 							variable={searchQuery}
 							onBack={handleSearchBack}
 							mode="search"
