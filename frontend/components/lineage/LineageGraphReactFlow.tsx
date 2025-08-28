@@ -3,6 +3,8 @@ import ReactFlow, {
   Node,
   Edge,
   Background,
+  Controls,
+  MiniMap,
   useNodesState,
   useEdgesState,
   Position,
@@ -11,6 +13,7 @@ import ReactFlow, {
   useReactFlow,
   Handle,
   NodeProps,
+  NodeResizer,
 } from 'reactflow'
 import * as dagre from 'dagre'
 import 'reactflow/dist/style.css'
@@ -25,7 +28,7 @@ const hideAttributionCSS = `
 `
 
 // Custom node component with group tag following React Flow best practices
-const CustomLineageNode = memo<NodeProps>(({ data }) => {
+const CustomLineageNode = memo<NodeProps>(({ data, selected }) => {
   const nodeType = (data.group || 'SDTM') as ArtifactType
   const colors = getTypeColors(nodeType)
   
@@ -35,8 +38,8 @@ const CustomLineageNode = memo<NodeProps>(({ data }) => {
       style={{
         border: `3px solid ${colors.border}`,
         borderRadius: '20px',
-        width: 280,
-        height: 160,
+        width: data.width || 280,
+        height: data.height || 160,
         background: colors.background,
         color: colors.text,
         fontSize: '20px',
@@ -48,6 +51,27 @@ const CustomLineageNode = memo<NodeProps>(({ data }) => {
         justifyContent: 'center',
       }}
     >
+      {/* NodeResizer - only show when selected */}
+      {selected && (
+        <NodeResizer
+          minWidth={200}
+          minHeight={120}
+          maxWidth={400}
+          maxHeight={300}
+          handleStyle={{
+            backgroundColor: colors.border,
+            border: '2px solid white',
+            borderRadius: '4px',
+            width: 12,
+            height: 12,
+          }}
+          lineStyle={{
+            borderColor: colors.border,
+            borderWidth: 2,
+          }}
+        />
+      )}
+      
       {/* Main node content */}
       <div className="text-center px-6 py-3">
         <div className="font-black text-white text-xl leading-tight tracking-wide">
@@ -176,6 +200,8 @@ function LineageGraphInner({ lineage }: LineageGraphProps) {
         title: node.title,
         group: node.group,
         type: node.group,
+        width: 280,
+        height: 160,
       },
       sourcePosition: Position.Right,
       targetPosition: Position.Left,
@@ -238,13 +264,42 @@ function LineageGraphInner({ lineage }: LineageGraphProps) {
           edgeTypes={edgeTypes}
           nodesDraggable={false}
           nodesConnectable={false}
-          elementsSelectable={false}
+          elementsSelectable={true}
           panOnDrag={true}
+          selectionOnDrag={false}
           zoomOnScroll={true}
           zoomOnPinch={true}
           preventScrolling={false}
         >
           <Background color="#f3f4f6" gap={16} />
+          <Controls 
+            position="top-left"
+            showZoom={true}
+            showFitView={true}
+            showInteractive={false}
+            fitViewOptions={{ padding: 0.1, includeHiddenNodes: false }}
+          />
+          <MiniMap 
+            nodeColor={(node) => {
+              const nodeType = (node.data?.group || 'SDTM') as ArtifactType
+              const colors = getTypeColors(nodeType)
+              return colors.background
+            }}
+            nodeStrokeColor={(node) => {
+              const nodeType = (node.data?.group || 'SDTM') as ArtifactType
+              const colors = getTypeColors(nodeType)
+              return colors.border
+            }}
+            nodeStrokeWidth={2}
+            zoomable={true}
+            pannable={true}
+            position="bottom-right"
+            style={{
+              backgroundColor: 'rgba(255, 255, 255, 0.9)',
+              border: '1px solid #e5e7eb',
+              borderRadius: '8px',
+            }}
+          />
         </ReactFlow>
       </div>
     </div>
