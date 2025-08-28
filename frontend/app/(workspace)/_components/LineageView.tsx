@@ -151,7 +151,7 @@ export function LineageView({
       <div className="flex-1 px-6 pb-6 overflow-hidden">
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 h-full">
           {/* Summary card - left side on large screens, top on small screens */}
-          <div className="lg:col-span-2 flex flex-col">
+          <div className="lg:col-span-2 flex flex-col min-h-0">
             <TraceabilitySummary lineage={lineage} />
           </div>
           
