@@ -113,8 +113,8 @@ export function TraceabilitySummary({ lineage }: TraceabilitySummaryProps) {
               
               <div
                 id="nodes-content"
-                className={`transition-all duration-300 ease-in-out overflow-hidden ${
-                  nodesExpanded ? 'flex-1 opacity-100' : 'max-h-0 opacity-0'
+                className={`overflow-hidden ${
+                  nodesExpanded ? 'flex-1 min-h-0' : 'max-h-0 opacity-0'
                 }`}
               >
                 <div className="h-full overflow-y-auto px-3 pb-3">
@@ -122,7 +122,7 @@ export function TraceabilitySummary({ lineage }: TraceabilitySummaryProps) {
                     {lineage.nodes.map((node) => (
                       <div key={node.id} className="bg-gray-50 rounded-md p-2 border border-gray-200 hover:border-gray-300 transition-colors">
                         <div className="flex items-center space-x-2 mb-1">
-                          <div className="flex-shrink-0 w-2 h-2 bg-green-500 rounded-full"></div>
+                          <div className="flex-shrink-0 w-2 h-2 bg-gray-400 rounded-full"></div>
                           <span className="text-xs font-semibold text-gray-900 truncate">{node.title}</span>
                         </div>
                         
@@ -169,8 +169,8 @@ export function TraceabilitySummary({ lineage }: TraceabilitySummaryProps) {
               
               <div
                 id="connections-content"
-                className={`transition-all duration-300 ease-in-out overflow-hidden ${
-                  connectionsExpanded ? 'flex-1 opacity-100' : 'max-h-0 opacity-0'
+                className={`overflow-hidden ${
+                  connectionsExpanded ? 'flex-1 min-h-0' : 'max-h-0 opacity-0'
                 }`}
               >
                 <div className="h-full overflow-y-auto px-3 pb-3">
@@ -178,7 +178,7 @@ export function TraceabilitySummary({ lineage }: TraceabilitySummaryProps) {
                     {lineage.edges.map((edge) => (
                       <div key={`${edge.from}-${edge.to}`} className="bg-gray-50 rounded-md p-2 border border-gray-200 hover:border-gray-300 transition-colors">
                         <div className="flex items-center space-x-2 mb-1">
-                          <div className="flex-shrink-0 w-2 h-2 bg-blue-500 rounded-full"></div>
+                          <div className="flex-shrink-0 w-2 h-2 bg-gray-400 rounded-full"></div>
                           <span className="text-xs font-semibold text-gray-900 truncate">{edge.from}</span>
                           <svg className="w-3 h-3 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
@@ -188,7 +188,7 @@ export function TraceabilitySummary({ lineage }: TraceabilitySummaryProps) {
                         
                         {edge.label && (
                           <div className="mb-1">
-                            <span className="inline-block px-1.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 rounded">
+                            <span className="inline-block px-1.5 py-0.5 text-xs font-medium bg-gray-200 text-gray-700 rounded">
                               {edge.label}
                             </span>
                           </div>

@@ -5,15 +5,18 @@ from pydantic import BaseModel
 from typing import List, Dict, Any, Tuple
 from pathlib import Path
 from datetime import datetime
-import os, shutil, json
+import os, shutil, json, re
 
 # --- local services ---
 from services.acrf_preprocess import acrf_preprocess
 from services.protocol_preprocess import protocol_to_txt
 from services.tlf_preprocess import tlf_extract_titles
-from services.llm_lineage_define import build_lineage_with_llm_from_session
 from services.tlf_index import build_tlf_index_from_uploads
 from services.usdm_extract import sniff_and_extract_usdm  # NEW
+from services.llm_lineage_define import (
+    build_lineage_with_llm_from_session,
+    build_endpoint_lineage_with_llm_from_session
+)
 
 try:
     import pyreadstat
@@ -109,6 +112,102 @@ def _cdisc_type_from_dtype(dtype: str) -> str:
     if any(x in s for x in ["int", "float", "double", "decimal", "number"]):
         return "numeric"
     return "character"
+
+# ---------- USDM objective/endpoint post-processing ----------
+def _looks_placeholder(text: str) -> bool:
+    """
+    True if the string looks like TBD/TBC/placeholder regardless of extra words.
+    Examples caught: "TBD", "To be determined", "To be determined from protocol", "TBC", "to be defined", etc.
+    """
+    if not text:
+        return True
+    t = (text or "").strip().lower()
+    # search (not full-match) for common placeholders
+    return re.search(
+        r"\b(tbd|tbc|placeholder|to\s*be\s*(determined|defined|decided|confirmed|specified)|not\s+applicable|n/?a)\b",
+        t
+    ) is not None
+
+def _short_phrase_llm(text: str) -> str:
+    """
+    Return a compact (<= 8 words, <= 80 chars) noun-phrase summary.
+    Uses gpt-4o-mini when OPENAI_API_KEY is present; otherwise a heuristic fallback.
+    """
+    text = (text or "").strip()
+    if not text:
+        return ""
+    phrase = ""
+    # Optional LLM call
+    try:
+        from openai import OpenAI
+        api_key = os.getenv("OPENAI_API_KEY")
+        model = os.getenv("USDM_SUMMARY_MODEL", "gpt-4o-mini")
+        if api_key:
+            client = OpenAI(api_key=api_key)
+            prompt = (
+                "Summarize this clinical text as a short noun phrase, "
+                "max 8 words, no trailing punctuation:\n\n" + text
+            )
+            resp = client.chat.completions.create(
+                model=model,
+                temperature=0.0,
+                max_tokens=32,
+                messages=[
+                    {"role": "system", "content": "You write extremely concise noun phrases."},
+                    {"role": "user", "content": prompt},
+                ],
+            )
+            phrase = (resp.choices[0].message.content or "").strip().strip('"').strip("'")
+    except Exception:
+        phrase = ""
+
+    # Heuristic fallback
+    if not phrase:
+        seg = re.split(r"[.;:\n]", text)[0]
+        seg = re.sub(r"[\[\]{}()]", "", seg)
+        words = seg.split()
+        phrase = " ".join(words[:8]).strip()
+
+    return phrase[:80]
+
+def _postprocess_usdm_design(design: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    - Rename Objective IDs to 'Objective <i> - <short phrase>'
+    - Rename Endpoint IDs to 'Endpoint <i> - <short phrase>'
+    - Drop endpoints whose description is placeholder/TBD
+    """
+    new = dict(design or {})
+
+    # Objectives: rename IDs
+    objs = list(new.get("objectives") or [])
+    new_objs = []
+    for i, obj in enumerate(objs, start=1):
+        o = dict(obj)
+        # phrase from description, backoff to name
+        phrase = _short_phrase_llm(o.get("description") or o.get("name") or "")
+        phrase = phrase or (o.get("name") or "").strip() or "Objective"
+        o["id"] = f"Objective {i} - {phrase}"
+        new_objs.append(o)
+    new["objectives"] = new_objs
+
+    # Endpoints: drop TBD and rename IDs
+    eps = list(new.get("endpoints") or [])
+    new_eps = []
+    idx = 1
+    for ep in eps:
+        e = dict(ep)
+        desc = (e.get("description") or "").strip()
+        if _looks_placeholder(desc):
+            # skip placeholders
+            continue
+        phrase = _short_phrase_llm(desc or e.get("name") or "")
+        phrase = phrase or (e.get("name") or "").strip() or "Endpoint"
+        e["id"] = f"Endpoint {idx} - {phrase}"
+        new_eps.append(e)
+        idx += 1
+    new["endpoints"] = new_eps
+
+    return new
 
 # ---------------- parse define.xml/html ----------------
 def parse_define_minimal(define_path: Path) -> Dict[str, Any]:
@@ -245,6 +344,13 @@ async def process_files(files: List[UploadFile] = File(...)) -> Dict[str, Any]:
         try:
             is_usdm, design, stats = sniff_and_extract_usdm(s["path"])
             if is_usdm:
+                # Summarize/clean: rename Objective/Endpoint IDs and drop TBD endpoints
+                design = _postprocess_usdm_design(design)
+                # Update counts to reflect any filtering/renaming
+                stats = dict(stats or {})
+                stats["objectiveCount"] = len(design.get("objectives", []))
+                stats["endpointCount"]  = len(design.get("endpoints", []))
+
                 protocol_entities["StudyDesign_USDM"] = {
                     "name": "USDM_Design",
                     "label": "USDM Study Design",
@@ -443,11 +549,6 @@ class AnalyzeVariableIn(BaseModel):
     variable: str
     dataset: str
     files: List[Dict[str, Any]] = []
-
-from services.llm_lineage_define import (
-    build_lineage_with_llm_from_session,
-    build_endpoint_lineage_with_llm_from_session
-)
 
 @app.post("/analyze-variable")
 def analyze_variable(payload: AnalyzeVariableIn):
