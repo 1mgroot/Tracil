@@ -83,10 +83,6 @@ export function TraceabilitySummary({ lineage }: TraceabilitySummaryProps) {
       {/* Expanded Lineage Details section */}
       <div className="flex-1 overflow-hidden px-4 pb-4">
         <div className="border-t border-gray-200 pt-3 h-full flex flex-col">
-          <h3 className="text-sm font-medium text-gray-900 mb-3 flex-shrink-0">
-            Lineage Details
-          </h3>
-          
           <div className="flex-1 flex flex-col space-y-3 min-h-0">
             {/* Collapsible Nodes Section - Takes more space when expanded */}
             <div className={`border border-gray-200 rounded-lg overflow-hidden flex-shrink-0 ${
