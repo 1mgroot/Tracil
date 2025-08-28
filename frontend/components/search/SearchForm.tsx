@@ -30,7 +30,7 @@ export function SearchForm({
 	}, [query, onSearch])
 
 	// Handle query input change
-	const handleQueryChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+	const handleQueryChange = useCallback((event: React.ChangeEvent<HTMLTextAreaElement>) => {
 		setQuery(event.target.value)
 	}, [])
 
@@ -45,13 +45,13 @@ export function SearchForm({
 					<label htmlFor="query" className="block text-sm font-medium text-gray-700 mb-2">
 						Tracil Request
 					</label>
-					<input
+					<textarea
 						id="query"
-						type="text"
 						value={query}
 						onChange={handleQueryChange}
 						placeholder="e.g., diastolic blood pressure change from baseline at week 2 for high dose treatment"
-						className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+						rows={3}
+						className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed resize-y min-h-[4rem]"
 						disabled={loading}
 						required
 					/>
