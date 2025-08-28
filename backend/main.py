@@ -2,7 +2,7 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Tuple, Optional
 from pathlib import Path
 from datetime import datetime
 import os, shutil, json, re
@@ -112,6 +112,25 @@ def _cdisc_type_from_dtype(dtype: str) -> str:
     if any(x in s for x in ["int", "float", "double", "decimal", "number"]):
         return "numeric"
     return "character"
+
+def _latest_session_dir() -> Optional[Path]:
+    sessions = sorted([p for p in OUTPUT.glob("session_*") if p.is_dir()],
+                      key=lambda p: p.stat().st_mtime, reverse=True)
+    return sessions[0] if sessions else None
+
+def _read_session_summary(sess_dir: Optional[Path]) -> Optional[Dict[str, Any]]:
+    if not sess_dir:
+        return None
+    ss = sess_dir / "session_summary.json"
+    if not ss.exists():
+        return None
+    try:
+        return json.loads(ss.read_text(encoding="utf-8", errors="ignore"))
+    except Exception:
+        return None
+
+def _norm(s: str) -> str:
+    return re.sub(r"[^a-z0-9]+", " ", (s or "").lower()).strip()
 
 # ---------- USDM objective/endpoint post-processing ----------
 def _looks_placeholder(text: str) -> bool:
@@ -314,6 +333,337 @@ def read_json_records(path: Path, ds_name_hint: str) -> Dict[str, Any]:
         "sourceFiles": [{"fileId": path.name, "role": "primary", "extractedData": ["data", "variables", "metadata"]}],
         "metadata": {"records": records, "structure": None, "validationStatus": "unknown"}
     }
+
+# ---------------- documents (helpers) ----------------
+def _openai_client():
+    try:
+        from openai import OpenAI
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            return None
+        return OpenAI(api_key=api_key)
+    except Exception:
+        return None
+
+def _parse_json_loose(s: str) -> Optional[Dict[str, Any]]:
+    if not s:
+        return None
+    s = s.strip()
+    # try strict
+    try:
+        return json.loads(s)
+    except Exception:
+        pass
+    # try to extract {"cell": "..."} with regex
+    m = re.search(r'{"\s*cell\s*"\s*:\s*"([^"]+)"}', s, re.S | re.I)
+    if m:
+        return {"cell": m.group(1)}
+    return None
+
+def _clean_cell_spec(cell: str, display_id: str) -> Optional[str]:
+    if not cell:
+        return None
+    parts = [p.strip() for p in cell.split("|")]
+    if not parts:
+        return None
+    # ensure first token is the display id
+    if parts[0].lower() != display_id.lower():
+        parts = [display_id] + parts
+    # drop empties and duplicates; avoid 'All Treatments' default when a specific arm is present
+    kept, seen = [], set()
+    has_specific_arm = any(re.search(r"\b(placebo|xanomeline)\b", p, re.I) for p in parts)
+    for tok in parts:
+        if not tok:
+            continue
+        key = tok.lower()
+        if has_specific_arm and key in ("all treatments", "overall"):
+            continue
+        if key not in seen:
+            kept.append(tok)
+            seen.add(key)
+    spec = " | ".join(kept)
+    return spec if spec.strip() else None
+
+def _fallback_cell_terms_from_text(text: str) -> List[str]:
+    t = (text or "").lower()
+    picks: List[str] = []
+
+    # timepoint (Week/Wk)
+    m = re.search(r"\b(?:wk|week)\s*0*(\d{1,2})\b", t)
+    if m: picks.append(f"Week {int(m.group(1))}")
+
+    # derivation
+    if re.search(r"\bchange\s*from\s*baseline\b|\bcfb\b|\bchg\b", t): picks.append("Change from Baseline")
+    if re.search(r"\bbaseline\b", t) and "Change from Baseline" not in picks: picks.append("Baseline")
+
+    # parameter/test
+    if re.search(r"\bpulse\s*rate\b", t): picks.append("Pulse Rate")
+    elif re.search(r"\bheart\s*rate\b", t): picks.append("Heart Rate")
+    elif re.search(r"\bsystolic\b.*\bblood\s*pressure\b|\bsbp\b", t): picks.append("Systolic Blood Pressure")
+    elif re.search(r"\bdiastolic\b.*\bblood\s*pressure\b|\bdbp\b", t): picks.append("Diastolic Blood Pressure")
+
+    # arm
+    if re.search(r"\bxanomeline\b.*\blow\b|\blow\b.*\bxanomeline\b", t): picks.append("Xanomeline Low Dose")
+    if re.search(r"\bplacebo\b", t): picks.append("Placebo")
+
+    # statistic
+    if re.search(r"\bmax(imum)?\b", t): picks.append("max")
+    if re.search(r"\bmean|average\b", t): picks.append("mean")
+    if re.search(r"\bnumber of\b|\bcount\b|\bn\b", t): picks.append("n")
+    if re.search(r"\bse\b|\bstandard\s*error\b", t): picks.append("se")
+
+    return picks
+
+def _harvest_from_json(js: Any, candidates: Dict[str, set]) -> None:
+    # Recursive scan: collect categorical values from ARS/ARD JSONs regardless of schema diversity
+    if isinstance(js, dict):
+        for k, v in js.items():
+            if isinstance(v, (str, int, float)):
+                s = str(v)
+                if re.search(r"\b(?:week|wk|day|month)\s*0*\d+\b", s, re.I):
+                    for x in re.findall(r"(?:Week|Wk|Day|Month)\s*0*\d{1,2}", s, re.I):
+                        candidates["visits"].add(re.sub(r"\bWk\b", "Week", x, flags=re.I))
+                if re.search(r"\bchange\s*from\s*baseline\b|\bbaseline\b", s, re.I):
+                    if re.search(r"change\s*from\s*baseline", s, re.I): candidates["derivations"].add("Change from Baseline")
+                    if re.search(r"\bbaseline\b", s, re.I): candidates["derivations"].add("Baseline")
+                # stats
+                if re.search(r"\b(max|minimum|min|median|mean|sd|se|sem|n\s*\(%\)|n)\b", s, re.I):
+                    for st in ["max","min","median","mean","sd","se","sem","n (%)","n"]:
+                        if re.search(rf"\b{re.escape(st)}\b", s, re.I):
+                            candidates["stats"].add(st)
+                # arms
+                if re.search(r"\bxanomeline\b.*\blow\b|\blow\b.*\bxanomeline\b", s, re.I):
+                    candidates["arms"].add("Xanomeline Low Dose")
+                if re.search(r"\bplacebo\b", s, re.I):
+                    candidates["arms"].add("Placebo")
+                # parameters
+                if re.search(r"\bpulse\s*rate\b", s, re.I): candidates["parameters"].add("Pulse Rate")
+                if re.search(r"\bheart\s*rate\b", s, re.I): candidates["parameters"].add("Heart Rate")
+                if re.search(r"\bsystolic\b.*\bblood\s*pressure\b|\bsbp\b", s, re.I):
+                    candidates["parameters"].add("Systolic Blood Pressure")
+                if re.search(r"\bdiastolic\b.*\bblood\s*pressure\b|\bdbp\b", s, re.I):
+                    candidates["parameters"].add("Diastolic Blood Pressure")
+                # populations
+                if re.search(r"\bsafety\b\s*(set|population)?\b", s, re.I):
+                    candidates["populations"].add("Safety Population")
+                if re.search(r"\bintent(?:ion)?\s*to\s*treat\b|\bitt\b", s, re.I):
+                    candidates["populations"].add("Intent-to-Treat")
+            elif isinstance(v, list):
+                for it in v:
+                    _harvest_from_json(it, candidates)
+            else:
+                _harvest_from_json(v, candidates)
+    elif isinstance(js, list):
+        for it in js:
+            _harvest_from_json(it, candidates)
+
+def _collect_ars_candidates_for_display(sess_dir: Path, display_id: str) -> Dict[str, List[str]]:
+    out_sets: Dict[str, set] = {
+        "visits": set(), "derivations": set(), "parameters": set(), "tests": set(),
+        "arms": set(), "stats": set(), "populations": set(), "other_labels": set()
+    }
+    did = _norm(display_id)
+    for p in sorted(sess_dir.glob("*.json")):
+        nm = p.name.lower()
+        if not (nm.endswith("-ars.json") or nm.endswith("-ard.json")):
+            continue
+        txt = p.read_text(encoding="utf-8", errors="ignore")
+        if did not in _norm(txt):
+            continue
+        try:
+            js = json.loads(txt)
+        except Exception:
+            js = None
+        if js is not None:
+            _harvest_from_json(js, out_sets)
+    return {k: sorted(v) for k, v in out_sets.items()}
+
+def _detect_display_id_from_text(user_text: str, sess_dir: Optional[Path]) -> Optional[str]:
+    """
+    Prefer an existing TLF display id from tlfIndex; fallback to 'table <id>' pattern.
+    """
+    if not user_text:
+        return None
+    t = user_text.strip()
+    # explicit "table <id>"
+    m = re.search(r"\btable\s+([A-Za-z0-9_.-]+)\b", t, re.I)
+    if m:
+        return m.group(1)
+    # scan tlfIndex
+    ss = _read_session_summary(sess_dir)
+    if ss:
+        displays = (ss.get("standards", {}).get("TLF", {}).get("metadata", {}) or {}).get("tlfIndex", {}).get("displays", []) or []
+        tnorm = _norm(t)
+        hits = []
+        for d in displays:
+            did = d.get("id") or ""
+            title = d.get("title") or ""
+            if _norm(did) in tnorm or _norm(title) in tnorm:
+                hits.append(did)
+        if hits:
+            # pick longest id (more specific)
+            hits.sort(key=lambda s: len(s or ""), reverse=True)
+            return hits[0]
+    return None
+
+def _llm_choose_cell_spec(display_id: str, user_text: str, options: Dict[str, List[str]]) -> Optional[str]:
+    client = _openai_client()
+    if not client:
+        return None
+    model = os.getenv("CELL_NORMALIZER_MODEL", "gpt-4o-mini")
+
+    sys = (
+        "You convert a user's natural-language request about a specific clinical TLF table into a SINGLE pipe-separated cell spec.\n"
+        "RULES:\n"
+        "1) Prefer ONLY values from the provided option lists. If a clearly explicit value appears in the user text but is missing from options (e.g., 'Week 4', 'Placebo'), you MAY use it verbatim.\n"
+        "2) Include only values needed to identify the cell. Do NOT output placeholders, empty segments, or repeated pipes.\n"
+        "3) Recommended order: timepoint/derivation, parameter/test, arm/treatment, statistic, population. Omit categories that don't apply.\n"
+        "4) Return STRICT JSON: {\"cell\": \"<display_id> | <value1> | <value2> | ...\"}."
+    )
+    opt_txt = json.dumps(options, indent=2)
+    user = (
+        f"Display id: {display_id}\n"
+        f"User request: {user_text}\n"
+        f"Available option values (some lists may be empty):\n{opt_txt}\n"
+        "Output strict JSON with the single field 'cell'."
+    )
+
+    try:
+        resp = client.chat.completions.create(
+            model=model,
+            temperature=0.0,
+            response_format={"type":"json_object"},
+            max_tokens=200,
+            messages=[{"role":"system","content":sys},{"role":"user","content":user}],
+        )
+        raw = (resp.choices[0].message.content or "").strip()
+    except Exception:
+        return None
+
+    obj = _parse_json_loose(raw)
+    if not obj:
+        return None
+    cell_raw = (obj.get("cell") or "").strip()
+    return _clean_cell_spec(cell_raw, display_id)
+
+def _normalize_freeform_to_cell_spec(user_text: str, sess_dir: Optional[Path]) -> Optional[Tuple[str, str]]:
+    display_id = _detect_display_id_from_text(user_text, sess_dir)
+    if not display_id:
+        return None
+
+    options = {"visits":[], "derivations":[], "parameters":[], "tests":[], "arms":[], "stats":[], "populations":[], "other_labels":[]}
+    if sess_dir:
+        mined = _collect_ars_candidates_for_display(sess_dir, display_id)
+        for k in options.keys():
+            options[k] = mined.get(k, [])
+
+    # LLM closed-set (with sanitizer)
+    cell = _llm_choose_cell_spec(display_id, user_text, options)
+
+    # If still empty or just the display id, fall back to explicit terms from the user text
+    if not cell or cell.strip().lower() == display_id.lower():
+        picks = _fallback_cell_terms_from_text(user_text)
+        if picks:
+            cell = _clean_cell_spec(f"{display_id} | " + " | ".join(picks), display_id)
+        else:
+            cell = display_id
+
+    return ("table", cell)
+
+def _guess_kind_and_target_with_llm(user_text: str, sess_dir: Optional[Path]) -> Optional[Tuple[str, str]]:
+    """
+    Ask LLM to classify freeform request into (dataset, variable).
+    dataset ∈ {'table','adam','sdtm','endpoint'}
+    variable formats:
+      - table display id (e.g., 'ars_vs_t01') OR a cell spec ('ars_vs_t01 | ... | ...')
+      - adam/sdtm variable 'ADXX.VAR' / 'DM.BRTHDTC'
+      - endpoint phrase (if dataset='endpoint')
+    """
+    client = _openai_client()
+    if not client:
+        return None
+
+    # gather known display ids to help classification
+    ss = _read_session_summary(sess_dir)
+    displays = []
+    if ss:
+        displays = (ss.get("standards", {}).get("TLF", {}).get("metadata", {}) or {}).get("tlfIndex", {}).get("displays", []) or []
+    display_ids = [d.get("id") for d in displays if d.get("id")]
+
+    sys = (
+        "You are a router. Classify the user's request into one of: ADaM variable, SDTM variable, Table display or Table cell, or Protocol endpoint.\n"
+        "OUTPUT STRICT JSON with fields: dataset (one of 'adam','sdtm','table','endpoint') and variable.\n"
+        "Rules:\n"
+        "- If the text mentions a specific table id (from the provided list) treat as 'table'. If the text describes a specific cell (mentions a visit/timepoint, statistic, parameter, arm, or population), you MUST return a pipe-separated cell spec: '<display_id> | <value1> | <value2> | ...'.\n"
+        "- If you see patterns like 'ADXX.VAR' it's ADaM; 'XX.VAR' is SDTM.\n"
+        "- If it's clearly an endpoint/SoA/Objective description, choose 'endpoint'.\n"
+        "Do NOT invent values. Do NOT output empty pipe segments."
+    )
+    user = json.dumps({
+        "known_display_ids": display_ids,
+        "request": user_text
+    }, indent=2)
+
+    try:
+        resp = client.chat.completions.create(
+            model=os.getenv("FREEFORM_ROUTER_MODEL", "gpt-4o-mini"),
+            temperature=0.0,
+            response_format={"type":"json_object"},
+            max_tokens=200,
+            messages=[{"role":"system","content":sys},{"role":"user","content":user}],
+        )
+        raw = (resp.choices[0].message.content or "").strip()
+        obj = json.loads(raw)
+        ds = (obj.get("dataset") or "").strip().lower()
+        var = (obj.get("variable") or "").strip()
+        if not ds or not var:
+            return None
+        # If dataset=table but variable is only the id and the user text seems to specify a cell → upgrade to cell via our normalizer.
+        if ds == "table":
+            disp = _detect_display_id_from_text(user_text, sess_dir)
+            # detect cell intent
+            if re.search(r"\b(week|wk|visit|day|month|baseline|change from baseline|mean|median|max|min|se|sd|count|n|placebo|trt|dose|arm|cohort|group)\b", user_text, re.I):
+                maybe = _normalize_freeform_to_cell_spec(user_text, sess_dir)
+                if maybe:
+                    return maybe
+            # else keep as table id
+            if disp and disp.lower() != var.lower():
+                var = disp
+        return (ds, var)
+    except Exception:
+        return None
+
+def _heuristic_router(user_text: str, sess_dir: Optional[Path]) -> Optional[Tuple[str, str]]:
+    """Heuristic fallback when LLM is unavailable."""
+    txt = user_text or ""
+    # ADaM / SDTM vars
+    m = re.search(r"\b(AD[A-Z0-9]{2,}\.[A-Z0-9_]+)\b", txt)
+    if m: return ("adam", m.group(1).upper())
+    m = re.search(r"\b([A-Z]{2}\.[A-Z0-9_]+)\b", txt)
+    if m: return ("sdtm", m.group(1).upper())
+    # Table id / cell
+    disp = _detect_display_id_from_text(txt, sess_dir)
+    if disp:
+        # look for cell intent
+        if re.search(r"\b(week|wk|visit|day|month|baseline|change from baseline|mean|median|max|min|se|sd|count|n|placebo|xanomeline|arm|cohort|group)\b", txt, re.I):
+            maybe = _normalize_freeform_to_cell_spec(txt, sess_dir)
+            if maybe:
+                return maybe
+        return ("table", disp)
+    # Endpoint-ish
+    if re.search(r"\b(endpoint|objective|primary|secondary|key secondary|soa|schedule of activities)\b", txt, re.I):
+        return ("endpoint", txt.strip())
+    return None
+
+def _normalize_freeform_request(user_text: str) -> Optional[Tuple[str, str]]:
+    """Main entry: freeform router → (dataset, variable/cell-spec)."""
+    sess = _latest_session_dir()
+    # Try LLM router first
+    out = _guess_kind_and_target_with_llm(user_text, sess)
+    if out:
+        return out
+    # Fallback heuristics
+    return _heuristic_router(user_text, sess)
 
 # ---------------- endpoints ----------------
 @app.post("/process-files")
@@ -553,17 +903,47 @@ class AnalyzeVariableIn(BaseModel):
 @app.post("/analyze-variable")
 def analyze_variable(payload: AnalyzeVariableIn):
     try:
-        if (payload.dataset or "").lower() in {"endpoint", "soa"}:
-            return build_endpoint_lineage_with_llm_from_session(endpoint_term=payload.variable, files_ctx=payload.files)
+        # If dataset is empty → freeform router
+        ds = (payload.dataset or "").strip()
+        var = (payload.variable or "").strip()
+
+        if not ds:
+            routed = _normalize_freeform_request(var)
+            if routed:
+                ds, var = routed
+            else:
+                # as a last resort: if it looks like a table mention, try cell normalizer
+                maybe = _normalize_freeform_to_cell_spec(var, _latest_session_dir())
+                if maybe:
+                    ds, var = maybe
+                else:
+                    return {
+                        "variable": payload.variable,
+                        "dataset": payload.dataset,
+                        "summary": "",
+                        "lineage": {
+                            "nodes": [ {"id": f"{(payload.dataset or '').strip()}.{(payload.variable or '').strip()}".lower() or "target",
+                                        "type":"target",
+                                        "explanation":"[general] Could not classify the freeform request into a dataset/variable."} ],
+                            "edges": [],
+                            "gaps":  ["Freeform router could not determine dataset/variable; please reference a table id (e.g., 'table ars_vs_t01'), an ADaM/SDTM variable (e.g., 'ADSL.AGE' or 'DM.BRTHDTC'), or an endpoint description."]
+                        }
+                    }
+
+        # Route to endpoint lineage if requested
+        if (ds or "").lower() in {"endpoint", "soa"}:
+            return build_endpoint_lineage_with_llm_from_session(endpoint_term=var, files_ctx=payload.files)
         else:
-            return build_lineage_with_llm_from_session(dataset=payload.dataset, variable=payload.variable, files_ctx=payload.files)
+            return build_lineage_with_llm_from_session(dataset=ds, variable=var, files_ctx=payload.files)
+
     except Exception as e:
         return {
             "variable": payload.variable,
             "dataset": payload.dataset,
             "summary": "",
             "lineage": {
-                "nodes": [ {"id": f"{payload.dataset}.{payload.variable}".lower(), "type":"target",
+                "nodes": [ {"id": f"{(payload.dataset or '').strip()}.{(payload.variable or '').strip()}".lower() or "target",
+                            "type":"target",
                             "explanation":"[general] Error path."} ],
                 "edges": [],
                 "gaps":  [f"Lineage service error: {str(e)}"]
