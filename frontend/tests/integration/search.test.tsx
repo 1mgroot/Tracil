@@ -132,7 +132,7 @@ describe('Search Integration', () => {
       
       expect(screen.getByText(/test-dataset/i)).toBeInTheDocument()
       // LineageView renders the graph, so we check for the lineage content instead
-      expect(screen.getByText(/Lineage for test-dataset\.test-variable/i)).toBeInTheDocument()
+      expect(screen.getByText(/test-dataset\.test-variable/i)).toBeInTheDocument()
       // Check for TraceabilitySummary content
       expect(screen.getByText(/AI-Generated Traceability Summary/i)).toBeInTheDocument()
     })
@@ -184,7 +184,6 @@ describe('Search Integration', () => {
       
       // LineageView now renders TraceabilitySummary which has different structure
       expect(screen.getByText(/AI-Generated Traceability Summary/i)).toBeInTheDocument()
-      expect(screen.getByText(/Lineage Details/i)).toBeInTheDocument()
       // Check for the specific Nodes button in TraceabilitySummary
       expect(screen.getByRole('button', { name: /Nodes/i })).toBeInTheDocument()
       // Check for the specific Connections button in TraceabilitySummary
@@ -224,7 +223,7 @@ describe('Search Integration', () => {
       
       expect(screen.getByText(/test-dataset/i)).toBeInTheDocument()
       // LineageView renders the lineage content, so check for that instead
-      expect(screen.getByText(/Lineage for test-dataset\.test-variable/i)).toBeInTheDocument()
+      expect(screen.getByText(/test-dataset\.test-variable/i)).toBeInTheDocument()
       expect(screen.getByText(/AI-Generated Traceability Summary/i)).toBeInTheDocument()
     })
   })

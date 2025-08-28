@@ -86,7 +86,7 @@ export function LineageView({
             </button>
           <div className="h-6 w-px bg-gray-300" />
           <h1 className="text-xl font-semibold text-gray-900">
-            Loading lineage for {dataset}.{variable}...
+            Loading lineage for {dataset}.{variable} ...
           </h1>
         </div>
         <div className="flex items-center justify-center h-64">
@@ -108,7 +108,7 @@ export function LineageView({
           </button>
           <div className="h-6 w-px bg-gray-300" />
           <h1 className="text-xl font-semibold text-gray-900">
-            Lineage for {dataset}.{variable}
+            {dataset}.{variable}
           </h1>
         </div>
         <div className="bg-red-50 border border-red-200 rounded-lg p-6">
@@ -142,7 +142,7 @@ export function LineageView({
           </button>
           <div className="h-6 w-px bg-gray-300" />
           <h1 className="text-xl font-semibold text-gray-900">
-            Lineage for {dataset}.{variable}
+            {dataset}.{variable}
           </h1>
         </div>
       </div>
