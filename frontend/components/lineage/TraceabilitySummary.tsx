@@ -124,18 +124,18 @@ export function TraceabilitySummary({ lineage }: TraceabilitySummaryProps) {
                       return (
                         <div key={node.id} className="bg-gray-50 rounded-md p-2 border border-gray-200 hover:border-gray-300 transition-colors">
                           <div className="flex items-center space-x-2 mb-1">
-                            <div 
-                              className="flex-shrink-0 w-2 h-2 rounded-full"
-                              style={{ backgroundColor: colors.background }}
-                            ></div>
+                            <span 
+                              className="inline-flex items-center justify-center w-16 px-1.5 py-0.5 text-xs font-medium rounded"
+                              style={{ 
+                                backgroundColor: colors.background,
+                                color: colors.text 
+                              }}
+                            >
+                              {nodeType}
+                            </span>
                             <span className="text-xs font-semibold text-gray-900 truncate">{getNodeDisplayText(node)}</span>
                           </div>
                           
-                          {node.dataset && node.variable && (
-                            <div className="text-xs text-gray-500 truncate">
-                              {node.group}
-                            </div>
-                          )}
                           
                           {node.meta?.file && (
                             <div className="text-xs text-gray-500 truncate">
