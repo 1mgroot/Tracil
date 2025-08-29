@@ -326,29 +326,6 @@ export function MainScreenClient(): ReactNode {
 
 					{/* Main content area */}
 					<main className="flex flex-col p-6 relative">
-						{/* Left edge restore hint when sidebar is hidden */}
-						{!sidebarVisible && (
-							<button
-								onClick={() => setSidebarVisible(true)}
-								onKeyDown={(e) => {
-									if (e.key === 'Enter' || e.key === ' ') {
-										e.preventDefault()
-										setSidebarVisible(true)
-									}
-								}}
-								className="absolute left-0 top-0 bottom-0 w-1 group cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset"
-								aria-label="Click to restore sidebar"
-								tabIndex={0}
-							>
-								<div className="absolute left-0 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity duration-200 pointer-events-none">
-									<div className="bg-blue-500 text-white text-xs px-2 py-1 rounded-r whitespace-nowrap shadow-lg">
-										Click to restore sidebar
-									</div>
-									<div className="absolute left-0 top-1/2 -translate-y-1/2 w-0 h-0 border-l-4 border-l-blue-500 border-t-4 border-t-transparent border-b-4 border-b-transparent"></div>
-								</div>
-							</button>
-						)}
-						
 						{/* Main content */}
 						<div className="flex-1 flex flex-col items-center justify-center gap-6">
 							<SearchForm 
@@ -442,30 +419,6 @@ export function MainScreenClient(): ReactNode {
 
 				{viewState === 'search' && (
 					<main className="flex flex-col p-6 relative">
-						{/* Left edge restore hint when sidebar is hidden */}
-						{!sidebarVisible && (
-							<button
-								onClick={() => setSidebarVisible(true)}
-								onKeyDown={(e) => {
-									if (e.key === 'Enter' || e.key === ' ') {
-										e.preventDefault()
-										setSidebarVisible(true)
-									}
-								}}
-								className="absolute left-0 top-0 bottom-0 w-1 group cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset"
-								aria-label="Click to restore sidebar"
-								tabIndex={0}
-							>
-								<div className="absolute left-0 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity duration-200 pointer-events-none">
-									<div className="bg-blue-500 text-white text-xs px-2 py-1 rounded-r whitespace-nowrap shadow-lg">
-										Click to restore sidebar
-									</div>
-									<div className="absolute left-0 top-1/2 -translate-y-1/2 w-0 h-0 border-l-4 border-l-blue-500 border-t-4 border-t-transparent border-b-4 border-b-transparent"></div>
-								</div>
-							</button>
-						)}
-						
-
 						{/* Main content */}
 						<div className="flex-1 flex flex-col items-center justify-center gap-6">
 							<SearchForm 
@@ -480,29 +433,6 @@ export function MainScreenClient(): ReactNode {
 
 				{viewState === 'search-results' && (
 					<div className="relative">
-						{/* Left edge restore hint when sidebar is hidden */}
-						{!sidebarVisible && (
-							<button
-								onClick={() => setSidebarVisible(true)}
-								onKeyDown={(e) => {
-									if (e.key === 'Enter' || e.key === ' ') {
-										e.preventDefault()
-										setSidebarVisible(true)
-									}
-								}}
-								className="absolute left-0 top-0 bottom-0 w-1 group cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset z-10"
-								aria-label="Click to restore sidebar"
-								tabIndex={0}
-							>
-								<div className="absolute left-0 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity duration-200 pointer-events-none">
-									<div className="bg-blue-500 text-white text-xs px-2 py-1 rounded-r whitespace-nowrap shadow-lg">
-										Click to restore sidebar
-									</div>
-									<div className="absolute left-0 top-1/2 -translate-y-1/2 w-0 h-0 border-l-4 border-l-blue-500 border-t-4 border-t-transparent border-b-4 border-b-transparent"></div>
-								</div>
-							</button>
-						)}
-						
 						<LineageView
 							dataset=""
 							variable={searchQuery}
@@ -516,29 +446,6 @@ export function MainScreenClient(): ReactNode {
 
 				{viewState === 'variables' && selectedDataset && (
 					<div className="flex-1 overflow-hidden relative">
-						{/* Left edge restore hint when sidebar is hidden */}
-						{!sidebarVisible && (
-							<button
-								onClick={() => setSidebarVisible(true)}
-								onKeyDown={(e) => {
-									if (e.key === 'Enter' || e.key === ' ') {
-										e.preventDefault()
-										setSidebarVisible(true)
-									}
-								}}
-								className="absolute left-0 top-0 bottom-0 w-1 group cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset"
-								aria-label="Click to restore sidebar"
-								tabIndex={0}
-							>
-								<div className="absolute left-0 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity duration-200 pointer-events-none">
-									<div className="bg-blue-500 text-white text-xs px-2 py-1 rounded-r whitespace-nowrap shadow-lg">
-										Click to restore sidebar
-									</div>
-									<div className="absolute left-0 top-1/2 -translate-y-1/2 w-0 h-0 border-l-4 border-l-blue-500 border-t-4 border-t-transparent border-b-4 border-b-transparent"></div>
-								</div>
-							</button>
-						)}
-						
 						<VariablesBrowser 
 							dataset={selectedDataset} 
 							onVariableSelect={handleVariableSelect}
@@ -553,29 +460,6 @@ export function MainScreenClient(): ReactNode {
 
 				{viewState === 'lineage' && lineageState && (
 					<div className="relative">
-						{/* Left edge restore hint when sidebar is hidden */}
-						{!sidebarVisible && (
-							<button
-								onClick={() => setSidebarVisible(true)}
-								onKeyDown={(e) => {
-									if (e.key === 'Enter' || e.key === ' ') {
-										e.preventDefault()
-										setSidebarVisible(true)
-									}
-								}}
-								className="absolute left-0 top-0 bottom-0 w-1 group cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset"
-								aria-label="Click to restore sidebar"
-								tabIndex={0}
-							>
-								<div className="absolute left-0 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity duration-200 pointer-events-none">
-									<div className="bg-blue-500 text-white text-xs px-2 py-1 rounded-r whitespace-nowrap shadow-lg">
-										Click to restore sidebar
-									</div>
-									<div className="absolute left-0 top-1/2 -translate-y-1/2 w-0 h-0 border-l-4 border-l-blue-500 border-t-4 border-t-transparent border-b-4 border-b-transparent"></div>
-								</div>
-							</button>
-						)}
-						
 						<LineageView
 							dataset={lineageState.dataset}
 							variable={lineageState.variable}
