@@ -20,10 +20,5 @@
   },
   "engines": {
     "node": ">=18.0.0"
-  },
-  "dependencies": {
-    "dagre": "^0.8.5",
-    "lucide-react": "^0.541.0",
-    "reactflow": "^11.11.4"
   }
 }
