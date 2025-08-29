@@ -31,7 +31,6 @@ export function MainScreenClient(): ReactNode {
 	
 	const {
 		query: searchQuery,
-		dataset: searchDataset,
 		lineage: searchLineage,
 		loading: searchLoading,
 		error: searchError,
@@ -153,9 +152,9 @@ export function MainScreenClient(): ReactNode {
 	}, [])
 
 	// Handle search submission
-	const handleSearch = useCallback(async (query: string, dataset: string) => {
+	const handleSearch = useCallback(async (query: string) => {
 		try {
-			await performSearch(query, dataset)
+			await performSearch(query)
 		} catch (error) {
 			console.error('Search failed:', error)
 		}
@@ -466,12 +465,6 @@ export function MainScreenClient(): ReactNode {
 							</button>
 						)}
 						
-						{/* Header */}
-						<div className="flex items-center justify-center mb-6">
-							<h1 className="text-2xl md:text-3xl text-balance text-center">
-								Search Variable Lineage
-							</h1>
-						</div>
 
 						{/* Main content */}
 						<div className="flex-1 flex flex-col items-center justify-center gap-6">
@@ -481,38 +474,6 @@ export function MainScreenClient(): ReactNode {
 								error={searchError}
 							/>
 							
-							{/* Show upload instructions if no datasets */}
-							{datasets.length === 0 && (
-								<div className="max-w-2xl text-center">
-									<div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-										<h3 className="text-lg font-semibold text-blue-800 mb-3">
-											🚀 Get Started with File Upload
-										</h3>
-										<p className="text-blue-700 mb-4">
-											Upload your clinical data files to the Python backend to start exploring variables and lineage.
-										</p>
-										<div className="bg-white p-4 rounded border text-sm font-mono text-left">
-											<span className="text-gray-600"># Upload files to backend</span><br/>
-											curl -X POST http://localhost:8000/process-files \<br/>
-											&nbsp;&nbsp;-F &quot;files=@your_file.xpt&quot;<br/>
-											&nbsp;&nbsp;-F &quot;files=@your_define.xml&quot;<br/>
-											&nbsp;&nbsp;-F &quot;files=@your_crf.pdf&quot;<br/>
-											&nbsp;&nbsp;-F &quot;files=@your_data.json&quot;
-										</div>
-										<p className="text-sm text-blue-600 mt-3">
-											After uploading, click &quot;Refresh Data&quot; to see your datasets.
-										</p>
-									</div>
-								</div>
-							)}
-							
-							{/* Add refresh button for testing */}
-							<button
-								onClick={refresh}
-								className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
-							>
-								🔄 Refresh Data
-							</button>
 						</div>
 					</main>
 				)}
@@ -543,11 +504,11 @@ export function MainScreenClient(): ReactNode {
 						)}
 						
 						<LineageView
-							dataset={searchDataset}
+							dataset=""
 							variable={searchQuery}
 							onBack={handleSearchBack}
 							mode="search"
-							backButtonText="← Back to Search"
+							backButtonText="← Back"
 							initialLineage={searchLineage}
 						/>
 					</div>

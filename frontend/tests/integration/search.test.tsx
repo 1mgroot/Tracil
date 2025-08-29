@@ -58,7 +58,6 @@ describe('Search Integration', () => {
     jest.clearAllMocks()
     ;(useSearch as jest.Mock).mockReturnValue({
       query: '',
-      dataset: '',
       lineage: null,
       loading: false,
       error: null,
@@ -69,32 +68,29 @@ describe('Search Integration', () => {
   })
 
   describe('SearchForm', () => {
-    it('should render search form with inputs and submit button', () => {
+    it('should render search form with natural language input and submit button', () => {
       render(<SearchForm onSearch={mockSearch} />)
       
-      expect(screen.getByLabelText(/variable name/i)).toBeInTheDocument()
-      expect(screen.getByLabelText(/dataset/i)).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: /search variable lineage/i })).toBeInTheDocument()
+      expect(screen.getByLabelText(/tracil request/i)).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /tracil it/i })).toBeInTheDocument()
     })
 
     it('should call onSearch when form is submitted with valid data', async () => {
       render(<SearchForm onSearch={mockSearch} />)
       
-      const variableInput = screen.getByLabelText(/variable name/i)
-      const datasetInput = screen.getByLabelText(/dataset/i)
-      const submitButton = screen.getByRole('button', { name: /search variable lineage/i })
+      const queryInput = screen.getByLabelText(/tracil request/i)
+      const submitButton = screen.getByRole('button', { name: /tracil it/i })
       
-      fireEvent.change(variableInput, { target: { value: 'test-variable' } })
-      fireEvent.change(datasetInput, { target: { value: 'test-dataset' } })
+      fireEvent.change(queryInput, { target: { value: 'diastolic blood pressure change from baseline at week 2' } })
       fireEvent.click(submitButton)
       
-      expect(mockSearch).toHaveBeenCalledWith('test-variable', 'test-dataset')
+      expect(mockSearch).toHaveBeenCalledWith('diastolic blood pressure change from baseline at week 2')
     })
 
     it('should not call onSearch when form is submitted with empty data', () => {
       render(<SearchForm onSearch={mockSearch} />)
       
-      const submitButton = screen.getByRole('button', { name: /search variable lineage/i })
+      const submitButton = screen.getByRole('button', { name: /tracil it/i })
       fireEvent.click(submitButton)
       
       expect(mockSearch).not.toHaveBeenCalled()
@@ -103,9 +99,9 @@ describe('Search Integration', () => {
     it('should show loading state when loading is true', () => {
       render(<SearchForm onSearch={mockSearch} loading={true} />)
       
-      const submitButton = screen.getByRole('button', { name: /analyzing lineage/i })
+      const submitButton = screen.getByRole('button', { name: /traciling/i })
       expect(submitButton).toBeDisabled()
-      expect(screen.getByText(/analyzing lineage/i)).toBeInTheDocument()
+      expect(screen.getByText(/traciling/i)).toBeInTheDocument()
     })
 
     it('should show error message when error is provided', () => {
@@ -136,7 +132,7 @@ describe('Search Integration', () => {
       
       expect(screen.getByText(/test-dataset/i)).toBeInTheDocument()
       // LineageView renders the graph, so we check for the lineage content instead
-      expect(screen.getByText(/Lineage for test-dataset\.test-variable/i)).toBeInTheDocument()
+      expect(screen.getByText(/test-dataset\.test-variable/i)).toBeInTheDocument()
       // Check for TraceabilitySummary content
       expect(screen.getByText(/AI-Generated Traceability Summary/i)).toBeInTheDocument()
     })
@@ -148,7 +144,7 @@ describe('Search Integration', () => {
           dataset="test-dataset"
           onBack={jest.fn()}
           mode="search"
-          backButtonText="← Back to Search"
+          backButtonText="← Back"
         />
       )
       
@@ -163,12 +159,12 @@ describe('Search Integration', () => {
           dataset="test-dataset"
           onBack={mockOnBack}
           mode="search"
-          backButtonText="← Back to Search"
+          backButtonText="← Back"
           initialLineage={mockLineageData}
         />
       )
       
-      const backButton = screen.getByRole('button', { name: /back to search/i })
+      const backButton = screen.getByRole('button', { name: /back/i })
       fireEvent.click(backButton)
       
       expect(mockOnBack).toHaveBeenCalled()
@@ -181,14 +177,13 @@ describe('Search Integration', () => {
           dataset="test-dataset"
           onBack={jest.fn()}
           mode="search"
-          backButtonText="← Back to Search"
+          backButtonText="← Back"
           initialLineage={mockLineageData}
         />
       )
       
       // LineageView now renders TraceabilitySummary which has different structure
       expect(screen.getByText(/AI-Generated Traceability Summary/i)).toBeInTheDocument()
-      expect(screen.getByText(/Lineage Details/i)).toBeInTheDocument()
       // Check for the specific Nodes button in TraceabilitySummary
       expect(screen.getByRole('button', { name: /Nodes/i })).toBeInTheDocument()
       // Check for the specific Connections button in TraceabilitySummary
@@ -202,15 +197,13 @@ describe('Search Integration', () => {
       const { rerender } = render(<SearchForm onSearch={mockSearch} />)
       
       // Fill out and submit form
-      const variableInput = screen.getByLabelText(/variable name/i)
-      const datasetInput = screen.getByLabelText(/dataset/i)
-      const submitButton = screen.getByRole('button', { name: /search variable lineage/i })
+      const queryInput = screen.getByLabelText(/tracil request/i)
+      const submitButton = screen.getByRole('button', { name: /tracil it/i })
       
-      fireEvent.change(variableInput, { target: { value: 'test-variable' } })
-      fireEvent.change(datasetInput, { target: { value: 'test-dataset' } })
+      fireEvent.change(queryInput, { target: { value: 'diastolic blood pressure change from baseline at week 2' } })
       fireEvent.click(submitButton)
       
-      expect(mockSearch).toHaveBeenCalledWith('test-variable', 'test-dataset')
+      expect(mockSearch).toHaveBeenCalledWith('diastolic blood pressure change from baseline at week 2')
       
       // Now render results view
       rerender(
@@ -219,7 +212,7 @@ describe('Search Integration', () => {
           dataset="test-dataset"
           onBack={jest.fn()}
           mode="search"
-          backButtonText="← Back to Search"
+          backButtonText="← Back"
           initialLineage={mockLineageData}
         />
       )
@@ -230,7 +223,7 @@ describe('Search Integration', () => {
       
       expect(screen.getByText(/test-dataset/i)).toBeInTheDocument()
       // LineageView renders the lineage content, so check for that instead
-      expect(screen.getByText(/Lineage for test-dataset\.test-variable/i)).toBeInTheDocument()
+      expect(screen.getByText(/test-dataset\.test-variable/i)).toBeInTheDocument()
       expect(screen.getByText(/AI-Generated Traceability Summary/i)).toBeInTheDocument()
     })
   })

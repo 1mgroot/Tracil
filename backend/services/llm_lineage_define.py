@@ -35,9 +35,16 @@ Notes
 
 This version adds:
 - Auto-prefixing for bare ADaM variables (e.g., PARAMCD → ADQSADAS.PARAMCD).
-- Canonical node types: 'adam variable', 'sdtm variable', 'adam dataset', 'sdtm dataset', 'tlf display', 'tlf cell', 'crf page', 'protocol section', 'endpoint'.
-- Prompts require canonical IDs (ADaM DATASET.VARIABLE and SDTM DOMAIN.VAR) and exhaustive parents/children with concrete aCRF page & Protocol section/USDM anchors.
-- Backtrace augmentation to add SDTM→CRF→Protocol anchors when missing.
+- Canonical node types: 'adam variable', 'sdtm variable', 'adam dataset', 'sdtm dataset',
+  'tlf display', 'tlf cell', 'crf page', 'protocol section', 'endpoint'.
+- Prompts require canonical IDs (ADaM DATASET.VARIABLE and SDTM DOMAIN.VAR) and exhaustive
+  parents/children with concrete aCRF page & Protocol section/USDM anchors.
+- ARS path hardened: recursive ADaM⇐SDTM⇐CRF⇐Protocol backtrace, no orphan nodes, and
+  an ARS-only connectivity repair pass.
+
+Table-only tweak (requested):
+- Enforce edge direction **upstream→downstream**: Protocol/USDM → CRF → SDTM → ADaM → TLF.
+- Explanations must be **full sentences**.
 """
 
 from __future__ import annotations
@@ -46,6 +53,10 @@ import os, re, json, time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Iterable, Tuple
 from contextlib import contextmanager
+
+# Load environment variables
+from dotenv import load_dotenv
+load_dotenv()
 
 import numpy as np
 from openai import OpenAI
@@ -72,7 +83,7 @@ OVERLAP         = 100
 TOP_K           = 12
 EMBED_BATCH     = 64
 MAX_INPUTS      = 1500
-MAX_TOKENS      = 1400
+MAX_TOKENS      = 2000
 RETRY_TRIES     = 5
 RETRY_BASE_WAIT = 1.5
 
@@ -222,6 +233,126 @@ def _cosine(a: np.ndarray, b: np.ndarray) -> np.ndarray:
     a = a/(np.linalg.norm(a, axis=1, keepdims=True)+1e-8)
     b = b/(np.linalg.norm(b, axis=1, keepdims=True)+1e-8)
     return a @ b.T
+
+# --- Robust JSON decode for model outputs ---
+_JSON_FENCE_RE = re.compile(r"```(?:json)?\s*([\s\S]*?)\s*```", re.I)
+
+# --- Robust JSON decode for model outputs (improved) ---
+_JSON_FENCE_RE = re.compile(r"```(?:json)?\s*([\s\S]*?)\s*```", re.I)
+
+def _extract_balanced_json_blob(s: str) -> str:
+    """Return the first balanced {...} blob, respecting strings/escapes."""
+    i = s.find("{")
+    if i == -1:
+        raise ValueError("No '{' found in model output.")
+    depth = 0
+    in_str = False
+    quote = ""
+    esc = False
+    for j in range(i, len(s)):
+        ch = s[j]
+        if in_str:
+            if esc:
+                esc = False
+            elif ch == "\\":
+                esc = True
+            elif ch == quote:
+                in_str = False
+        else:
+            if ch in ("'", '"'):
+                in_str = True
+                quote = ch
+            elif ch == "{":
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+                if depth == 0:
+                    return s[i:j+1]
+    raise ValueError("Braces not balanced in model output.")
+
+def _maybe_close_square_brackets(blob: str) -> str:
+    """Balance '[' ... ']' outside strings by appending missing ']'s before the final '}'."""
+    depth = 0
+    in_str = False
+    quote = ""
+    esc = False
+    for ch in blob:
+        if in_str:
+            if esc:
+                esc = False
+            elif ch == "\\":
+                esc = True
+            elif ch == quote:
+                in_str = False
+        else:
+            if ch in ("'", '"'):
+                in_str = True
+                quote = ch
+            elif ch == "[":
+                depth += 1
+            elif ch == "]":
+                depth = max(0, depth - 1)
+    if depth > 0:
+        k = blob.rfind("}")
+        if k != -1:
+            return blob[:k] + ("]" * depth) + blob[k:]
+        return blob + ("]" * depth)
+    return blob
+
+def _parse_llm_json(s: str) -> Dict[str, Any]:
+    """
+    Parse JSON from model output robustly:
+      - strip code fences
+      - extract a balanced {...} object (respecting quotes/escapes)
+      - normalize smart quotes
+      - auto-close any unbalanced '[' arrays
+      - try json.loads, then ast.literal_eval as last resort
+    """
+    if not s:
+        raise ValueError("Empty model response while JSON was expected.")
+
+    raw = s.strip()
+    fence = _JSON_FENCE_RE.search(raw)
+    if fence:
+        raw = fence.group(1).strip()
+
+    try:
+        blob = _extract_balanced_json_blob(raw)
+    except Exception:
+        i, j = raw.find("{"), raw.rfind("}")
+        if i == -1 or j == -1 or j <= i:
+            raise ValueError("No JSON object found in model output.")
+        blob = raw[i:j+1]
+
+    # normalize curly quotes
+    blob = (blob.replace("\u201c", '"').replace("\u201d", '"')
+                .replace("\u2018", "'").replace("\u2019", "'"))
+
+    # auto-close any stray arrays
+    blob2 = _maybe_close_square_brackets(blob)
+
+    # strict JSON first
+    try:
+        return json.loads(blob2)
+    except Exception:
+        pass
+
+    # tolerant single-quote dicts
+    import ast
+    try:
+        obj = ast.literal_eval(blob2)
+    except Exception as e:
+        if os.getenv("LINEAGE_DEBUG"):
+            OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+            ts = int(time.time())
+            (OUTPUT_DIR / f"llm_raw_parse_fail_{ts}.txt").write_text(raw[:100000], encoding="utf-8")
+        raise ValueError(f"Model returned non-JSON and could not be coerced: {e}")
+
+    def _to_jsonable(x):
+        if isinstance(x, dict):  return {str(k): _to_jsonable(v) for k, v in x.items()}
+        if isinstance(x, (list, tuple, set)): return [_to_jsonable(v) for v in x]
+        return x
+    return _to_jsonable(obj)
 
 def _retrieve(client: OpenAI, chunks: List[Dict[str,str]], query: str, k:int=TOP_K) -> List[Dict[str,str]]:
     chunks = _prefilter_chunks(chunks, query)
@@ -420,6 +551,7 @@ def _build_messages_for_variable(target_ds: str, target_var: str, retrieved: Lis
         "For CRF anchors, use the aCRF index (page numbers); for Protocol, cite the exact §/heading and/or USDM ids; "
         "include short snippets when possible.\n"
         "Provide an 'explanation' on EVERY node/edge with [direct]/[reasoned]/[general] and a short citation.\n"
+        "Explanations must be full sentences.\n"
         "Output STRICT JSON in this schema:\n"
         + _variable_prompt_schema() +
         "Use ONLY 'from' and 'to' for edges; ensure every edge refers to an existing node id; avoid duplicates.\n"
@@ -442,7 +574,7 @@ def _build_messages_for_endpoint(endpoint_term: str, retrieved: List[Dict[str,st
         "Node types: 'protocol endpoint' for the root, 'crf page', 'sdtm dataset', 'adam dataset', 'tlf display'.\n"
         "Enumerate ALL relevant parents/children; do not stop at one path.\n"
         "Provide an 'explanation' on EVERY node and edge with [direct]/[reasoned]/[general] and cite anchors "
-        "(protocol §, USDM id, CRF page, define/analysis id, TLF id).\n"
+        "(protocol §, USDM id, CRF page, define/analysis id, TLF id). Explanations must be full sentences.\n"
         "Output STRICT JSON only in this schema:\n"
         + _endpoint_prompt_schema() +
         "Use ONLY 'from' and 'to' for edges; ensure endpoints exist and avoid duplicates.\n"
@@ -466,6 +598,11 @@ def _build_messages_for_table(display_id: str, mode: str, retrieved: List[Dict[s
     """
     rules_common = (
         "Provide an 'explanation' on EVERY node and edge using [direct]/[reasoned]/[general]. "
+        "Explanations MUST be full sentences.\n"
+        "EDGE DIRECTION (mandatory): edges must run **upstream→downstream**, where 'from' is the parent/source and 'to' is the child/derivation. "
+        "The required chain is: Protocol/SAP/USDM → CRF page/field → SDTM.DOMAIN.VAR (or SDTM Domain) → ADaM.DATASET.VAR (or ADaM Dataset) → TLF display. "
+        "Do **not** connect ADaM directly to CRF; connect CRF only to SDTM, SDTM to ADaM, and ADaM to TLF. "
+        "TLF displays should not have outgoing edges.\n"
         "[direct] must cite file and exact anchor when possible (define.xml path/ResultDisplay id, "
         "ARS analysis/output/whereClause ids, protocol section number or USDM id, aCRF page). "
         "Enumerate **ALL** parents/children present in evidence; unlimited nodes/edges are OK. "
@@ -477,25 +614,21 @@ def _build_messages_for_table(display_id: str, mode: str, retrieved: List[Dict[s
     if mode == "titles_only":
         MODE_TXT = (
             "SITUATION: Only combined TLF titles (no define.xml Analysis Results, no ARS).\n"
-            "Goal: Infer high-level lineage at the DATASET level (not variable-level):\n"
-            "- TLF Display → ADaM dataset(s) likely used\n"
-            "- ADaM dataset(s) → SDTM domain(s) likely sourced\n"
-            "- SDTM domain(s) → CRF form(s) likely captured\n"
-            "- Protocol/SAP endpoint(s) related to the display\n"
+            "Goal: Infer high-level lineage at the DATASET level (not variable-level) with correct DIRECTION:\n"
+            "Protocol/SAP/USDM → CRF Form(s) → SDTM Domain(s) → ADaM Dataset(s) → TLF Display. "
             "Avoid specific variable names in this mode. Keep nodes at dataset/domain/form/endpoint level.\n"
         )
     elif mode == "define_ar":
         MODE_TXT = (
             "SITUATION: define.xml contains Analysis Results metadata for the display.\n"
-            "Goal: Build variable-level lineage using define evidence:\n"
-            "- TLF Display → ADaM variable(s) listed in Analysis Result (emit as DATASET.VARIABLE) "
-            "→ SDTM parent variable(s) (emit as DOMAIN.VAR) → CRF anchors → related Protocol/SAP section(s)/USDM ids.\n"
+            "Goal: Build **variable-level** lineage using define evidence with correct DIRECTION:\n"
+            "Protocol/SAP/USDM → CRF page/field → SDTM parent variable(s) (DOMAIN.VAR) → ADaM variable(s) (DATASET.VARIABLE) → TLF display.\n"
         )
     else:  # ars_display
         MODE_TXT = (
             "SITUATION: ARS/ARD JSONs are available for this display (table-level summary, not a single cell).\n"
             "Goal: Summarize the ADaM variables and filters used across the display per ARS (emit as DATASET.VARIABLE), "
-            "then map back to SDTM parents and CRF anchors. Include Protocol/SAP linkage.\n"
+            "then map back with correct DIRECTION: Protocol/SAP/USDM → CRF → SDTM → ADaM → TLF. Include Protocol/SAP linkage.\n"
         )
 
     SYSTEM = (
@@ -530,18 +663,25 @@ def _build_messages_for_ars_backtrace(
     """
     adam_list = ", ".join(adam_vars) if adam_vars else "(none)"
     SYSTEM = (
-        "You are a senior CDISC standards expert augmenting a lineage graph for a specific output/display.\n"
+        "You are a senior CDISC standards expert augmenting a lineage graph for a specific ARS output/cell.\n"
         "Input: a list of ADaM variables already linked to this output.\n"
-        "Task: For EACH ADaM variable, backtrace to one or more SDTM parent variables; for those, "
-        "identify CRF page/field anchors from the aCRF index (emit concrete nodes like 'CRF page 12 • AE.AESTDTC'); "
-        "and provide the related Protocol/SAP section(s) and USDM endpoint/objective ids.\n\n"
+        "Task: For **EACH** ADaM variable, recursively backtrace to **ALL** SDTM parent variables used; for those SDTM parents, "
+        "identify **specific CRF page/field anchors** from the aCRF index (emit nodes like 'CRF page 12 • VS.VSSTRESN' or "
+        "'CRF page 5 • DM.ARM'); and attach the related **Protocol/SAP/USDM** anchors (precise section number, SoA/endpoint id or objective).\n\n"
+        "EVIDENCE PRECEDENCE (use in this order and cite): ADaM define/spec → SDTM define/spec → aCRF index → Protocol text/USDM.\n\n"
         "STRICT requirements:\n"
-        "- Build CONNECTED paths for every ADaM var: Protocol/USDM §/ID → CRF page/field → SDTM.DOMAIN.VAR → ADaM.DATASET.VAR.\n"
-        "- Enumerate all plausible parents/children found; do not reduce to a single path.\n"
-        "- Node types must be from: 'protocol section','crf page','sdtm variable','adam variable'.\n"
-        "- Use existing ADaM variable IDs EXACTLY as provided; do not rename.\n"
-        "- Provide an 'explanation' on EVERY node and edge with citations/snippets.\n"
-        "- Return STRICT JSON ONLY in this schema:\n"
+        "1) **Connectivity:** Build a fully CONNECTED path for **every** ADaM var: Protocol/SAP/USDM → CRF page/field → SDTM.DOMAIN.VAR → ADaM.DATASET.VAR.\n"
+        "   - Do **not** emit orphan nodes. If you mention an SDTM variable, you **must** connect it by an edge to ≥1 ADaM variable that it feeds.\n"
+        "   - Similarly, every CRF page must connect to ≥1 SDTM variable; every Protocol/SAP/USDM node must connect to ≥1 CRF page.\n"
+        "   - If a candidate cannot be supported, **do not emit the node**; instead add a 'gaps' item stating exactly what is missing.\n"
+        "2) **Multi-parent & helpers:** Include **all plausible parents** per evidence and common CDISC practice. "
+        "   Add ADaM helper variables actually implicated by the cell (e.g., AVAL, BASE, CHG, ABLFL, ANLxxFL, AVISIT/AVISITN, PARAM/PARAMCD, TRTxxA/PN) "
+        "   and backtrace each helper to its SDTM parent(s), CRF, and Protocol.\n"
+        "3) **Domain realism:** Use CDISC conventions (e.g., Vital Signs → VS.* feeding ADVS.*). Avoid introducing unrelated domains "
+        "(e.g., AE) unless you connect them to an ADaM variable with a clear derivation and citation.\n"
+        "4) **Explanations:** Every node/edge must begin with [direct], [reasoned], or [general], followed by a short anchor "
+        "(file + id, page#, JSON path, or brief snippet). Explanations must be full sentences.\n"
+        "Output STRICT JSON ONLY in this schema:\n"
         "{\n"
         "  'variable': '<display id or cell id>',\n"
         "  'dataset': 'table',\n"
@@ -569,14 +709,19 @@ def _build_messages_for_ars_backtrace(
 def _build_messages_for_ars_cell(cell_spec: str, retrieved: List[Dict[str,str]]) -> List[Dict[str,str]]:
     SYSTEM = (
         "You are an expert reading ARS/ARD JSON for clinical TLF outputs. "
-        "Your ONLY source of truth is the ARS text provided. Do not invent content. "
-        "Task: locate the single best-matching output/cell for the user's spec string, "
-        "then extract ALL ADaM parents (emit as DATASET.VARIABLE), filters/slices (where clauses), "
-        "populations/denominators, parameters, and the statistical method shown in ARS. "
+        "Your ONLY source of truth is the ARS/ARD text provided (do not invent fields not in ARS). "
+        "Task: locate the single best-matching output/cell for the user's spec string, then extract:\n"
+        "  • ALL parent ADaM variables (emit as DATASET.VARIABLE, e.g., ADVS.AVAL, ADSL.TRT01A),\n"
+        "  • Any ADaM helper variables actually used (e.g., BASE, CHG, ABLFL, ANLxxFL, AVISIT/AVISITN, PARAM/PARAMCD),\n"
+        "  • Filters/whereClauses, populations/denominators, parameters, and the statistical method.\n"
+        "Also add the ADaM dataset node(s) (e.g., ADVS, ADSL) when visible in ARS and link dataset→variable.\n"
         "Return a lineage graph with:\n"
-        "- a TLF cell target node whose id is exactly the input spec string,\n"
-        "- one node per ADaM parent (type='adam variable'), and all applicable rules as edges with [direct] ARS citations.\n"
-        "If multiple ARS candidates remain, pick the strongest and list alternates under 'gaps' as ambiguity notes.\n"
+        "  - a TLF cell target node whose id is exactly the input spec string,\n"
+        "  - one node per ADaM parent/helper (type='adam variable') with [direct] explanations that cite ARS anchors "
+        "(analysisId/outputId/whereClause/param ids or exact ARS JSON key paths). "
+        "Explanations must be full sentences.\n"
+        "If multiple ARS candidates remain, pick the strongest and place alternates under 'gaps' as ambiguity notes.\n"
+        "Every 'explanation' MUST begin with [direct]/[reasoned]/[general], followed by a short anchor.\n"
         "STRICT JSON only in this schema:\n"
         "{ 'variable': '<cell spec>', 'dataset': 'table', 'summary': '<short>', "
         "  'lineage': { 'nodes': [...], 'edges': [...], 'gaps': [...] } }\n"
@@ -586,6 +731,106 @@ def _build_messages_for_ars_cell(cell_spec: str, retrieved: List[Dict[str,str]])
         EVIDENCE += f"\n[CHUNK {c['id']}]\n{c['text'][:2400]}\n"
     USER = f"Cell spec to locate and extract from ARS: {cell_spec}\nReturn STRICT JSON now.\n{EVIDENCE}"
     return [{"role":"system","content":SYSTEM},{"role":"user","content":USER}]
+
+# ---------------- ARS connectivity repair (micro-prompt) ----------------
+
+def _build_messages_for_ars_connectivity_repair(
+    tlf_cell_id: str,
+    adam_vars: List[str],
+    orphan_sdtm_vars: List[str],
+    retrieved: List[Dict[str,str]]
+) -> List[Dict[str,str]]:
+    """
+    ARS-only micro-prompt to repair connectivity when SDTM nodes exist but are not linked
+    to any ADaM variable. We ask the model to either (a) add the missing edges/intermediate
+    ADaM helpers with citations, or (b) drop the SDTM node and emit a precise gap.
+    """
+    SYSTEM = (
+        "You are repairing an ARS-derived backtrace graph. Some SDTM variables appear but are not linked to any ADaM parents. "
+        "Your job: for EACH listed SDTM variable, either (1) add the missing, evidence-based connection(s) to one or more of the "
+        "already-linked ADaM variables (adding necessary ADaM helper variables like BASE/CHG/AVISIT/ANLxxFL/PARAMCD as needed), "
+        "or (2) if no evidence supports the link, do not connect it and instead return a 'gaps' note explaining exactly why. "
+        "Do NOT create unrelated nodes. Keep everything CONNECTED up to CRF and Protocol anchors if available. "
+        "Every explanation must start with [direct]/[reasoned]/[general], include a short anchor/citation, and be a full sentence.\n"
+        "Return STRICT JSON with only the incremental subgraph to add (nodes and edges), plus any gaps."
+    )
+    orphans = ", ".join(orphan_sdtm_vars) if orphan_sdtm_vars else "(none)"
+    adam_list = ", ".join(adam_vars) if adam_vars else "(none)"
+    EVIDENCE = "\n\n--- EVIDENCE (define/spec, CRF index, protocol text, USDM, ARS) ---\n"
+    for c in retrieved:
+        EVIDENCE += f"\n[CHUNK {c['id']}]\n{c['text'][:2000]}\n"
+    USER = (
+        f"Output/cell id: {tlf_cell_id}\n"
+        f"Existing ADaM variables: {adam_list}\n"
+        f"SDTM variables to repair (must link to ≥1 ADaM var or be dropped with a gap): {orphans}\n"
+        f"Return STRICT JSON with added nodes/edges/gaps only.\n"
+        f"{EVIDENCE}"
+    )
+    return [{"role":"system","content":SYSTEM},{"role":"user","content":USER}]
+
+def _ensure_ars_connectivity(graph: Dict[str, Any], *, model: str, embed_model: str) -> Dict[str, Any]:
+    """
+    ARS-only post step: if SDTM nodes exist that are not connected to any ADaM variable,
+    ask the LLM to add the missing connections (or justify their removal in 'gaps').
+    """
+    try:
+        if (graph.get("dataset") != "table") or ("|" not in str(graph.get("variable",""))):
+            return graph  # not an ARS cell path
+        lin = graph.get("lineage", {})
+        nodes = lin.get("nodes", [])
+        edges = lin.get("edges", [])
+        adam_vars = [n["id"] for n in nodes if (n.get("type","").lower()=="adam variable")]
+        sdtm_vars = [n["id"] for n in nodes if (n.get("type","").lower()=="sdtm variable")]
+        if not sdtm_vars or not adam_vars:
+            return graph
+        # find SDTM nodes with no edge touching any ADaM variable
+        touch = set()
+        for e in edges:
+            if e.get("from") in sdtm_vars and e.get("to") in adam_vars: touch.add(e.get("from"))
+            if e.get("to")   in sdtm_vars and e.get("from") in adam_vars: touch.add(e.get("to"))
+        orphans = [s for s in sdtm_vars if s not in touch]
+        if not orphans:
+            return graph
+
+        # build broad evidence and ask for minimal repair
+        client = _make_client()
+        sess = _latest_session()
+        summary = _load_session_summary(sess)
+        pairs = _collect_evidence_texts(sess, summary)
+        chunks=[]
+        for doc_id, text in pairs:
+            chunks += _chunk_text(doc_id, text, MAX_CHARS, OVERLAP)
+        query = f"Repair missing SDTM→ADaM connectivity for {', '.join(orphans)} in ARS cell '{graph.get('variable')}'."
+        with _use_embed_model(embed_model or EMBED_MODEL):
+            top_chunks = _retrieve(client, chunks, query, k=TOP_K)
+        messages = _build_messages_for_ars_connectivity_repair(
+            tlf_cell_id=str(graph.get("variable")),
+            adam_vars=adam_vars,
+            orphan_sdtm_vars=orphans,
+            retrieved=top_chunks
+        )
+        def _chat_call(m: str):
+            resp = _retry(client.chat.completions.create, model=m, temperature=0.0,
+                          response_format={"type":"json_object"},
+                          messages=messages, max_tokens=MAX_TOKENS)
+            return _parse_llm_json(resp.choices[0].message.content)
+        try:
+            aug_raw = _chat_call(model)
+        except Exception:
+            aug_raw = _chat_call(FALLBACK_MODEL)
+        aug_graph = {
+            "variable": aug_raw.get("variable") or graph.get("variable"),
+            "dataset":  "table",
+            "summary":  (aug_raw.get("summary") or "").strip(),
+            "lineage": {
+                "nodes": list(aug_raw.get("lineage", {}).get("nodes", [])),
+                "edges": list(aug_raw.get("lineage", {}).get("edges", [])),
+                "gaps":  list(aug_raw.get("lineage", {}).get("gaps",  [])),
+            }
+        }
+        return _merge_graphs(graph, aug_graph)
+    except Exception:
+        return graph
 
 # ---------------- graph post-processing & helpers ----------------
 
@@ -602,7 +847,7 @@ def _suggest_type_for_id(nid: str, dataset_kind: str) -> str:
         return "adam variable"
     if up.startswith("SDTM."):
         return "sdtm variable"
-    if re.match(r"^[A-Z]{2}\.[A-Z0-9_]+$", up):  # e.g., AE.AESTDTC
+    if re.match(r"^[A-Z]{2}\.[A-Z0-9_]+$", up):
         return "sdtm variable"
     if up in ("PROTOCOL", "CRF", "USDM"):
         return up.lower()
@@ -625,7 +870,7 @@ def _auto_prefix_adam_vars(graph: Dict[str, Any]) -> Dict[str, Any]:
     ds_ids = [d for d in ds_ids if d]
 
     # try infer dataset from edges (dataset → variable)
-    edge_map = {}
+    edge_map: Dict[str, str] = {}
     for e in edges:
         frm = str(e.get("from") or "")
         to  = str(e.get("to")   or "")
@@ -682,16 +927,11 @@ def _canonicalize_types_in_graph(graph: Dict[str, Any]) -> Dict[str, Any]:
         if t in ("protocol", "protocol/sap", "sap", "protocol section"):
             n["type"] = "protocol section"; continue
         if t in ("crf", "acrf", "crf page"):
-            # if id mentions page → crf page
-            if "crf page" in (nid.lower() + " " + lbl):
-                n["type"] = "crf page"
-            else:
-                n["type"] = "crf page"
+            n["type"] = "crf page"
             continue
 
         # unify adam/sdtm datasets and variables
         if t in ("adam", "adam variable", "adsl var", "ad a m", "adaml", "adaml variable"):
-            # if looks like dataset.var keep variable, else dataset
             if "." in nid:
                 n["type"] = "adam variable"
             else:
@@ -704,7 +944,7 @@ def _canonicalize_types_in_graph(graph: Dict[str, Any]) -> Dict[str, Any]:
                 n["type"] = "sdtm dataset"
             continue
 
-        # if nothing matched, infer from id pattern
+        # infer from id pattern
         if not t or t in ("target", "source", "concept"):
             if re.match(r"^AD[A-Z0-9]{2,}\.[A-Z0-9_]+$", up):
                 n["type"] = "adam variable"
@@ -767,12 +1007,12 @@ def _validate_and_fix_graph(graph: Dict[str, Any]) -> Dict[str, Any]:
         if t in ("", "target", "source"):
             n["type"] = _suggest_type_for_id(nid, dataset_kind)
         if not n.get("explanation"):
-            n["explanation"] = "[reasoned] Included based on adjacent evidence and CDISC artifacts."
+            n["explanation"] = "[reasoned] This node is included based on adjacent evidence and CDISC artifacts."
 
     nodes_fixed = [node_map[n] for n in order]
 
     # Normalize edges
-    edges_fixed = []
+    edges_fixed: List[Dict[str, Any]] = []
     for e in edges:
         if "from" not in e and "source" in e:
             e["from"] = e.pop("source")
@@ -781,18 +1021,37 @@ def _validate_and_fix_graph(graph: Dict[str, Any]) -> Dict[str, Any]:
         frm = str(e.get("from") or "").strip()
         to  = str(e.get("to")   or "").strip()
         if not frm or not to:
-            gaps.append({"explanation": "Dropped edge missing 'from' or 'to'."})
+            gaps.append({"explanation": "Dropped an edge because 'from' or 'to' was missing."})
             continue
         if frm not in node_map or to not in node_map:
             gaps.append({"source": frm or None, "target": to or None,
-                         "explanation": "Edge refers to unknown node id; edge removed."})
+                         "explanation": "Removed an edge that referenced an unknown node id."})
             continue
         if not e.get("explanation"):
-            e["explanation"] = "[reasoned] Connection inferred from standard mapping and nearby evidence."
+            e["explanation"] = "[reasoned] This connection is inferred from standard mapping and nearby evidence."
         edges_fixed.append(e)
 
     lineage["nodes"] = nodes_fixed
     lineage["edges"] = edges_fixed
+
+    # --- DROP PLACEHOLDER EXPLICIT ORPHANS (requested) ---
+    # Remove nodes like "[general] Explicit node for the requested/target variable."
+    # when they have no edges connected.
+    used_ids = {str(e.get("from")) for e in edges_fixed} | {str(e.get("to")) for e in edges_fixed}
+
+    def _is_explicit_placeholder(n: Dict[str, Any]) -> bool:
+        expl = (n.get("explanation") or "").lower()
+        # robust match: must be [general] and mention "explicit node" + ("requested" or "target")
+        return ("[general]" in expl) and ("explicit node" in expl) and ("requested" in expl or "target" in expl)
+
+    pruned_nodes = []
+    for n in nodes_fixed:
+        nid = n.get("id")
+        if nid not in used_ids and _is_explicit_placeholder(n):
+            continue  # drop this orphan placeholder
+        pruned_nodes.append(n)
+
+    lineage["nodes"] = pruned_nodes
 
     # Canonicalize node types
     _canonicalize_types_in_graph(graph)
@@ -863,7 +1122,7 @@ def _table_mode_for_display(sess_dir: Path, summary: Dict[str, Any], display_id:
 # ---------------- main builders ----------------
 
 def _extract_adam_vars_from_nodes(nodes: List[Dict[str, Any]]) -> List[str]:
-    out = []
+    out: List[str] = []
     for n in nodes:
         if (n.get("type") or "").lower() == "adam variable":
             vid = n.get("id") or n.get("label")
@@ -909,7 +1168,7 @@ def _augment_backtrace_if_missing_sdtm(base_graph: Dict[str, Any], *, model: str
         resp = _retry(client.chat.completions.create, model=m, temperature=0.0,
                       response_format={"type":"json_object"},
                       messages=messages, max_tokens=MAX_TOKENS)
-        return json.loads(resp.choices[0].message.content.strip())
+        return _parse_llm_json(resp.choices[0].message.content)
 
     try:
         aug_raw = _chat_call(model)
@@ -988,7 +1247,7 @@ def build_lineage_with_llm_from_session(
         resp = _retry(client.chat.completions.create, model=m, temperature=0.0,
                       response_format={"type":"json_object"},
                       messages=messages, max_tokens=MAX_TOKENS)
-        return json.loads(resp.choices[0].message.content.strip())
+        return _parse_llm_json(resp.choices[0].message.content)
 
     try:
         raw = _chat_call(model)
@@ -1082,7 +1341,7 @@ def build_endpoint_lineage_with_llm_from_session(
         resp = _retry(client.chat.completions.create, model=m, temperature=0.0,
                       response_format={"type":"json_object"},
                       messages=messages, max_tokens=MAX_TOKENS)
-        return json.loads(resp.choices[0].message.content.strip())
+        return _parse_llm_json(resp.choices[0].message.content)
 
     try:
         raw = _chat_call(model)
@@ -1162,7 +1421,7 @@ def _build_ars_cell_base_graph_llm(cell_spec: str, *, model: str, embed_model: s
         resp = _retry(client.chat.completions.create, model=m, temperature=0.0,
                       response_format={"type": "json_object"},
                       messages=messages, max_tokens=MAX_TOKENS)
-        return json.loads(resp.choices[0].message.content.strip())
+        return _parse_llm_json(resp.choices[0].message.content)
 
     try:
         raw = _chat(model)
@@ -1213,6 +1472,8 @@ def build_table_lineage_from_session(
         )
         # Backtrace to add SDTM → CRF → Protocol for the ADaM parents
         base_graph = _augment_backtrace_if_missing_sdtm(base_graph, model=model, embed_model=embed_model)
+        # ARS-only connectivity repair: ensure every SDTM var is linked to ≥1 ADaM var (or removed with a gap)
+        base_graph = _ensure_ars_connectivity(base_graph, model=model, embed_model=embed_model)
         return base_graph
 
     # --- LLM display-level (situations #1/#2 or ARS summary) ---
@@ -1251,7 +1512,7 @@ def build_table_lineage_from_session(
         resp = _retry(client.chat.completions.create, model=m, temperature=0.0,
                       response_format={"type":"json_object"},
                       messages=messages, max_tokens=MAX_TOKENS)
-        return json.loads(resp.choices[0].message.content.strip())
+        return _parse_llm_json(resp.choices[0].message.content)
 
     try:
         raw = _chat_call(model)

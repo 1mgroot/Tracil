@@ -29,9 +29,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Parse request body
     const body: AnalyzeVariableRequest = await request.json()
     
-    if (!body.variable || !body.dataset) {
+    // Allow empty dataset for freeform search; only variable is strictly required
+    if (!body.variable) {
       return NextResponse.json(
-        { error: 'Missing required fields: variable and dataset' },
+        { error: 'Missing required field: variable' },
         { status: 400 }
       )
     }
