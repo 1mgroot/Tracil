@@ -49,7 +49,7 @@ export function SearchForm({
 						id="query"
 						value={query}
 						onChange={handleQueryChange}
-						placeholder="e.g., diastolic blood pressure change from baseline at week 2 for high dose treatment"
+						placeholder="e.g., Show the derivation of max week 4 baseline pulse rate for patients that received Xanomeline low dose treatment in table ARS_VS_T01"
 						rows={3}
 						className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed resize-y min-h-[4rem]"
 						disabled={loading}
@@ -97,10 +97,10 @@ export function SearchForm({
 			<div className="mt-6 p-4 bg-gray-50 rounded-lg">
 				<h4 className="text-sm font-medium text-gray-700 mb-2">Example Requests</h4>
 				<div className="text-xs text-gray-600 space-y-2">
-					<p><strong>•</strong> "diastolic blood pressure change from baseline at week 2 for high dose treatment"</p>
-					<p><strong>•</strong> "hemoglobin mean values in lab data for week 4 by treatment group"</p>
-					<p><strong>•</strong> "adverse events leading to treatment discontinuation"</p>
-					<p><strong>•</strong> "demographics age distribution by treatment arm"</p>
+					<p><strong>•</strong> "AE.AESDTH"</p>
+					<p><strong>•</strong> "I want to see the lineage of RACE in ADSL dataset"</p>
+					<p><strong>•</strong> "Trace the CIBIC endpoint in protocol"</p>
+					<p><strong>•</strong> "Show the derivation of max week 4 baseline pulse rate for patients that received Xanomeline low dose treatment in table ARS_VS_T01"</p>
 				</div>
 			</div>
 		</div>
