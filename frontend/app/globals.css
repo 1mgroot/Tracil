@@ -240,17 +240,26 @@
    Idle: mix accent with pane/item bg; Active: solid accent bg with light text. */
 .sidebar-item.is-idle {
   background: color-mix(in oklab, var(--accent-color, var(--sidebar-item-bg)) var(--tone, 10%), var(--sidebar-item-bg));
+  border: 1px solid transparent;
+  backdrop-filter: blur(8px);
 }
 .sidebar-item.is-idle:hover {
   background: color-mix(in oklab, var(--accent-color, var(--sidebar-item-hover-bg)) var(--tone, 18%), var(--sidebar-item-hover-bg));
+  border-color: color-mix(in oklab, var(--accent-color, var(--sidebar-border)) 30%, var(--sidebar-border));
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px oklch(0 0 0 / 0.08);
 }
 .sidebar-item.is-active {
   background: color-mix(in oklab, var(--accent-color, var(--sidebar-item-active-bg)) 85%, var(--sidebar-item-active-bg));
   color: var(--sidebar-item-active-text);
   border-color: transparent;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 2px 12px oklch(0 0 0 / 0.12);
 }
 .sidebar-item.is-active:hover {
   background: color-mix(in oklab, var(--accent-color, var(--sidebar-item-active-bg)) 85%, var(--sidebar-item-active-bg));
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px oklch(0 0 0 / 0.15);
 }
 
   /* Variable card state styling with color-mix - similar to sidebar items */
@@ -431,6 +440,8 @@
   will-change: width;
   overflow: hidden;
   flex-shrink: 0;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .sidebar-container.collapsed {
@@ -463,4 +474,120 @@
 .sidebar-animation-wrapper {
   position: relative;
   overflow: hidden;
+}
+
+/* Enhanced sidebar group styling */
+.sidebar-group-header {
+  position: relative;
+  overflow: hidden;
+}
+
+.sidebar-group-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    135deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent 100%
+  );
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.sidebar-group-header:hover::before {
+  opacity: 1;
+}
+
+/* Enhanced chevron animation for sidebar groups */
+.sidebar-group button svg {
+  transform-origin: center;
+  will-change: transform;
+}
+
+/* Smooth expand/collapse animation with easing */
+.sidebar-group .transition-all {
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Enhanced hover effects for group buttons */
+.sidebar-group button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px oklch(0 0 0 / 0.06);
+}
+
+.sidebar-group button:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px oklch(0 0 0 / 0.08);
+}
+
+/* Enhanced scrollbar styling for sidebar - Apple-style minimal design */
+.sidebar-container::-webkit-scrollbar {
+  width: 6px;
+  background: transparent;
+}
+
+.sidebar-container::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 4px;
+}
+
+.sidebar-container::-webkit-scrollbar-thumb {
+  background: oklch(0 0 0 / 0.08);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  min-height: 40px;
+}
+
+.sidebar-container::-webkit-scrollbar-thumb:hover {
+  background: oklch(0 0 0 / 0.15);
+  background-clip: content-box;
+}
+
+.sidebar-container::-webkit-scrollbar-thumb:active {
+  background: oklch(0 0 0 / 0.25);
+  background-clip: content-box;
+}
+
+/* Dark mode scrollbar */
+.dark .sidebar-container::-webkit-scrollbar-thumb {
+  background: oklch(1 1 1 / 0.08);
+  background-clip: content-box;
+}
+
+.dark .sidebar-container::-webkit-scrollbar-thumb:hover {
+  background: oklch(1 1 1 / 0.15);
+  background-clip: content-box;
+}
+
+.dark .sidebar-container::-webkit-scrollbar-thumb:active {
+  background: oklch(1 1 1 / 0.25);
+  background-clip: content-box;
+}
+
+/* Firefox scrollbar styling */
+.sidebar-container {
+  scrollbar-width: thin;
+  scrollbar-color: oklch(0 0 0 / 0.08) transparent;
+}
+
+.dark .sidebar-container {
+  scrollbar-color: oklch(1 1 1 / 0.08) transparent;
+}
+
+/* Hide scrollbar when not needed */
+.sidebar-container:not(:hover)::-webkit-scrollbar-thumb {
+  background: oklch(0 0 0 / 0.04);
+  background-clip: content-box;
+}
+
+.dark .sidebar-container:not(:hover)::-webkit-scrollbar-thumb {
+  background: oklch(1 1 1 / 0.04);
+  background-clip: content-box;
 }

@@ -12,8 +12,10 @@ export function Sidebar({ className, header, children, onKeyDown, ...props }: Si
 	return (
 		<nav
 			className={cn(
-				'hidden md:flex md:flex-col md:sticky md:top-0 md:h-screen md:overflow-hidden border-r',
-				'bg-[var(--sidebar-pane-bg)]',
+				'hidden md:flex md:flex-col md:sticky md:top-0 md:h-screen md:overflow-hidden',
+				'bg-[var(--sidebar-pane-bg)]/80 backdrop-blur-sm',
+				'border-r border-[var(--sidebar-border)]/60',
+				'shadow-sm',
 				className,
 			)}
 			role="navigation"
@@ -21,8 +23,12 @@ export function Sidebar({ className, header, children, onKeyDown, ...props }: Si
 			onKeyDown={onKeyDown}
 			{...props}
 		>
-			{header ? <div className="border-b border-gray-200 dark:border-gray-700">{header}</div> : null}
-			<div className="flex-1 overflow-y-auto p-2 space-y-3">{children}</div>
+			{header ? (
+				<div className="border-b border-[var(--sidebar-border)]/50 bg-[var(--sidebar-pane-bg)]/60 backdrop-blur-sm">
+					{header}
+				</div>
+			) : null}
+			<div className="flex-1 overflow-y-auto p-4 space-y-4 pr-6">{children}</div>
 		</nav>
 	)
 }
@@ -38,37 +44,61 @@ export function SidebarGroup({ label, accentVar, className, children, collapsibl
 	const [expanded, setExpanded] = useState<boolean>(defaultExpanded)
 	return (
 		<div 
-			className={cn('space-y-1', className)} 
+			className={cn('space-y-2', className)} 
 			style={accentVar ? { ['--accent-color' as string]: `var(${accentVar})` } : undefined} 
 			role="group"
 			aria-labelledby={`sidebar-group-${label.toLowerCase().replace(/\s+/g, '-')}`}
 			{...props}
 		>
-			<div id={`sidebar-group-${label.toLowerCase().replace(/\s+/g, '-')}`} className="px-2 pt-2">
-				<button
-					type="button"
-					className="w-full flex items-center justify-between text-left text-xs font-medium tracking-wide text-[--text-muted] hover:text-[var(--text-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--focus)] rounded"
-					aria-expanded={expanded}
-					onClick={() => collapsible && setExpanded(prev => !prev)}
+			<button
+				type="button"
+				className={cn(
+					'w-full flex items-center justify-between text-left',
+					'px-4 py-3 text-xs font-medium tracking-wide',
+					'text-[--text-muted] hover:text-[var(--text-primary)]',
+					'hover:bg-white/60 dark:hover:bg-gray-800/60',
+					'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-0',
+					'rounded-xl transition-all duration-200 backdrop-blur-sm',
+					'border border-transparent hover:border-[var(--sidebar-border)]/30',
+					'group'
+				)}
+				id={`sidebar-group-${label.toLowerCase().replace(/\s+/g, '-')}`}
+				aria-expanded={expanded}
+				onClick={() => collapsible && setExpanded(prev => !prev)}
+			>
+				<span className="flex items-center gap-3">
+					<span
+						className="inline-block h-3 w-3 rounded-full shadow-sm"
+						style={accentVar ? { background: `var(${accentVar})` } : undefined}
+						aria-hidden="true"
+					/>
+					{label}
+				</span>
+				{collapsible && (
+					<svg 
+						className={cn(
+							'h-4 w-4 text-[--text-muted] transition-all duration-300 ease-out',
+							'group-hover:text-[var(--text-primary)] group-hover:scale-110',
+							expanded ? 'rotate-180 scale-110' : 'rotate-0 scale-100'
+						)} 
+						viewBox="0 0 20 20" 
+						fill="currentColor" 
+						aria-hidden="true"
+					>
+						<path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clipRule="evenodd" />
+					</svg>
+				)}
+			</button>
+			
+			{expanded && (
+				<div 
+					className="space-y-2 transition-all duration-200"
+					role="listbox" 
+					aria-labelledby={`sidebar-group-${label.toLowerCase().replace(/\s+/g, '-')}`}
 				>
-					<span className="flex items-center gap-2">
-						<span
-							className="inline-block h-2 w-2 rounded-full"
-							style={accentVar ? { background: `var(${accentVar})` } : undefined}
-							aria-hidden="true"
-						/>
-						{label}
-					</span>
-					{collapsible && (
-						<svg className="h-3 w-3 text-[--text-muted]" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-							<path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clipRule="evenodd" />
-						</svg>
-					)}
-				</button>
-			</div>
-			<div className={cn('mt-1 space-y-1 transition-[max-height,opacity] duration-200', expanded ? '' : 'max-h-0 overflow-hidden opacity-0')} role="listbox" aria-labelledby={`sidebar-group-${label.toLowerCase().replace(/\s+/g, '-')}`}>
-				{children}
-			</div>
+					{children}
+				</div>
+			)}
 		</div>
 	)
 }
@@ -83,9 +113,11 @@ export function SidebarItem({ className, active, tone, itemId, children, ...prop
 	return (
 		<button
 			className={cn(
-				'group w-full text-left inline-flex items-center h-9 rounded-md px-3 text-sm transition-colors border sidebar-item',
+				'group w-full text-left inline-flex items-center h-10 rounded-xl px-4 text-sm',
+				'transition-all duration-200 border sidebar-item',
+				'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-0',
+				'hover:scale-[1.02] active:scale-[0.98]',
 				active ? 'is-active' : 'is-idle',
-				'focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--focus)]',
 				className,
 			)}
 			style={tone ? ({ ['--tone' as string]: `${tone}%` } as CSSProperties) : undefined}
