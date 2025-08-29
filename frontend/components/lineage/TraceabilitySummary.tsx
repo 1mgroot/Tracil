@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { LineageGraph } from '@/types/lineage'
 import { ChevronDown, ChevronRight } from 'lucide-react'
-import { getNodeDisplayText } from '@/lib/utils'
+import { getNodeDisplayText, capitalizeWords } from '@/lib/utils'
 import { getTypeColors, type ArtifactType } from '@/lib/colors'
 
 interface TraceabilitySummaryProps {
@@ -187,11 +187,11 @@ export function TraceabilitySummary({ lineage }: TraceabilitySummaryProps) {
                       <div key={`${edge.from}-${edge.to}`} className="bg-gray-50 rounded-md p-2 border border-gray-200 hover:border-gray-300 transition-colors">
                         <div className="flex items-center space-x-2 mb-1">
                           <div className="flex-shrink-0 w-2 h-2 bg-gray-400 rounded-full"></div>
-                          <span className="text-xs font-semibold text-gray-900 truncate">{edge.from}</span>
+                          <span className="text-xs font-semibold text-gray-900 truncate">{capitalizeWords(edge.from)}</span>
                           <svg className="w-3 h-3 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                           </svg>
-                          <span className="text-xs font-semibold text-gray-900 truncate">{edge.to}</span>
+                          <span className="text-xs font-semibold text-gray-900 truncate">{capitalizeWords(edge.to)}</span>
                         </div>
                         
                         {edge.label && (
