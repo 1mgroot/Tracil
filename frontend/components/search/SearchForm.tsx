@@ -97,10 +97,10 @@ export function SearchForm({
 			<div className="mt-6 p-4 bg-gray-50 rounded-lg">
 				<h4 className="text-sm font-medium text-gray-700 mb-2">Example Requests</h4>
 				<div className="text-xs text-gray-600 space-y-2">
-					<p><strong>•</strong> "AE.AESDTH"</p>
-					<p><strong>•</strong> "I want to see the lineage of RACE in ADSL dataset"</p>
-					<p><strong>•</strong> "Trace the CIBIC endpoint in protocol"</p>
-					<p><strong>•</strong> "Show the derivation of max week 4 baseline pulse rate for patients that received Xanomeline low dose treatment in table ARS_VS_T01"</p>
+					<p><strong>•</strong> &ldquo;AE.AESDTH&rdquo;</p>
+					<p><strong>•</strong> &ldquo;I want to see the lineage of RACE in ADSL dataset&rdquo;</p>
+					<p><strong>•</strong> &ldquo;Trace the CIBIC endpoint in protocol&rdquo;</p>
+					<p><strong>•</strong> &ldquo;Show the derivation of max week 4 baseline pulse rate for patients that received Xanomeline low dose treatment in table ARS_VS_T01&rdquo;</p>
 				</div>
 			</div>
 		</div>

@@ -311,13 +311,9 @@ export function MainScreenClient(): ReactNode {
 
 			{/* No data state - show main interface even without uploaded files */}
 			{!hasUploadedFiles ? (
-				<div 
-					className={`min-h-screen w-full grid grid-cols-1 ${
-						sidebarVisible ? 'md:grid-cols-[260px_1fr]' : 'md:grid-cols-[0px_1fr]'
-					}`}
-				>
-					<aside className={`hidden md:block transition-all duration-300 ${
-						sidebarVisible ? 'w-[260px]' : 'w-0 overflow-hidden'
+				<div className="min-h-screen w-full flex sidebar-animation-wrapper">
+					<aside className={`hidden md:block sidebar-container ${
+						sidebarVisible ? '' : 'collapsed'
 					}`}>
 						<Sidebar 
 							header={(
@@ -344,7 +340,7 @@ export function MainScreenClient(): ReactNode {
 					</aside>
 
 					{/* Main content area */}
-					<main className="flex flex-col p-6 relative">
+					<main className="flex flex-col p-6 relative main-content">
 						{/* Main content */}
 						<div className="flex-1 flex flex-col items-center justify-center gap-6">
 							<SearchForm 
@@ -358,13 +354,9 @@ export function MainScreenClient(): ReactNode {
 					</main>
 				</div>
 			) : (
-				<div 
-					className={`h-screen w-full grid grid-cols-1 ${
-						sidebarVisible ? 'md:grid-cols-[260px_1fr]' : 'md:grid-cols-[0px_1fr]'
-					}`}
-				>
-				<aside className={`hidden md:block transition-all duration-300 ${
-					sidebarVisible ? 'w-[260px]' : 'w-0 overflow-hidden'
+				<div className="h-screen w-full flex sidebar-animation-wrapper">
+				<aside className={`hidden md:block sidebar-container ${
+					sidebarVisible ? '' : 'collapsed'
 				}`}>
 					<Sidebar 
 						header={(
@@ -444,7 +436,7 @@ export function MainScreenClient(): ReactNode {
 				</aside>
 
 				{viewState === 'search' && (
-					<main className="flex flex-col p-6 relative">
+					<main className="flex flex-col p-6 relative main-content">
 						{/* Main content */}
 						<div className="flex-1 flex flex-col items-center justify-center gap-6">
 							<SearchForm 
@@ -458,7 +450,7 @@ export function MainScreenClient(): ReactNode {
 				)}
 
 				{viewState === 'search-results' && (
-					<div className="relative">
+					<div className="relative content-wrapper">
 						<LineageView
 							dataset=""
 							variable={searchQuery}
@@ -471,7 +463,7 @@ export function MainScreenClient(): ReactNode {
 				)}
 
 				{viewState === 'variables' && selectedDataset && (
-					<div className="flex-1 overflow-hidden relative">
+					<div className="flex-1 overflow-hidden relative content-wrapper">
 						<VariablesBrowser 
 							dataset={selectedDataset} 
 							onVariableSelect={handleVariableSelect}
@@ -485,7 +477,7 @@ export function MainScreenClient(): ReactNode {
 				)}
 
 				{viewState === 'lineage' && lineageState && (
-					<div className="relative">
+					<div className="relative content-wrapper">
 						<LineageView
 							dataset={lineageState.dataset}
 							variable={lineageState.variable}
