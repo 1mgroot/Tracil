@@ -896,6 +896,116 @@ def _auto_prefix_adam_vars(graph: Dict[str, Any]) -> Dict[str, Any]:
                 e["to"] = id_changes[e["to"]]
     return graph
 
+# --- Enforce upstream→downstream flow (Protocol → CRF → SDTM → ADaM → TLF) ---
+# --- Enforce upstream→downstream flow (Protocol → CRF → SDTM → ADaM → TLF) ---
+# REPLACE your existing function with this version (adds same-layer heuristics).
+def _enforce_upstream_downstream_direction(lineage: Dict[str, Any]) -> None:
+    nodes = lineage.get("nodes", []) or []
+    edges = lineage.get("edges", []) or []
+
+    layer_map = {
+        "protocol section": 0, "protocol endpoint": 0, "endpoint": 0,
+        "crf page": 1,
+        "sdtm dataset": 2, "sdtm domain": 2,
+        "sdtm variable": 3,
+        "adam dataset": 4,
+        "adam variable": 5,
+        "tlf display": 6,
+        "tlf cell": 7,
+    }
+
+    id2type: Dict[str, str] = {str(n.get("id","")): (n.get("type","") or "").lower() for n in nodes}
+
+    # id → layer index (fallbacks so we still orient even if a type slipped through)
+    id2layer: Dict[str, int] = {}
+    for n in nodes:
+        nid = str(n.get("id") or "")
+        t = (n.get("type") or "").strip().lower()
+        if t in layer_map:
+            id2layer[nid] = layer_map[t]; continue
+        up = nid.upper()
+        if "|" in nid:
+            id2layer[nid] = 7
+        elif up.startswith("AD") and "." in up:
+            id2layer[nid] = 5
+        elif up.startswith("AD"):
+            id2layer[nid] = 4
+        elif re.match(r"^[A-Z]{2}\.[A-Z0-9_]+$", up) or up.startswith("SDTM."):
+            id2layer[nid] = 3
+        else:
+            id2layer[nid] = 3  # neutral default around SDTM var level
+
+    def _split(nid: str) -> Tuple[str, str]:
+        up = (nid or "").upper()
+        if "." in up:
+            ds, var = up.split(".", 1)
+            return ds, var
+        return "", up
+
+    def _should_flip_peer(frm_id: str, to_id: str) -> bool:
+        """
+        Heuristics for same-layer edges (e.g., ADaM→ADaM, SDTM→SDTM).
+        We prefer character→numeric/code orientation.
+        Returns True if the current frm→to should be flipped.
+        """
+        ta, tb = id2type.get(frm_id, ""), id2type.get(to_id, "")
+        same_family = (("adam" in ta and "adam" in tb) or ("sdtm" in ta and "sdtm" in tb))
+        if not same_family:
+            return False
+
+        _, a = _split(frm_id)
+        _, b = _split(to_id)
+
+        # N-pairs: e.g., AVISIT → AVISITN, TRT01A → TRT01AN, TRT01P → TRT01PN
+        if a.endswith("N") and b == a[:-1]:
+            return True                      # numeric→char (wrong) → flip
+        if b.endswith("N") and a == b[:-1]:
+            return False                     # char→numeric (correct)
+
+        # CD-pairs: e.g., PARAM → PARAMCD (prefer char → code)
+        if a.endswith("CD") and b == a[:-2]:
+            return True                      # code→char (wrong) → flip
+        if b.endswith("CD") and a == b[:-2]:
+            return False                     # char→code (correct)
+
+        # C-pairs: e.g., AVALC → AVAL (prefer char → non-C numeric)
+        if b.endswith("C") and a == b[:-1]:
+            return True                      # numeric→charC (wrong) → flip
+        if a.endswith("C") and b == a[:-1]:
+            return False                     # charC→numeric (correct)
+
+        return False
+
+    def _add_norm_note(e: Dict[str, Any], note: str) -> None:
+        msg = "[reasoned] " + note
+        if e.get("explanation"):
+            if note.lower() not in e["explanation"].lower():
+                e["explanation"] = e["explanation"].rstrip() + " " + msg
+        else:
+            e["explanation"] = msg
+
+    # flip any downstream→upstream edges; then fix same-layer pairs by heuristics
+    for e in edges:
+        frm = str(e.get("from") or "")
+        to  = str(e.get("to")   or "")
+        if not frm or not to:
+            continue
+        li_f = id2layer.get(frm)
+        li_t = id2layer.get(to)
+        if li_f is None or li_t is None:
+            continue
+
+        if li_f > li_t:
+            e["from"], e["to"] = to, frm
+            _add_norm_note(e, "Edge direction normalized to follow upstream→downstream flow.")
+            frm, to = e["from"], e["to"]
+            li_f, li_t = li_t, li_f  # refresh
+
+        # Same-layer normalization (e.g., ADaM variable ↔ ADaM variable)
+        if li_f == li_t and _should_flip_peer(frm, to):
+            e["from"], e["to"] = to, frm
+            _add_norm_note(e, "Edge direction normalized between same-layer variables (character→numeric/code).")
+
 def _canonicalize_types_in_graph(graph: Dict[str, Any]) -> Dict[str, Any]:
     """Coerce node.type values to canonical set based on id/label patterns."""
     nodes = graph.get("lineage", {}).get("nodes", [])
@@ -1051,6 +1161,9 @@ def _validate_and_fix_graph(graph: Dict[str, Any]) -> Dict[str, Any]:
 
     # Canonicalize node types
     _canonicalize_types_in_graph(graph)
+
+    # Enforce upstream→downstream direction (Protocol→CRF→SDTM→ADaM→TLF; cells at the very bottom)
+    _enforce_upstream_downstream_direction(lineage)
 
     lineage["gaps"]  = gaps
     return graph
