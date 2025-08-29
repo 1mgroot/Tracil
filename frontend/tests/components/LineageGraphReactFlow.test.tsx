@@ -240,10 +240,10 @@ describe('LineageGraphReactFlow', () => {
     
     // Check that all trace strength types are shown (text is split across elements)
     expect(screen.getByText('Direct')).toBeInTheDocument()
-    expect(screen.getByText('- Exact citation')).toBeInTheDocument()
+    expect(screen.getByText('- Exact evidence')).toBeInTheDocument()
     expect(screen.getByText('Reasoned')).toBeInTheDocument()
-    expect(screen.getByText('- Inferred evidence')).toBeInTheDocument()
+    expect(screen.getByText('- Brief reasoning from nearby evidence')).toBeInTheDocument()
     expect(screen.getByText('General')).toBeInTheDocument()
-    expect(screen.getByText('- CDISC conventions')).toBeInTheDocument()
+    expect(screen.getByText('- General CDISC knowledge/conventions')).toBeInTheDocument()
   })
 })
