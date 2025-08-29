@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import type { LineageGraph } from '@/types/lineage'
 import { ChevronDown, ChevronRight } from 'lucide-react'
+import { getNodeDisplayText } from '@/lib/utils'
+import { getTypeColors, type ArtifactType } from '@/lib/colors'
 
 interface TraceabilitySummaryProps {
   lineage: LineageGraph
@@ -115,26 +117,34 @@ export function TraceabilitySummary({ lineage }: TraceabilitySummaryProps) {
               >
                 <div className="h-full overflow-y-auto px-3 pb-3">
                   <div className="space-y-2 pt-2">
-                    {lineage.nodes.map((node) => (
-                      <div key={node.id} className="bg-gray-50 rounded-md p-2 border border-gray-200 hover:border-gray-300 transition-colors">
-                        <div className="flex items-center space-x-2 mb-1">
-                          <div className="flex-shrink-0 w-2 h-2 bg-gray-400 rounded-full"></div>
-                          <span className="text-xs font-semibold text-gray-900 truncate">{node.title}</span>
+                    {lineage.nodes.map((node) => {
+                      const nodeType = (node.group || 'Unknown') as ArtifactType
+                      const colors = getTypeColors(nodeType)
+                      
+                      return (
+                        <div key={node.id} className="bg-gray-50 rounded-md p-2 border border-gray-200 hover:border-gray-300 transition-colors">
+                          <div className="flex items-center space-x-2 mb-1">
+                            <div 
+                              className="flex-shrink-0 w-2 h-2 rounded-full"
+                              style={{ backgroundColor: colors.background }}
+                            ></div>
+                            <span className="text-xs font-semibold text-gray-900 truncate">{getNodeDisplayText(node)}</span>
+                          </div>
+                          
+                          {node.dataset && node.variable && (
+                            <div className="text-xs text-gray-500 truncate">
+                              {node.group}
+                            </div>
+                          )}
+                          
+                          {node.meta?.file && (
+                            <div className="text-xs text-gray-500 truncate">
+                              Source: {node.meta.file}
+                            </div>
+                          )}
                         </div>
-                        
-                        {node.dataset && (
-                          <div className="text-xs text-gray-500 truncate">
-                            Dataset: {node.dataset}.{node.variable}
-                          </div>
-                        )}
-                        
-                        {node.meta?.file && (
-                          <div className="text-xs text-gray-500 truncate">
-                            Source: {node.meta.file}
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </div>
               </div>
@@ -151,12 +161,14 @@ export function TraceabilitySummary({ lineage }: TraceabilitySummaryProps) {
                 aria-controls="connections-content"
               >
                 <div className="flex items-center gap-2">
-                  {connectionsExpanded ? (
-                    <ChevronDown className="h-4 w-4 text-gray-500 flex-shrink-0" />
-                  ) : (
-                    <ChevronRight className="h-4 w-4 text-gray-500 flex-shrink-0" />
-                  )}
-                  <span>Connections</span>
+                  <div className="flex items-center gap-2">
+                    {connectionsExpanded ? (
+                      <ChevronDown className="h-4 w-4 text-gray-500 flex-shrink-0" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4 text-gray-500 flex-shrink-0" />
+                    )}
+                    <span>Connections</span>
+                  </div>
                 </div>
                 <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full">
                   {lineage.edges.length}

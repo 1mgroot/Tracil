@@ -19,6 +19,7 @@ import * as dagre from 'dagre'
 import 'reactflow/dist/style.css'
 import type { LineageGraph as LineageGraphType, LineageNode, LineageEdge } from '@/types/lineage'
 import { getTypeColors, type ArtifactType } from '@/lib/colors'
+import { getNodeDisplayText } from '@/lib/utils'
 
 // Custom CSS to hide React Flow attribution
 const hideAttributionCSS = `
@@ -27,73 +28,15 @@ const hideAttributionCSS = `
   }
 `
 
-// Datasets that should display ID instead of title (ADaM + SDTM)
-const DATASETS_USE_ID = new Set([
-  // ADaM datasets
-  'ADSL',
-  'ADAE', 
-  'ADCM',
-  'ADLB',
-  'ADVS',
-  'ADEG',
-  'ADQS',
-  'ADPC',
-  'ADPP',
-  'ADTR',
-  'ADRS',
-  'ADTTE',
-  'ADMH',
-  'ADPR',
-  'ADDS',
-  'ADHO',
-  'ADRE',
-  // SDTM datasets
-  'DM',
-  'CO',
-  'SE',
-  'SV',
-  'TE',
-  'TV',
-  'TS',
-  'TI',
-  'AE',
-  'DS',
-  'DV',
-  'CE',
-  'MH',
-  'CM',
-  'EX',
-  'SU',
-  'PR',
-  'LB',
-  'VS',
-  'EG',
-  'IE',
-  'QS',
-  'RS',
-  'DA',
-  'PE',
-  'SC',
-  'FA',
-  'TA',
-  'SUPP--',
-  'RELREC'
-])
 
-// Helper function to determine if node should display ID instead of title
-const shouldDisplayNodeId = (nodeData: any): boolean => {
-  // Extract dataset from node ID or data
-  const dataset = nodeData.dataset || nodeData.id?.split('.')[1]
-  return dataset && DATASETS_USE_ID.has(dataset)
-}
 
 // Custom node component with group tag following React Flow best practices
 const CustomLineageNode = memo<NodeProps>(({ data, selected }) => {
   const nodeType = (data.group || 'SDTM') as ArtifactType
   const colors = getTypeColors(nodeType)
   
-  // Determine what text to display based on dataset type
-  const displayText = shouldDisplayNodeId(data) ? data.id : (data.title || data.label)
+  // Use shared utility function to determine display text
+  const displayText = getNodeDisplayText(data)
   
   return (
     <div 

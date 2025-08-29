@@ -6,6 +6,57 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
+ * Capitalize the first letter of each word in a string
+ * This improves readability for node titles and labels
+ */
+export function capitalizeWords(text: string): string {
+  if (!text || typeof text !== 'string') return text
+  
+  return text.replace(/\b\w/g, (char) => char.toUpperCase())
+}
+
+/**
+ * Datasets that should display ID instead of title (ADaM + SDTM)
+ * This matches the logic used in React Flow components
+ */
+const DATASETS_USE_ID = new Set([
+  // ADaM datasets
+  'ADSL', 'ADAE', 'ADCM', 'ADLB', 'ADVS', 'ADEG', 'ADQS', 'ADPC', 'ADPP', 'ADTR', 'ADRS', 'ADTTE', 'ADMH', 'ADPR', 'ADDS', 'ADHO', 'ADRE', 'ADQSADAS', 'ADQSCIBC', 'ADQSNPIX',
+  // SDTM datasets
+  'DM', 'CO', 'SE', 'SV', 'TE', 'TV', 'TS', 'TI', 'AE', 'DS', 'DV', 'CE', 'MH', 'CM', 'EX', 'SU', 'PR', 'LB', 'VS', 'EG', 'IE', 'QS', 'RS', 'DA', 'PE', 'SC', 'FA', 'TA', 'SUPP--', 'RELREC'
+])
+
+/**
+ * Determine if a node should display its ID instead of title
+ * This is used for ADaM and SDTM datasets to show the full node identifier
+ */
+export function shouldDisplayNodeId(node: { dataset?: string }): boolean {
+  const dataset = node.dataset
+  return dataset ? DATASETS_USE_ID.has(dataset) : false
+}
+
+/**
+ * Get the appropriate display text for a node
+ * For ADaM/SDTM datasets: returns the full node ID
+ * For other types: returns the title/label with proper capitalization
+ * This ensures consistency between React Flow charts and text summaries
+ */
+export function getNodeDisplayText(node: { 
+  id?: string; 
+  title?: string; 
+  label?: string; 
+  dataset?: string 
+}): string {
+  if (shouldDisplayNodeId(node)) {
+    return capitalizeWords(node.id || node.title || node.label || 'Unknown')
+  }
+  
+  // For non-ADaM/SDTM datasets, apply proper capitalization
+  const text = node.title || node.label || node.id || 'Unknown'
+  return capitalizeWords(text)
+}
+
+/**
  * Deduplicate lineage nodes by ID to prevent React key conflicts
  * This function ensures that each node ID appears only once in the array
  */
