@@ -70,7 +70,7 @@ export function TraceabilitySummary({ lineage }: TraceabilitySummaryProps) {
                     // Create a unique key that combines note content and index
                     const uniqueKey = `gap-${index}-${note.substring(0, 20).replace(/[^a-zA-Z0-9]/g, '-')}`
                     return (
-                      <li key={uniqueKey} className="text-xs text-amber-700 bg-amber-50 px-2 py-1 rounded border border-amber-200">
+                      <li key={uniqueKey} className="text-xs text-gray-700 bg-gray-50 px-2 py-1 rounded border border-gray-200">
                         {note}
                       </li>
                     )
@@ -143,7 +143,7 @@ export function TraceabilitySummary({ lineage }: TraceabilitySummaryProps) {
                           )}
                           
                           {node.meta?.file && (
-                            <div className="text-xs text-gray-600 leading-relaxed mt-1">
+                            <div className="text-xs text-gray-600 leading-relaxed mt-1">aliz
                               Source: {node.meta.file}
                             </div>
                           )}

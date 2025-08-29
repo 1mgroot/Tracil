@@ -319,19 +319,22 @@ export function MainScreenClient(): ReactNode {
 					<aside className={`hidden md:block transition-all duration-300 ${
 						sidebarVisible ? 'w-[260px]' : 'w-0 overflow-hidden'
 					}`}>
-						<Sidebar header={null} onKeyDown={handleKeyDown}>
-							{/* Sidebar Header with Controls */}
-							<div className="flex items-center justify-between p-3 border-b border-gray-200 dark:border-gray-700">
-								<FileUploadButton
-									onUploadClick={handleUploadClick}
-									variant="sidebar"
-									className="flex-shrink-0"
-								/>
-								<SidebarToggle
-									onToggle={() => setSidebarVisible(!sidebarVisible)}
-									className="flex-shrink-0"
-								/>
-							</div>
+						<Sidebar 
+							header={(
+								<div className="flex items-center justify-between p-3">
+									<FileUploadButton
+										onUploadClick={handleUploadClick}
+										variant="sidebar"
+										className="flex-shrink-0"
+									/>
+									<SidebarToggle
+										onToggle={() => setSidebarVisible(!sidebarVisible)}
+										className="flex-shrink-0"
+									/>
+								</div>
+							)}
+							onKeyDown={handleKeyDown}
+						>
 							{/* Empty sidebar content */}
 							<div className="p-4 text-center text-gray-500 dark:text-gray-400">
 								<p className="text-sm">No datasets available</p>
@@ -363,19 +366,22 @@ export function MainScreenClient(): ReactNode {
 				<aside className={`hidden md:block transition-all duration-300 ${
 					sidebarVisible ? 'w-[260px]' : 'w-0 overflow-hidden'
 				}`}>
-					<Sidebar header={null} onKeyDown={handleKeyDown}>
-						{/* Sidebar Header with Controls */}
-						<div className="flex items-center justify-between p-3 border-b border-gray-200 dark:border-gray-700">
-							<FileUploadButton
-								onUploadClick={handleUploadClick}
-								variant="sidebar"
-								className="flex-shrink-0"
-							/>
-							<SidebarToggle
-								onToggle={() => setSidebarVisible(!sidebarVisible)}
-								className="flex-shrink-0"
-							/>
-						</div>
+					<Sidebar 
+						header={(
+							<div className="flex items-center justify-between p-3">
+								<FileUploadButton
+									onUploadClick={handleUploadClick}
+									variant="sidebar"
+									className="flex-shrink-0"
+								/>
+								<SidebarToggle
+									onToggle={() => setSidebarVisible(!sidebarVisible)}
+									className="flex-shrink-0"
+								/>
+							</div>
+						)}
+						onKeyDown={handleKeyDown}
+					>
 						
 						<SidebarGroup label="ADaM" accentVar="--accent-adam">
 							{groupedDatasets.ADaM.map((dataset, i) => (

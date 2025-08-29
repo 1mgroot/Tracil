@@ -11,7 +11,7 @@ export function Sidebar({ className, header, children, onKeyDown, ...props }: Si
 	return (
 		<nav
 			className={cn(
-				'hidden md:flex md:flex-col md:sticky md:top-0 md:h-screen md:overflow-y-auto border-r',
+				'hidden md:flex md:flex-col md:sticky md:top-0 md:h-screen md:overflow-hidden border-r',
 				'bg-[var(--sidebar-pane-bg)]',
 				'focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--focus)]',
 				className,
@@ -22,8 +22,8 @@ export function Sidebar({ className, header, children, onKeyDown, ...props }: Si
 			tabIndex={0}
 			{...props}
 		>
-			{header ? <div className="px-3 py-2 text-sm text-[--text-muted]">{header}</div> : null}
-			<div className="p-2 space-y-3">{children}</div>
+			{header ? <div className="border-b border-gray-200 dark:border-gray-700">{header}</div> : null}
+			<div className="flex-1 overflow-y-auto p-2 space-y-3">{children}</div>
 		</nav>
 	)
 }
