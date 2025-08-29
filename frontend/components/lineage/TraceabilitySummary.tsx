@@ -43,9 +43,9 @@ export function TraceabilitySummary({ lineage }: TraceabilitySummaryProps) {
   }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 shadow-sm flex flex-col h-full">
+    <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-gray-200/60 shadow-sm flex flex-col h-full overflow-hidden">
       {/* Compact header */}
-      <div className="flex-shrink-0 p-4 pb-3">
+      <div className="flex-shrink-0 p-6 pb-4">
         <h2 className="text-lg font-semibold text-gray-900 mb-3">
           AI-Generated Traceability Summary
         </h2>
@@ -83,16 +83,16 @@ export function TraceabilitySummary({ lineage }: TraceabilitySummaryProps) {
       </div>
 
       {/* Expanded Lineage Details section */}
-      <div className="flex-1 overflow-hidden px-4 pb-4">
-        <div className="border-t border-gray-200 pt-3 h-full flex flex-col">
-          <div className="flex-1 flex flex-col space-y-3 min-h-0">
+      <div className="flex-1 overflow-hidden px-6 pb-6">
+        <div className="border-t border-gray-200/60 pt-4 h-full flex flex-col">
+          <div className="flex-1 flex flex-col space-y-4 min-h-0">
             {/* Collapsible Nodes Section - Takes more space when expanded */}
-            <div className={`border border-gray-200 rounded-lg overflow-hidden flex-shrink-0 ${
+            <div className={`border border-gray-200/50 rounded-xl bg-gray-50/50 backdrop-blur-sm flex-shrink-0 overflow-hidden ${
               nodesExpanded ? 'flex-1 min-h-0' : ''
             }`}>
               <button
                 onClick={handleNodesToggle}
-                className="flex items-center justify-between w-full px-3 py-2 text-left text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 transition-colors rounded-t-lg"
+                className="flex items-center justify-between w-full px-4 py-3 text-left text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-white/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:ring-offset-0 transition-all duration-200 backdrop-blur-sm"
                 aria-expanded={nodesExpanded}
                 aria-controls="nodes-content"
               >
@@ -111,11 +111,11 @@ export function TraceabilitySummary({ lineage }: TraceabilitySummaryProps) {
               
               <div
                 id="nodes-content"
-                className={`overflow-hidden ${
-                  nodesExpanded ? 'flex-1 min-h-0' : 'max-h-0 opacity-0'
+                className={`transition-all duration-200 overflow-hidden ${
+                  nodesExpanded ? 'max-h-[32rem]' : 'max-h-0'
                 }`}
               >
-                <div className="h-full overflow-y-auto px-3 pb-3">
+                <div className="h-[32rem] overflow-y-auto px-4 pb-4">
                   <div className="space-y-2 pt-2">
                     {lineage.nodes.map((node) => {
                       const nodeType = (node.group || 'Unknown') as ArtifactType
@@ -168,12 +168,12 @@ export function TraceabilitySummary({ lineage }: TraceabilitySummaryProps) {
             </div>
             
             {/* Collapsible Connections Section - Takes more space when expanded */}
-            <div className={`border border-gray-200 rounded-lg overflow-hidden flex-shrink-0 ${
+            <div className={`border border-gray-200/50 rounded-xl bg-gray-50/50 backdrop-blur-sm flex-shrink-0 overflow-hidden ${
               connectionsExpanded ? 'flex-1 min-h-0' : ''
             }`}>
               <button
                 onClick={handleConnectionsToggle}
-                className="flex items-center justify-between w-full px-3 py-2 text-left text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 transition-colors rounded-t-lg"
+                className="flex items-center justify-between w-full px-4 py-3 text-left text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-white/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:ring-offset-0 transition-all duration-200 backdrop-blur-sm"
                 aria-expanded={connectionsExpanded}
                 aria-controls="connections-content"
               >
@@ -194,11 +194,11 @@ export function TraceabilitySummary({ lineage }: TraceabilitySummaryProps) {
               
               <div
                 id="connections-content"
-                className={`overflow-hidden ${
-                  connectionsExpanded ? 'flex-1 min-h-0' : 'max-h-0 opacity-0'
+                className={`transition-all duration-200 overflow-hidden ${
+                  connectionsExpanded ? 'max-h-[32rem]' : 'max-h-0'
                 }`}
               >
-                <div className="h-full overflow-y-auto px-3 pb-3">
+                <div className="h-[32rem] overflow-y-auto px-4 pb-4">
                   <div className="space-y-2 pt-2">
                     {lineage.edges.map((edge) => (
                       <div key={`${edge.from}-${edge.to}`} className="bg-gray-50 rounded-md p-2 border border-gray-200 hover:border-gray-300 transition-colors">
