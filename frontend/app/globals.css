@@ -591,3 +591,89 @@
   background: oklch(1 1 1 / 0.04);
   background-clip: content-box;
 }
+
+/* Generic scrollable container - Apple-style scrollbar design */
+.scrollable-container::-webkit-scrollbar {
+  width: 6px;
+  background: transparent;
+}
+
+.scrollable-container::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 4px;
+}
+
+.scrollable-container::-webkit-scrollbar-thumb {
+  background: oklch(0 0 0 / 0.08);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  min-height: 40px;
+}
+
+.scrollable-container::-webkit-scrollbar-thumb:hover {
+  background: oklch(0 0 0 / 0.15);
+  background-clip: content-box;
+}
+
+.scrollable-container::-webkit-scrollbar-thumb:active {
+  background: oklch(0 0 0 / 0.25);
+  background-clip: content-box;
+}
+
+/* Dark mode scrollbar for generic containers */
+.dark .scrollable-container::-webkit-scrollbar-thumb {
+  background: oklch(1 1 1 / 0.08);
+  background-clip: content-box;
+}
+
+.dark .scrollable-container::-webkit-scrollbar-thumb:hover {
+  background: oklch(1 1 1 / 0.15);
+  background-clip: content-box;
+}
+
+.dark .scrollable-container::-webkit-scrollbar-thumb:active {
+  background: oklch(1 1 1 / 0.25);
+  background-clip: content-box;
+}
+
+/* Firefox scrollbar styling for generic containers */
+.scrollable-container {
+  scrollbar-width: thin;
+  scrollbar-color: oklch(0 0 0 / 0.08) transparent;
+}
+
+.dark .scrollable-container {
+  scrollbar-color: oklch(1 1 1 / 0.08) transparent;
+}
+
+/* Hide scrollbar when not needed for generic containers */
+.scrollable-container:not(:hover)::-webkit-scrollbar-thumb {
+  background: oklch(0 0 0 / 0.04);
+  background-clip: content-box;
+}
+
+.dark .scrollable-container:not(:hover)::-webkit-scrollbar-thumb {
+  background: oklch(1 1 1 / 0.04);
+  background-clip: content-box;
+}
+
+/* Mobile optimization for generic scrollable containers */
+@media (max-width: 768px) {
+  .scrollable-container::-webkit-scrollbar {
+    width: 0;
+  }
+  
+  .scrollable-container {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+}
+
+/* Touch device optimization for generic scrollable containers */
+@media (pointer: coarse) {
+  .scrollable-container::-webkit-scrollbar {
+    width: 8px;
+  }
+}

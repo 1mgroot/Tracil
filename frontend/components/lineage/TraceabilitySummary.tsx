@@ -62,7 +62,7 @@ export function TraceabilitySummary({ lineage }: TraceabilitySummaryProps) {
               <h3 className="text-sm font-medium text-gray-900 mb-2">
                 Gaps & Notes
               </h3>
-              <div className="max-h-16 overflow-y-auto">
+              <div className="max-h-16 overflow-y-auto scrollable-container">
                 <ul className="space-y-1">
                   {lineage.gaps.notes.map((note, index) => {
                     // Debug: Log each note and its index
@@ -115,7 +115,7 @@ export function TraceabilitySummary({ lineage }: TraceabilitySummaryProps) {
                   nodesExpanded ? 'max-h-[32rem]' : 'max-h-0'
                 }`}
               >
-                <div className="h-[32rem] overflow-y-auto px-4 pb-4">
+                <div className="h-[32rem] overflow-y-auto scrollable-container px-4 pb-4">
                   <div className="space-y-2 pt-2">
                     {lineage.nodes.map((node) => {
                       const nodeType = (node.group || 'Unknown') as ArtifactType
@@ -143,7 +143,7 @@ export function TraceabilitySummary({ lineage }: TraceabilitySummaryProps) {
                           )}
                           
                           {node.meta?.file && (
-                            <div className="text-xs text-gray-600 leading-relaxed mt-1">aliz
+                            <div className="text-xs text-gray-600 leading-relaxed mt-1">
                               Source: {node.meta.file}
                             </div>
                           )}
@@ -198,7 +198,7 @@ export function TraceabilitySummary({ lineage }: TraceabilitySummaryProps) {
                   connectionsExpanded ? 'max-h-[32rem]' : 'max-h-0'
                 }`}
               >
-                <div className="h-[32rem] overflow-y-auto px-4 pb-4">
+                <div className="h-[32rem] overflow-y-auto scrollable-container px-4 pb-4">
                   <div className="space-y-2 pt-2">
                     {lineage.edges.map((edge) => (
                       <div key={`${edge.from}-${edge.to}`} className="bg-gray-50 rounded-md p-2 border border-gray-200 hover:border-gray-300 transition-colors">

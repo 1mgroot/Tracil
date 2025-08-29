@@ -183,7 +183,7 @@ export function FileUploadModal({ isOpen, onClose, onUpload }: FileUploadModalPr
               <h3 className="text-sm sm:text-base md:text-lg font-medium text-gray-900 dark:text-white">
                 Selected Files ({uploadState.selectedFiles.length})
               </h3>
-              <div className="space-y-2 max-h-28 sm:max-h-36 md:max-h-40 lg:max-h-48 overflow-y-auto">
+              <div className="space-y-2 max-h-28 sm:max-h-36 md:max-h-40 lg:max-h-48 overflow-y-auto scrollable-container">
                 {uploadState.selectedFiles.map((file, fileIndex) => (
                   <div
                     key={`${file.name}-${file.size}-${file.lastModified}-${fileIndex}`}

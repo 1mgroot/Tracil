@@ -28,7 +28,7 @@ export function Sidebar({ className, header, children, onKeyDown, ...props }: Si
 					{header}
 				</div>
 			) : null}
-			<div className="flex-1 overflow-y-auto p-4 space-y-4 pr-6">{children}</div>
+			<div className="flex-1 overflow-y-auto scrollable-container p-4 space-y-4 pr-6">{children}</div>
 		</nav>
 	)
 }
