@@ -136,10 +136,27 @@ export function TraceabilitySummary({ lineage }: TraceabilitySummaryProps) {
                             <span className="text-xs font-semibold text-gray-900 truncate">{getNodeDisplayText(node)}</span>
                           </div>
                           
+                          {node.id && (
+                            <div className="text-xs text-gray-500 truncate">
+                              {node.id}
+                            </div>
+                          )}
                           
                           {node.meta?.file && (
-                            <div className="text-xs text-gray-500 truncate">
+                            <div className="text-xs text-gray-600 leading-relaxed mt-1">
                               Source: {node.meta.file}
+                            </div>
+                          )}
+                          
+                          {node.description && (
+                            <div className="text-xs text-gray-600 leading-relaxed mt-1">
+                              {node.description}
+                            </div>
+                          )}
+                          
+                          {node.explanation && (
+                            <div className="text-xs text-gray-600 leading-relaxed mt-1">
+                              <span className="font-medium text-gray-700">Explanation:</span> {node.explanation}
                             </div>
                           )}
                         </div>

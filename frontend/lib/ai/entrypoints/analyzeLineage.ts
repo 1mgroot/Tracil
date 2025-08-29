@@ -143,6 +143,8 @@ export async function analyzeLineage(request: AnalyzeLineageRequest): Promise<Li
           variable: data.variable,
           group,
           kind,
+          description: node.description,
+          explanation: node.explanation,
           meta: { 
             file: node.file,
             notes: node.description || node.explanation || node.file

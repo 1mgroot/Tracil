@@ -8,6 +8,8 @@ export interface LineageNode {
   readonly variable?: string     // e.g., "SEX", "AEBODSYS"
   readonly group: ArtifactGroup  // for visual accent & grouping
   readonly kind: LineageNodeKind // visual style and ordering
+  readonly description?: string  // detailed description from backend
+  readonly explanation?: string  // explanation from backend
   readonly meta?: { file?: string; notes?: string }
 }
 
