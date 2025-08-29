@@ -29,7 +29,7 @@ describe('Node Display Utilities', () => {
   describe('capitalizeWords', () => {
     it('should capitalize first letter of each word', () => {
       expect(capitalizeWords('protocol section')).toBe('Protocol Section')
-      expect(capitalizeWords('tlf display 14')).toBe('Tlf Display 14')
+      expect(capitalizeWords('tlf display 14')).toBe('TLF Display 14')
       expect(capitalizeWords('demographics form')).toBe('Demographics Form')
       expect(capitalizeWords('summary table')).toBe('Summary Table')
     })
@@ -45,6 +45,14 @@ describe('Node Display Utilities', () => {
       expect(capitalizeWords('table_2024')).toBe('Table_2024')
       expect(capitalizeWords('data (version 2)')).toBe('Data (Version 2)')
       expect(capitalizeWords('section 1.2')).toBe('Section 1.2')
+    })
+
+    it('should handle TLF abbreviation correctly', () => {
+      expect(capitalizeWords('tlf display')).toBe('TLF Display')
+      expect(capitalizeWords('tlf table 14')).toBe('TLF Table 14')
+      expect(capitalizeWords('tlf listing')).toBe('TLF Listing')
+      expect(capitalizeWords('tlf figure 3')).toBe('TLF Figure 3')
+      expect(capitalizeWords('mixed tlf content')).toBe('Mixed TLF Content')
     })
 
     it('should handle edge cases', () => {
@@ -84,7 +92,7 @@ describe('Node Display Utilities', () => {
       expect(getNodeDisplayText(crfNode)).toBe('Demographics Form')
 
       const tlfNode = { id: 'TLF.001', title: 'tlf display 14', dataset: 'TLF' }
-      expect(getNodeDisplayText(tlfNode)).toBe('Tlf Display 14')
+      expect(getNodeDisplayText(tlfNode)).toBe('TLF Display 14')
     })
 
     it('should fallback to label when title is missing', () => {

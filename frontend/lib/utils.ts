@@ -12,7 +12,10 @@ export function cn(...inputs: ClassValue[]) {
 export function capitalizeWords(text: string): string {
   if (!text || typeof text !== 'string') return text
   
-  return text.replace(/\b\w/g, (char) => char.toUpperCase())
+  // Special case: convert "tlf" to "TLF" before general capitalization
+  const normalizedText = text.replace(/\btlf\b/gi, 'TLF')
+  
+  return normalizedText.replace(/\b\w/g, (char) => char.toUpperCase())
 }
 
 /**
