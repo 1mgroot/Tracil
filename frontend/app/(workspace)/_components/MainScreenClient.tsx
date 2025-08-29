@@ -26,7 +26,8 @@ export function MainScreenClient(): ReactNode {
 		refresh,
 		hasUploadedFiles,
 		setHasUploadedFiles,
-		setDataDirectly
+		setDataDirectly,
+		data // Add access to raw response data
 	} = useVariablesBrowser()
 	
 	const {
@@ -101,6 +102,21 @@ export function MainScreenClient(): ReactNode {
 		return groups
 	}, [datasets])
 
+	// Check if Protocol section should be shown (only when StudyDesign_USDM exists)
+	const shouldShowProtocolSection = useMemo(() => {
+		return data?.standards?.Protocol?.datasetEntities?.StudyDesign_USDM !== undefined
+	}, [data])
+
+	// Filter Protocol datasets to only show the 4 specific items when StudyDesign_USDM exists
+	const filteredProtocolDatasets = useMemo(() => {
+		if (!shouldShowProtocolSection) return []
+		
+		// Only show the 4 specific Protocol items: Endpoints, Objectives, Populations, SOA
+		return groupedDatasets.Protocol.filter(dataset => 
+			['Endpoints', 'Objectives', 'Populations', 'SOA'].includes(dataset.name)
+		)
+	}, [groupedDatasets.Protocol, shouldShowProtocolSection])
+
 	// Create flat list of all item IDs for keyboard navigation
 	const allItemIds = useMemo(() => {
 		return [
@@ -108,9 +124,9 @@ export function MainScreenClient(): ReactNode {
 			...groupedDatasets.SDTM.map(d => d.id),
 			...groupedDatasets.CRF.map(d => d.id),
 			...groupedDatasets.TLF.map(d => d.id),
-			...groupedDatasets.Protocol.map(d => d.id),
+			...filteredProtocolDatasets.map(d => d.id), // Use filtered Protocol datasets
 		]
-	}, [groupedDatasets])
+	}, [groupedDatasets, filteredProtocolDatasets])
 
 	// Handle dataset selection
 	const handleDatasetSelect = useCallback((datasetId: string) => {
@@ -401,19 +417,23 @@ export function MainScreenClient(): ReactNode {
 								</SidebarItem>
 							))}
 						</SidebarGroup>
-						<SidebarGroup label="Protocol" accentVar="--accent-protocol">
-							{groupedDatasets.Protocol.map((dataset, i) => (
-								<SidebarItem 
-									key={dataset.id} 
-									active={selectedId === dataset.id} 
-									onClick={() => handleDatasetSelect(dataset.id)} 
-									tone={toneFor(i, groupedDatasets.Protocol.length)}
-									itemId={dataset.id}
-								>
-									{dataset.name}
-								</SidebarItem>
-							))}
-						</SidebarGroup>
+						
+						{/* Only show Protocol section when StudyDesign_USDM exists */}
+						{shouldShowProtocolSection && (
+							<SidebarGroup label="Protocol" accentVar="--accent-protocol">
+								{filteredProtocolDatasets.map((dataset, i) => (
+									<SidebarItem 
+										key={dataset.id} 
+										active={selectedId === dataset.id} 
+										onClick={() => handleDatasetSelect(dataset.id)} 
+										tone={toneFor(i, filteredProtocolDatasets.length)}
+										itemId={dataset.id}
+									>
+										{dataset.name}
+									</SidebarItem>
+								))}
+							</SidebarGroup>
+						)}
 					</Sidebar>
 				</aside>
 
