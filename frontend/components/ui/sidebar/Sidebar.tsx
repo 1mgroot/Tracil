@@ -14,13 +14,11 @@ export function Sidebar({ className, header, children, onKeyDown, ...props }: Si
 			className={cn(
 				'hidden md:flex md:flex-col md:sticky md:top-0 md:h-screen md:overflow-hidden border-r',
 				'bg-[var(--sidebar-pane-bg)]',
-				'focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--focus)]',
 				className,
 			)}
 			role="navigation"
 			aria-label="File navigation"
 			onKeyDown={onKeyDown}
-			tabIndex={0}
 			{...props}
 		>
 			{header ? <div className="border-b border-gray-200 dark:border-gray-700">{header}</div> : null}
