@@ -54,6 +54,10 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Iterable, Tuple
 from contextlib import contextmanager
 
+# Load environment variables
+from dotenv import load_dotenv
+load_dotenv()
+
 import numpy as np
 from openai import OpenAI
 from openai import APIError, RateLimitError

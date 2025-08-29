@@ -7,6 +7,10 @@ from pathlib import Path
 from datetime import datetime
 import os, shutil, json, re, difflib
 
+# Load environment variables from .env file
+from dotenv import load_dotenv
+load_dotenv()
+
 # --- local services ---
 from services.acrf_preprocess import acrf_preprocess
 from services.protocol_preprocess import protocol_to_txt
