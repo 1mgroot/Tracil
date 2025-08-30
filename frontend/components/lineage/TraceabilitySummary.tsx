@@ -13,18 +13,10 @@ export function TraceabilitySummary({ lineage }: TraceabilitySummaryProps) {
   const [nodesExpanded, setNodesExpanded] = useState(true)
   const [connectionsExpanded, setConnectionsExpanded] = useState(false)
 
-  // Debug: Log gaps data using useEffect
+  // Debug: Log API response and lineage data
   useEffect(() => {
+    console.log('🔍 Debug - Raw API Response:', lineage)
     console.log('🔍 Debug - Full lineage object:', lineage)
-    console.log('🔍 Debug - Summary:', lineage.summary)
-    console.log('🔍 Debug - Summary type:', typeof lineage.summary)
-    console.log('🔍 Debug - Summary length:', lineage.summary?.length)
-    
-    if (lineage.gaps?.notes) {
-      console.log('🔍 Debug - Gaps data:', lineage.gaps.notes)
-      console.log('🔍 Debug - Gaps data length:', lineage.gaps.notes.length)
-      console.log('🔍 Debug - Gaps data types:', lineage.gaps.notes.map((note, i) => ({ index: i, note, type: typeof note })))
-    }
   }, [lineage])
 
   // Smart toggle handlers - auto-collapse the other section when expanding one
@@ -65,8 +57,6 @@ export function TraceabilitySummary({ lineage }: TraceabilitySummaryProps) {
               <div className="max-h-16 overflow-y-auto scrollable-container">
                 <ul className="space-y-1">
                   {lineage.gaps.notes.map((note, index) => {
-                    // Debug: Log each note and its index
-                    console.log(`🔍 Debug - Note ${index}:`, note)
                     // Create a unique key that combines note content and index
                     const uniqueKey = `gap-${index}-${note.substring(0, 20).replace(/[^a-zA-Z0-9]/g, '-')}`
                     return (
