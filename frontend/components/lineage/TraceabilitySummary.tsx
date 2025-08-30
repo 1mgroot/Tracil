@@ -211,14 +211,6 @@ export function TraceabilitySummary({ lineage }: TraceabilitySummaryProps) {
                           <span className="text-xs font-semibold text-gray-900 truncate">{capitalizeWords(edge.to)}</span>
                         </div>
                         
-                        {edge.label && (
-                          <div className="mb-1">
-                            <span className="inline-block px-1.5 py-0.5 text-xs font-medium bg-gray-200 text-gray-700 rounded">
-                              {edge.label}
-                            </span>
-                          </div>
-                        )}
-                        
                         {edge.explanation && (
                           <div className="text-xs text-gray-700 leading-relaxed overflow-hidden" style={{ 
                             display: '-webkit-box', 
