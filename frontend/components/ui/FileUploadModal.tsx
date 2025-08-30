@@ -120,11 +120,11 @@ export function FileUploadModal({ isOpen, onClose, onUpload }: FileUploadModalPr
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-3 md:p-4 bg-black/50">
-      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-2xl max-h-[95vh] sm:max-h-[92vh] md:max-h-[90vh] overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between p-3 sm:p-4 md:p-5 lg:p-6 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-base sm:text-lg md:text-xl font-semibold text-gray-900 dark:text-white">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[calc(100vh-2rem)] border border-gray-100">
+        {/* Header - Clean and modern */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-100 flex-shrink-0">
+          <h2 className="text-xl font-semibold text-gray-900">
             Upload Clinical Data Files
           </h2>
           <Button
@@ -132,38 +132,39 @@ export function FileUploadModal({ isOpen, onClose, onUpload }: FileUploadModalPr
             size="sm"
             onClick={handleClose}
             disabled={uploadState.isUploading}
-            className="p-2"
+            className="p-2 hover:bg-gray-100 rounded-xl transition-all duration-200"
           >
-            <X className="w-4 h-4" />
+            <X className="w-5 h-5 text-gray-500" />
           </Button>
         </div>
 
-        {/* Content */}
-        <div className="p-3 sm:p-4 md:p-5 lg:p-6 space-y-3 sm:space-y-4 md:space-y-5 lg:space-y-6">
-          {/* File Drop Zone - More compact on small screens */}
+        {/* Content - Elegant scrollable area */}
+        <div className="flex-1 min-h-0 overflow-y-auto p-6 space-y-6">
+          {/* File Drop Zone - Beautiful design */}
           <div
-            className={`border-2 border-dashed rounded-lg p-3 sm:p-4 md:p-5 lg:p-6 xl:p-8 text-center transition-colors ${
+            className={`border-2 border-dashed rounded-2xl p-8 text-center transition-all duration-300 ${
               isDragOver
-                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
+                ? 'border-blue-500 bg-blue-50 shadow-lg scale-[1.02]'
+                : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50/50'
             }`}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
           >
-            <Upload className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 mx-auto mb-2 sm:mb-3 md:mb-4 text-gray-400" />
-            <p className="text-sm sm:text-base md:text-lg font-medium text-gray-900 dark:text-white mb-1 sm:mb-2 md:mb-3">
+            <div className="w-16 h-16 mx-auto mb-4 bg-blue-100 rounded-2xl flex items-center justify-center">
+              <Upload className="w-8 h-8 text-blue-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
               Drop files here or click to browse
-            </p>
-            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mb-2 sm:mb-3 md:mb-4">
+            </h3>
+            <p className="text-sm text-gray-500 mb-6 max-w-sm mx-auto">
               Support for .xpt, .sas7bdat, .csv, .pdf, .docx, .rtf, .xml, .json files
             </p>
             <Button
               onClick={() => fileInputRef.current?.click()}
               variant="outline"
               disabled={uploadState.isUploading}
-              size="sm"
-              className="text-xs sm:text-sm md:text-base"
+              className="px-6 py-3 text-sm font-medium hover:bg-blue-50 hover:border-blue-300 transition-all duration-200"
             >
               Choose Files
             </Button>
@@ -177,25 +178,32 @@ export function FileUploadModal({ isOpen, onClose, onUpload }: FileUploadModalPr
             />
           </div>
 
-          {/* Selected Files */}
+          {/* Selected Files - Clean list design */}
           {uploadState.selectedFiles.length > 0 && (
-            <div className="space-y-2 sm:space-y-3 md:space-y-4">
-              <h3 className="text-sm sm:text-base md:text-lg font-medium text-gray-900 dark:text-white">
-                Selected Files ({uploadState.selectedFiles.length})
-              </h3>
-              <div className="space-y-2 max-h-28 sm:max-h-36 md:max-h-40 lg:max-h-48 overflow-y-auto scrollable-container">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Selected Files
+                </h3>
+                <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                  {uploadState.selectedFiles.length} files
+                </span>
+              </div>
+              <div className="space-y-3 max-h-48 overflow-y-auto pr-2">
                 {uploadState.selectedFiles.map((file, fileIndex) => (
                   <div
                     key={`${file.name}-${file.size}-${file.lastModified}-${fileIndex}`}
-                    className="flex items-center justify-between p-2 sm:p-2.5 md:p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                    className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100 hover:bg-gray-100/80 transition-all duration-200"
                   >
-                    <div className="flex items-center space-x-2 sm:space-x-2.5 md:space-x-3 min-w-0 flex-1">
-                      <File className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    <div className="flex items-center space-x-3 min-w-0 flex-1">
+                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <File className="w-5 h-5 text-blue-600" />
+                      </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white truncate">
+                        <p className="text-sm font-medium text-gray-900 truncate">
                           {file.name}
                         </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                        <p className="text-xs text-gray-500 mt-1">
                           {(file.size / 1024).toFixed(1)} KB
                         </p>
                       </div>
@@ -205,9 +213,9 @@ export function FileUploadModal({ isOpen, onClose, onUpload }: FileUploadModalPr
                       size="sm"
                       onClick={() => handleRemoveFile(fileIndex)}
                       disabled={uploadState.isUploading}
-                      className="p-1 h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 flex-shrink-0 ml-2"
+                      className="p-2 h-8 w-8 flex-shrink-0 hover:bg-red-50 hover:text-red-600 transition-all duration-200"
                     >
-                      <X className="w-3 h-3" />
+                      <X className="w-4 h-4" />
                     </Button>
                   </div>
                 ))}
@@ -215,52 +223,54 @@ export function FileUploadModal({ isOpen, onClose, onUpload }: FileUploadModalPr
             </div>
           )}
 
-          {/* Progress Bar */}
+          {/* Progress Bar - Modern design */}
           {uploadState.isUploading && (
-            <div className="space-y-2">
-              <div className="flex justify-between text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+            <div className="space-y-3 p-4 bg-gray-50 rounded-xl border border-gray-200">
+              <div className="flex justify-between text-sm font-medium text-gray-700">
                 <span>Uploading files...</span>
                 <span>{uploadState.progress}%</span>
               </div>
-              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+              <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
                 <div
-                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                  className="bg-gray-800 h-2 rounded-full transition-all duration-300 shadow-sm"
                   style={{ width: `${uploadState.progress}%` }}
                 />
               </div>
             </div>
           )}
 
-          {/* Errors */}
+          {/* Errors - Clean error display */}
           {uploadState.errors.length > 0 && (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {uploadState.errors.map((error, errorIndex) => (
                 <div
                   key={`error-${errorIndex}-${error.slice(0, 20)}`}
-                  className="flex items-center space-x-2 p-2 sm:p-2.5 md:p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg"
+                  className="flex items-center space-x-3 p-4 bg-red-50 border border-red-200 rounded-xl"
                 >
-                  <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
-                  <p className="text-xs sm:text-sm text-red-700 dark:text-red-400">{error}</p>
+                  <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <AlertCircle className="w-4 h-4 text-red-600" />
+                  </div>
+                  <p className="text-sm text-red-700 font-medium">{error}</p>
                 </div>
               ))}
             </div>
           )}
         </div>
 
-        {/* Footer - Always visible with responsive spacing */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-2.5 md:gap-3 p-3 sm:p-4 md:p-5 lg:p-6 border-t border-gray-200 dark:border-gray-700">
+        {/* Footer - Elegant button design */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 p-6 border-t border-gray-100 flex-shrink-0 bg-gray-50/50">
           <Button
             variant="outline"
             onClick={handleClose}
             disabled={uploadState.isUploading}
-            className="order-2 sm:order-1 flex-1 sm:flex-none text-xs sm:text-sm md:text-base"
+            className="order-2 sm:order-1 flex-1 sm:flex-none py-3 text-sm font-medium hover:bg-white hover:border-gray-300 transition-all duration-200"
           >
             Cancel
           </Button>
           <Button
             onClick={handleUpload}
             disabled={uploadState.selectedFiles.length === 0 || uploadState.isUploading}
-            className="bg-blue-600 hover:bg-blue-700 order-1 sm:order-2 flex-1 sm:flex-none text-xs sm:text-sm md:text-base"
+            className="order-1 sm:order-2 flex-1 sm:flex-none py-3 text-sm font-medium bg-blue-600 hover:bg-blue-700 shadow-lg hover:shadow-xl transition-all duration-200"
           >
             {uploadState.isUploading ? 'Uploading...' : 'Upload Files'}
           </Button>
