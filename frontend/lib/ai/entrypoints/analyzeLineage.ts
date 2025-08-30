@@ -74,7 +74,6 @@ export async function analyzeLineage(request: AnalyzeLineageRequest): Promise<Li
     
     // Debug: Log the raw backend response
     console.log('🔍 Debug - Raw backend response:', data)
-    console.log('🔍 Debug - Lineage data:', data.lineage)
     
     // Transform the API response to match LineageGraph type
     // The backend returns a different structure, so we need to transform it
@@ -143,6 +142,8 @@ export async function analyzeLineage(request: AnalyzeLineageRequest): Promise<Li
           variable: data.variable,
           group,
           kind,
+          description: node.description,
+          explanation: node.explanation,
           meta: { 
             file: node.file,
             notes: node.description || node.explanation || node.file

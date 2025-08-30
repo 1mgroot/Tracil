@@ -211,6 +211,16 @@ export function LineageGraph({ lineage }: LineageGraphProps) {
             Notes: {node.meta.notes}
           </div>
         )}
+        {node.description && (
+          <div className="text-sm text-gray-600">
+            Description: {node.description}
+          </div>
+        )}
+        {node.explanation && (
+          <div className="text-sm text-gray-600">
+            Explanation: {node.explanation}
+          </div>
+        )}
         <div className="text-sm text-gray-600">
           Group: {node.group}
         </div>
@@ -395,6 +405,18 @@ export function LineageGraph({ lineage }: LineageGraphProps) {
                   {node.meta?.file && (
                     <div className="text-xs text-gray-500">
                       Source: {node.meta.file}
+                    </div>
+                  )}
+                  
+                  {node.description && (
+                    <div className="text-xs text-gray-600 mt-1">
+                      <span className="font-medium text-gray-700">Description:</span> {node.description}
+                    </div>
+                  )}
+                  
+                  {node.explanation && (
+                    <div className="text-xs text-gray-600 mt-1">
+                      <span className="font-medium text-gray-700">Explanation:</span> {node.explanation}
                     </div>
                   )}
                 </div>

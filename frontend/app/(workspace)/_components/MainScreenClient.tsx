@@ -26,7 +26,8 @@ export function MainScreenClient(): ReactNode {
 		refresh,
 		hasUploadedFiles,
 		setHasUploadedFiles,
-		setDataDirectly
+		setDataDirectly,
+		data // Add access to raw response data
 	} = useVariablesBrowser()
 	
 	const {
@@ -101,6 +102,21 @@ export function MainScreenClient(): ReactNode {
 		return groups
 	}, [datasets])
 
+	// Check if Protocol section should be shown (only when StudyDesign_USDM exists)
+	const shouldShowProtocolSection = useMemo(() => {
+		return data?.standards?.Protocol?.datasetEntities?.StudyDesign_USDM !== undefined
+	}, [data])
+
+	// Filter Protocol datasets to only show the 4 specific items when StudyDesign_USDM exists
+	const filteredProtocolDatasets = useMemo(() => {
+		if (!shouldShowProtocolSection) return []
+		
+		// Only show the 4 specific Protocol items: Endpoints, Objectives, Populations, SOA
+		return groupedDatasets.Protocol.filter(dataset => 
+			['Endpoints', 'Objectives', 'Populations', 'SOA'].includes(dataset.name)
+		)
+	}, [groupedDatasets.Protocol, shouldShowProtocolSection])
+
 	// Create flat list of all item IDs for keyboard navigation
 	const allItemIds = useMemo(() => {
 		return [
@@ -108,9 +124,9 @@ export function MainScreenClient(): ReactNode {
 			...groupedDatasets.SDTM.map(d => d.id),
 			...groupedDatasets.CRF.map(d => d.id),
 			...groupedDatasets.TLF.map(d => d.id),
-			...groupedDatasets.Protocol.map(d => d.id),
+			...filteredProtocolDatasets.map(d => d.id), // Use filtered Protocol datasets
 		]
-	}, [groupedDatasets])
+	}, [groupedDatasets, filteredProtocolDatasets])
 
 	// Handle dataset selection
 	const handleDatasetSelect = useCallback((datasetId: string) => {
@@ -295,27 +311,26 @@ export function MainScreenClient(): ReactNode {
 
 			{/* No data state - show main interface even without uploaded files */}
 			{!hasUploadedFiles ? (
-				<div 
-					className={`min-h-screen w-full grid grid-cols-1 ${
-						sidebarVisible ? 'md:grid-cols-[260px_1fr]' : 'md:grid-cols-[0px_1fr]'
-					}`}
-				>
-					<aside className={`hidden md:block transition-all duration-300 ${
-						sidebarVisible ? 'w-[260px]' : 'w-0 overflow-hidden'
+				<div className="min-h-screen w-full flex sidebar-animation-wrapper">
+					<aside className={`hidden md:block sidebar-container ${
+						sidebarVisible ? '' : 'collapsed'
 					}`}>
-						<Sidebar header={null} onKeyDown={handleKeyDown}>
-							{/* Sidebar Header with Controls */}
-							<div className="flex items-center justify-between p-3 border-b border-gray-200 dark:border-gray-700">
-								<FileUploadButton
-									onUploadClick={handleUploadClick}
-									variant="sidebar"
-									className="flex-shrink-0"
-								/>
-								<SidebarToggle
-									onToggle={() => setSidebarVisible(!sidebarVisible)}
-									className="flex-shrink-0"
-								/>
-							</div>
+						<Sidebar 
+							header={(
+								<div className="flex items-center justify-between p-3">
+									<FileUploadButton
+										onUploadClick={handleUploadClick}
+										variant="sidebar"
+										className="flex-shrink-0"
+									/>
+									<SidebarToggle
+										onToggle={() => setSidebarVisible(!sidebarVisible)}
+										className="flex-shrink-0"
+									/>
+								</div>
+							)}
+							onKeyDown={handleKeyDown}
+						>
 							{/* Empty sidebar content */}
 							<div className="p-4 text-center text-gray-500 dark:text-gray-400">
 								<p className="text-sm">No datasets available</p>
@@ -325,30 +340,7 @@ export function MainScreenClient(): ReactNode {
 					</aside>
 
 					{/* Main content area */}
-					<main className="flex flex-col p-6 relative">
-						{/* Left edge restore hint when sidebar is hidden */}
-						{!sidebarVisible && (
-							<button
-								onClick={() => setSidebarVisible(true)}
-								onKeyDown={(e) => {
-									if (e.key === 'Enter' || e.key === ' ') {
-										e.preventDefault()
-										setSidebarVisible(true)
-									}
-								}}
-								className="absolute left-0 top-0 bottom-0 w-1 group cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset"
-								aria-label="Click to restore sidebar"
-								tabIndex={0}
-							>
-								<div className="absolute left-0 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity duration-200 pointer-events-none">
-									<div className="bg-blue-500 text-white text-xs px-2 py-1 rounded-r whitespace-nowrap shadow-lg">
-										Click to restore sidebar
-									</div>
-									<div className="absolute left-0 top-1/2 -translate-y-1/2 w-0 h-0 border-l-4 border-l-blue-500 border-t-4 border-t-transparent border-b-4 border-b-transparent"></div>
-								</div>
-							</button>
-						)}
-						
+					<main className="flex flex-col p-6 relative main-content">
 						{/* Main content */}
 						<div className="flex-1 flex flex-col items-center justify-center gap-6">
 							<SearchForm 
@@ -362,27 +354,26 @@ export function MainScreenClient(): ReactNode {
 					</main>
 				</div>
 			) : (
-				<div 
-					className={`h-screen w-full grid grid-cols-1 ${
-						sidebarVisible ? 'md:grid-cols-[260px_1fr]' : 'md:grid-cols-[0px_1fr]'
-					}`}
-				>
-				<aside className={`hidden md:block transition-all duration-300 ${
-					sidebarVisible ? 'w-[260px]' : 'w-0 overflow-hidden'
+				<div className="h-screen w-full flex sidebar-animation-wrapper">
+				<aside className={`hidden md:block sidebar-container ${
+					sidebarVisible ? '' : 'collapsed'
 				}`}>
-					<Sidebar header={null} onKeyDown={handleKeyDown}>
-						{/* Sidebar Header with Controls */}
-						<div className="flex items-center justify-between p-3 border-b border-gray-200 dark:border-gray-700">
-							<FileUploadButton
-								onUploadClick={handleUploadClick}
-								variant="sidebar"
-								className="flex-shrink-0"
-							/>
-							<SidebarToggle
-								onToggle={() => setSidebarVisible(!sidebarVisible)}
-								className="flex-shrink-0"
-							/>
-						</div>
+					<Sidebar 
+						header={(
+							<div className="flex items-center justify-between p-3">
+								<FileUploadButton
+									onUploadClick={handleUploadClick}
+									variant="sidebar"
+									className="flex-shrink-0"
+								/>
+								<SidebarToggle
+									onToggle={() => setSidebarVisible(!sidebarVisible)}
+									className="flex-shrink-0"
+								/>
+							</div>
+						)}
+						onKeyDown={handleKeyDown}
+					>
 						
 						<SidebarGroup label="ADaM" accentVar="--accent-adam">
 							{groupedDatasets.ADaM.map((dataset, i) => (
@@ -424,48 +415,28 @@ export function MainScreenClient(): ReactNode {
 								</SidebarItem>
 							))}
 						</SidebarGroup>
-						<SidebarGroup label="Protocol" accentVar="--accent-protocol">
-							{groupedDatasets.Protocol.map((dataset, i) => (
-								<SidebarItem 
-									key={dataset.id} 
-									active={selectedId === dataset.id} 
-									onClick={() => handleDatasetSelect(dataset.id)} 
-									tone={toneFor(i, groupedDatasets.Protocol.length)}
-									itemId={dataset.id}
-								>
-									{dataset.name}
-								</SidebarItem>
-							))}
-						</SidebarGroup>
+						
+						{/* Only show Protocol section when StudyDesign_USDM exists */}
+						{shouldShowProtocolSection && (
+							<SidebarGroup label="Protocol" accentVar="--accent-protocol">
+								{filteredProtocolDatasets.map((dataset, i) => (
+									<SidebarItem 
+										key={dataset.id} 
+										active={selectedId === dataset.id} 
+										onClick={() => handleDatasetSelect(dataset.id)} 
+										tone={toneFor(i, filteredProtocolDatasets.length)}
+										itemId={dataset.id}
+									>
+										{dataset.name}
+									</SidebarItem>
+								))}
+							</SidebarGroup>
+						)}
 					</Sidebar>
 				</aside>
 
 				{viewState === 'search' && (
-					<main className="flex flex-col p-6 relative">
-						{/* Left edge restore hint when sidebar is hidden */}
-						{!sidebarVisible && (
-							<button
-								onClick={() => setSidebarVisible(true)}
-								onKeyDown={(e) => {
-									if (e.key === 'Enter' || e.key === ' ') {
-										e.preventDefault()
-										setSidebarVisible(true)
-									}
-								}}
-								className="absolute left-0 top-0 bottom-0 w-1 group cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset"
-								aria-label="Click to restore sidebar"
-								tabIndex={0}
-							>
-								<div className="absolute left-0 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity duration-200 pointer-events-none">
-									<div className="bg-blue-500 text-white text-xs px-2 py-1 rounded-r whitespace-nowrap shadow-lg">
-										Click to restore sidebar
-									</div>
-									<div className="absolute left-0 top-1/2 -translate-y-1/2 w-0 h-0 border-l-4 border-l-blue-500 border-t-4 border-t-transparent border-b-4 border-b-transparent"></div>
-								</div>
-							</button>
-						)}
-						
-
+					<main className="flex flex-col p-6 relative main-content">
 						{/* Main content */}
 						<div className="flex-1 flex flex-col items-center justify-center gap-6">
 							<SearchForm 
@@ -479,30 +450,7 @@ export function MainScreenClient(): ReactNode {
 				)}
 
 				{viewState === 'search-results' && (
-					<div className="relative">
-						{/* Left edge restore hint when sidebar is hidden */}
-						{!sidebarVisible && (
-							<button
-								onClick={() => setSidebarVisible(true)}
-								onKeyDown={(e) => {
-									if (e.key === 'Enter' || e.key === ' ') {
-										e.preventDefault()
-										setSidebarVisible(true)
-									}
-								}}
-								className="absolute left-0 top-0 bottom-0 w-1 group cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset z-10"
-								aria-label="Click to restore sidebar"
-								tabIndex={0}
-							>
-								<div className="absolute left-0 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity duration-200 pointer-events-none">
-									<div className="bg-blue-500 text-white text-xs px-2 py-1 rounded-r whitespace-nowrap shadow-lg">
-										Click to restore sidebar
-									</div>
-									<div className="absolute left-0 top-1/2 -translate-y-1/2 w-0 h-0 border-l-4 border-l-blue-500 border-t-4 border-t-transparent border-b-4 border-b-transparent"></div>
-								</div>
-							</button>
-						)}
-						
+					<div className="relative content-wrapper">
 						<LineageView
 							dataset=""
 							variable={searchQuery}
@@ -515,30 +463,7 @@ export function MainScreenClient(): ReactNode {
 				)}
 
 				{viewState === 'variables' && selectedDataset && (
-					<div className="flex-1 overflow-hidden relative">
-						{/* Left edge restore hint when sidebar is hidden */}
-						{!sidebarVisible && (
-							<button
-								onClick={() => setSidebarVisible(true)}
-								onKeyDown={(e) => {
-									if (e.key === 'Enter' || e.key === ' ') {
-										e.preventDefault()
-										setSidebarVisible(true)
-									}
-								}}
-								className="absolute left-0 top-0 bottom-0 w-1 group cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset"
-								aria-label="Click to restore sidebar"
-								tabIndex={0}
-							>
-								<div className="absolute left-0 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity duration-200 pointer-events-none">
-									<div className="bg-blue-500 text-white text-xs px-2 py-1 rounded-r whitespace-nowrap shadow-lg">
-										Click to restore sidebar
-									</div>
-									<div className="absolute left-0 top-1/2 -translate-y-1/2 w-0 h-0 border-l-4 border-l-blue-500 border-t-4 border-t-transparent border-b-4 border-b-transparent"></div>
-								</div>
-							</button>
-						)}
-						
+					<div className="flex-1 overflow-hidden relative content-wrapper">
 						<VariablesBrowser 
 							dataset={selectedDataset} 
 							onVariableSelect={handleVariableSelect}
@@ -552,30 +477,7 @@ export function MainScreenClient(): ReactNode {
 				)}
 
 				{viewState === 'lineage' && lineageState && (
-					<div className="relative">
-						{/* Left edge restore hint when sidebar is hidden */}
-						{!sidebarVisible && (
-							<button
-								onClick={() => setSidebarVisible(true)}
-								onKeyDown={(e) => {
-									if (e.key === 'Enter' || e.key === ' ') {
-										e.preventDefault()
-										setSidebarVisible(true)
-									}
-								}}
-								className="absolute left-0 top-0 bottom-0 w-1 group cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset"
-								aria-label="Click to restore sidebar"
-								tabIndex={0}
-							>
-								<div className="absolute left-0 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity duration-200 pointer-events-none">
-									<div className="bg-blue-500 text-white text-xs px-2 py-1 rounded-r whitespace-nowrap shadow-lg">
-										Click to restore sidebar
-									</div>
-									<div className="absolute left-0 top-1/2 -translate-y-1/2 w-0 h-0 border-l-4 border-l-blue-500 border-t-4 border-t-transparent border-b-4 border-b-transparent"></div>
-								</div>
-							</button>
-						)}
-						
+					<div className="relative content-wrapper">
 						<LineageView
 							dataset={lineageState.dataset}
 							variable={lineageState.variable}

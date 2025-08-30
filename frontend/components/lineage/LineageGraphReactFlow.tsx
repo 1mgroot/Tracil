@@ -1,4 +1,4 @@
-import { useMemo, memo } from 'react'
+import { useMemo, memo, useState } from 'react'
 import ReactFlow, {
   Node,
   Edge,
@@ -15,10 +15,14 @@ import ReactFlow, {
   NodeProps,
   NodeResizer,
 } from 'reactflow'
+import { Maximize2 } from 'lucide-react'
+import { FullscreenModal } from '@/components/ui/FullscreenModal'
+import { Button } from '@/components/ui/button'
 import * as dagre from 'dagre'
 import 'reactflow/dist/style.css'
 import type { LineageGraph as LineageGraphType, LineageNode, LineageEdge } from '@/types/lineage'
 import { getTypeColors, type ArtifactType } from '@/lib/colors'
+import { getNodeDisplayText } from '@/lib/utils'
 
 // Custom CSS to hide React Flow attribution
 const hideAttributionCSS = `
@@ -27,73 +31,15 @@ const hideAttributionCSS = `
   }
 `
 
-// Datasets that should display ID instead of title (ADaM + SDTM)
-const DATASETS_USE_ID = new Set([
-  // ADaM datasets
-  'ADSL',
-  'ADAE', 
-  'ADCM',
-  'ADLB',
-  'ADVS',
-  'ADEG',
-  'ADQS',
-  'ADPC',
-  'ADPP',
-  'ADTR',
-  'ADRS',
-  'ADTTE',
-  'ADMH',
-  'ADPR',
-  'ADDS',
-  'ADHO',
-  'ADRE',
-  // SDTM datasets
-  'DM',
-  'CO',
-  'SE',
-  'SV',
-  'TE',
-  'TV',
-  'TS',
-  'TI',
-  'AE',
-  'DS',
-  'DV',
-  'CE',
-  'MH',
-  'CM',
-  'EX',
-  'SU',
-  'PR',
-  'LB',
-  'VS',
-  'EG',
-  'IE',
-  'QS',
-  'RS',
-  'DA',
-  'PE',
-  'SC',
-  'FA',
-  'TA',
-  'SUPP--',
-  'RELREC'
-])
 
-// Helper function to determine if node should display ID instead of title
-const shouldDisplayNodeId = (nodeData: any): boolean => {
-  // Extract dataset from node ID or data
-  const dataset = nodeData.dataset || nodeData.id?.split('.')[1]
-  return dataset && DATASETS_USE_ID.has(dataset)
-}
 
 // Custom node component with group tag following React Flow best practices
 const CustomLineageNode = memo<NodeProps>(({ data, selected }) => {
   const nodeType = (data.group || 'SDTM') as ArtifactType
   const colors = getTypeColors(nodeType)
   
-  // Determine what text to display based on dataset type
-  const displayText = shouldDisplayNodeId(data) ? data.id : (data.title || data.label)
+  // Use shared utility function to determine display text
+  const displayText = getNodeDisplayText(data)
   
   return (
     <div 
@@ -177,9 +123,28 @@ CustomLineageNode.displayName = 'CustomLineageNode'
 
 // Legend component for trace strength visualization
 const TraceLegend = memo(() => {
+  const [isVisible, setIsVisible] = useState(true)
+
+  if (!isVisible) {
+    return null
+  }
+
   return (
     <div className="absolute top-4 right-4 bg-white border border-gray-200 rounded-lg shadow-sm p-3 z-10 min-w-[200px]">
-      <div className="text-sm font-semibold text-gray-900 mb-3">Trace Strength</div>
+      {/* Header with close button */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="text-sm font-semibold text-gray-900">Trace Strength</div>
+        <button
+          onClick={() => setIsVisible(false)}
+          className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-full hover:bg-gray-100"
+          aria-label="Close legend"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
       
       <div className="space-y-2 text-xs">
         {/* Direct */}
@@ -192,7 +157,7 @@ const TraceLegend = memo(() => {
               <polygon points="36,2 46,6 36,10" fill="#374151" />
             </svg>
           </div>
-          <span className="text-gray-700"><strong>Direct</strong> - Exact citation</span>
+          <span className="text-gray-700"><strong>Direct</strong> - Exact evidence</span>
         </div>
         
         {/* Reasoned */}
@@ -205,7 +170,7 @@ const TraceLegend = memo(() => {
               <polygon points="36,2 46,6 36,10" fill="none" stroke="#374151" strokeWidth="1.5" />
             </svg>
           </div>
-          <span className="text-gray-700"><strong>Reasoned</strong> - Inferred evidence</span>
+          <span className="text-gray-700"><strong>Reasoned</strong> - Brief reasoning from nearby evidence</span>
         </div>
         
         {/* General */}
@@ -218,7 +183,7 @@ const TraceLegend = memo(() => {
               <polygon points="38,3 44,6 38,9" fill="none" stroke="#374151" strokeWidth="1.5" />
             </svg>
           </div>
-          <span className="text-gray-700"><strong>General</strong> - CDISC conventions</span>
+          <span className="text-gray-700"><strong>General</strong> - General CDISC knowledge/conventions</span>
         </div>
       </div>
     </div>
@@ -377,6 +342,11 @@ const getLayoutedElements = (nodes: readonly LineageNode[], edges: readonly Line
 // Inner component that uses React Flow hooks
 function LineageGraphInner({ lineage }: LineageGraphProps) {
   const { fitView } = useReactFlow()
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const handleCloseFullscreen = () => {
+    setIsFullscreen(false)
+    setTimeout(() => fitView(), 50)
+  }
   
   // Create layouted elements
   const { nodes: layoutedNodes, edges: layoutedEdges } = useMemo(() => {
@@ -441,13 +411,27 @@ function LineageGraphInner({ lineage }: LineageGraphProps) {
       <style dangerouslySetInnerHTML={{ __html: hideAttributionCSS }} />
       
       <div className="p-4 md:p-6 pb-3 flex-shrink-0">
-        <h2 className="text-lg font-semibold text-gray-900">
-          Lineage Flow Chart
-        </h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-gray-900">
+            Lineage Flow Chart
+          </h2>
+          
+          {/* Fullscreen button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsFullscreen(true)}
+            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+            aria-label="Open fullscreen view"
+          >
+            <Maximize2 className="w-4 h-4" />
+          </Button>
+        </div>
       </div>
       
       <div className="flex-1 mx-4 md:mx-6 mb-4 md:mb-6 border border-gray-200 rounded-lg overflow-hidden min-h-0 relative">
         <ReactFlow
+          id="lineage-main"
           nodes={nodes}
           edges={edges}
           onNodesChange={onNodesChange}
@@ -502,6 +486,74 @@ function LineageGraphInner({ lineage }: LineageGraphProps) {
           />
         </ReactFlow>
       </div>
+      
+      {/* Fullscreen Modal */}
+      <FullscreenModal
+        isOpen={isFullscreen}
+        onClose={handleCloseFullscreen}
+        title={`Lineage Flow Chart - ${lineage.nodes.length} nodes`}
+        className="bg-white"
+      >
+        <div className="w-full h-full">
+          <ReactFlowProvider>
+            <ReactFlow
+              id="lineage-fullscreen"
+              nodes={nodes}
+              edges={edges}
+              onNodesChange={onNodesChange}
+              onEdgesChange={onEdgesChange}
+              fitView
+              fitViewOptions={{ padding: 0.1, includeHiddenNodes: false }}
+              minZoom={0.1}
+              maxZoom={3.0}
+              attributionPosition="bottom-left"
+              nodeTypes={nodeTypes}
+              edgeTypes={edgeTypes}
+              nodesDraggable={false}
+              nodesConnectable={false}
+              elementsSelectable={true}
+              panOnDrag={true}
+              selectionOnDrag={false}
+              zoomOnScroll={true}
+              zoomOnPinch={true}
+              preventScrolling={false}
+            >
+              <Background color="#f3f4f6" gap={16} />
+              
+              {/* Trace Strength Legend */}
+              <TraceLegend />
+              <Controls 
+                position="top-left"
+                showZoom={true}
+                showFitView={true}
+                showInteractive={false}
+                fitViewOptions={{ padding: 0.1, includeHiddenNodes: false }}
+              />
+              <MiniMap 
+                nodeColor={(node) => {
+                  const nodeType = (node.data?.group || 'SDTM') as ArtifactType
+                  const colors = getTypeColors(nodeType)
+                  return colors.background
+                }}
+                nodeStrokeColor={(node) => {
+                  const nodeType = (node.data?.group || 'SDTM') as ArtifactType
+                  const colors = getTypeColors(nodeType)
+                  return colors.border
+                }}
+                nodeStrokeWidth={2}
+                zoomable={true}
+                pannable={true}
+                position="bottom-right"
+                style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                }}
+              />
+            </ReactFlow>
+          </ReactFlowProvider>
+        </div>
+      </FullscreenModal>
     </div>
   )
 }

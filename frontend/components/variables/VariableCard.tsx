@@ -70,25 +70,7 @@ export const VariableCard = memo(function VariableCard({
       ref={cardRef}
       className={`
         variable-card
-        aspect-[2/1]
-        rounded-lg
-        focus:outline-none
-        focus:ring-2
-        focus:ring-[var(--focus-ring)]
-        focus:ring-offset-2
-        transition-all
-        duration-200
-        ease-in-out
-        hover:transform
-        hover:-translate-y-0.5
-        hover:shadow-md
-        flex
-        items-center
-        justify-center
-        text-sm
-        font-medium
         cursor-pointer
-        p-2
         ${selected ? 'is-selected' : 'is-idle'}
         ${isFocused ? 'ring-2 ring-[var(--focus-ring)] ring-offset-2' : ''}
       `}

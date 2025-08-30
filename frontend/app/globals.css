@@ -90,6 +90,11 @@
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
 
+  /* Sidebar animation utilities */
+  --sidebar-transition: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  --sidebar-width: 260px;
+  --sidebar-collapsed-width: 0px;
+
   /* Group accents - Redesigned based on Apple & Sony principles */
   /* 
    * Design Principles:
@@ -235,51 +240,182 @@
    Idle: mix accent with pane/item bg; Active: solid accent bg with light text. */
 .sidebar-item.is-idle {
   background: color-mix(in oklab, var(--accent-color, var(--sidebar-item-bg)) var(--tone, 10%), var(--sidebar-item-bg));
+  border: 1px solid transparent;
+  backdrop-filter: blur(8px);
 }
 .sidebar-item.is-idle:hover {
   background: color-mix(in oklab, var(--accent-color, var(--sidebar-item-hover-bg)) var(--tone, 18%), var(--sidebar-item-hover-bg));
+  border-color: color-mix(in oklab, var(--accent-color, var(--sidebar-border)) 30%, var(--sidebar-border));
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px oklch(0 0 0 / 0.08);
 }
 .sidebar-item.is-active {
   background: color-mix(in oklab, var(--accent-color, var(--sidebar-item-active-bg)) 85%, var(--sidebar-item-active-bg));
   color: var(--sidebar-item-active-text);
   border-color: transparent;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 2px 12px oklch(0 0 0 / 0.12);
 }
 .sidebar-item.is-active:hover {
   background: color-mix(in oklab, var(--accent-color, var(--sidebar-item-active-bg)) 85%, var(--sidebar-item-active-bg));
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px oklch(0 0 0 / 0.15);
 }
 
-/* Variable card state styling with color-mix - similar to sidebar items */
-.variable-card.is-idle {
-  background: color-mix(in oklab, var(--accent-color) 15%, var(--surface-muted));
-  color: var(--text-primary);
-}
-.variable-card.is-idle:hover {
-  background: color-mix(in oklab, var(--accent-color) 35%, var(--surface-muted));
-  color: var(--text-primary);
-}
-.variable-card.is-selected {
-  background: color-mix(in oklab, var(--accent-color) 85%, var(--sidebar-item-active-bg));
-  color: var(--sidebar-item-active-text);
-}
-/* Selected cards don't change on hover */
-.variable-card.is-selected:hover {
-  background: color-mix(in oklab, var(--accent-color) 85%, var(--sidebar-item-active-bg));
-  color: var(--sidebar-item-active-text);
-}
+  /* Variable card state styling with color-mix - similar to sidebar items */
+  .variable-card.is-idle {
+    background: color-mix(in oklab, var(--accent-color) 15%, var(--surface-muted));
+    color: var(--text-primary);
+    border-color: transparent;
+  }
+  
+  .variable-card.is-idle:hover {
+    background: color-mix(in oklab, var(--accent-color) 25%, var(--surface-muted));
+    color: var(--text-primary);
+    border-color: color-mix(in oklab, var(--accent-color) 30%, var(--border));
+  }
+  
+  .variable-card.is-selected {
+    background: color-mix(in oklab, var(--accent-color) 85%, var(--sidebar-item-active-bg));
+    color: var(--sidebar-item-active-text);
+    border-color: color-mix(in oklab, var(--accent-color) 60%, var(--border));
+  }
+  
+  /* Selected cards don't change on hover */
+  .variable-card.is-selected:hover {
+    background: color-mix(in oklab, var(--accent-color) 85%, var(--sidebar-item-active-bg));
+    color: var(--sidebar-item-active-text);
+    border-color: color-mix(in oklab, var(--accent-color) 60%, var(--border));
+  }
 
-/* Variables Browser animations and transitions */
-.variable-card {
-  transition: all 0.2s ease-in-out;
-}
+  /* Variables Browser - Responsive Design System */
+  
+  /* Card size tokens - Design system approach */
+  :root {
+    --card-min-width: 120px;
+    --card-max-width: 200px;
+    --card-min-height: 60px;
+    --card-max-height: 100px;
+    --card-aspect-ratio: 2 / 1;
+    --card-gap: 12px;
+    --card-padding: 16px;
+    --card-border-radius: 8px;
+    
+    /* Responsive breakpoints for card sizing */
+    --card-size-xs: 100px;  /* Small screens */
+    --card-size-sm: 140px;  /* Medium screens */
+    --card-size-md: 160px;  /* Large screens */
+    --card-size-lg: 180px;  /* Extra large screens */
+    --card-size-xl: 200px;  /* Ultra wide screens */
+  }
 
-.variable-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px oklch(0 0 0 / 0.1);
-}
+  /* Variables Grid - Responsive grid system */
+  .variables-grid {
+    display: grid;
+    gap: var(--card-gap);
+    /* Responsive grid with intelligent sizing */
+    grid-template-columns: repeat(auto-fill, minmax(var(--card-min-width), 1fr));
+    /* Ensure cards don't get too wide on large screens */
+    max-width: 100%;
+  }
 
-.dark .variable-card:hover {
-  box-shadow: 0 4px 12px oklch(0 0 0 / 0.3);
-}
+  /* Responsive card sizing */
+  @media (min-width: 640px) {
+    .variables-grid {
+      grid-template-columns: repeat(auto-fill, minmax(var(--card-size-sm), 1fr));
+    }
+  }
+
+  @media (min-width: 768px) {
+    .variables-grid {
+      grid-template-columns: repeat(auto-fill, minmax(var(--card-size-md), 1fr));
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .variables-grid {
+      grid-template-columns: repeat(auto-fill, minmax(var(--card-size-lg), 1fr));
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .variables-grid {
+      grid-template-columns: repeat(auto-fill, minmax(var(--card-size-xl), 1fr));
+    }
+  }
+
+  /* Variable Card - Consistent sizing and animations */
+  .variable-card {
+    /* Size constraints */
+    min-width: var(--card-min-width);
+    max-width: var(--card-max-width);
+    min-height: var(--card-min-height);
+    max-height: var(--card-max-height);
+    
+    /* Aspect ratio with fallback */
+    aspect-ratio: var(--card-aspect-ratio);
+    
+    /* Layout */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    /* Spacing */
+    padding: var(--card-padding);
+    
+    /* Visual styling */
+    border-radius: var(--card-border-radius);
+    border: 1px solid transparent;
+    
+    /* Typography */
+    font-size: 0.875rem; /* 14px */
+    font-weight: 500;
+    line-height: 1.25;
+    
+    /* Animations - Single, consistent transition */
+    transition: 
+      transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+      box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+      border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    /* Performance optimization */
+    will-change: transform, box-shadow;
+    
+    /* Prevent text overflow */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Hover state - Subtle and consistent */
+  .variable-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px oklch(0 0 0 / 0.08);
+    border-color: oklch(0 0 0 / 0.1);
+  }
+
+  /* Focus state - Accessible focus indicator */
+  .variable-card:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+    transform: translateY(-1px);
+  }
+
+  /* Active/Selected state */
+  .variable-card.is-selected {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px oklch(0 0 0 / 0.12);
+  }
+
+  /* Dark mode adjustments */
+  .dark .variable-card:hover {
+    box-shadow: 0 4px 12px oklch(0 0 0 / 0.2);
+    border-color: oklch(1 1 1 / 0.1);
+  }
+
+  .dark .variable-card:focus-visible {
+    outline-color: var(--focus-ring);
+  }
 
 /* Tooltip animations */
 @keyframes tooltip-in {
@@ -295,4 +431,249 @@
 
 .tooltip-animate-in {
   animation: tooltip-in 200ms ease-out;
+}
+
+/* Sidebar animation improvements - Best practices for expandable sidebar */
+.sidebar-container {
+  width: var(--sidebar-width);
+  transition: width var(--sidebar-transition);
+  will-change: width;
+  overflow: hidden;
+  flex-shrink: 0;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.sidebar-container.collapsed {
+  width: 0;
+}
+
+/* Main content area - expands to fill available space */
+.main-content {
+  flex: 1;
+  min-width: 0;
+  transition: margin-left var(--sidebar-transition);
+  will-change: margin-left;
+}
+
+/* Content wrapper with proper overflow handling */
+.content-wrapper {
+  position: relative;
+  overflow: hidden;
+  min-width: 0;
+  flex: 1;
+}
+
+/* Smooth sidebar toggle animation */
+.sidebar-toggle-animation {
+  transition: all var(--sidebar-transition);
+  will-change: transform, opacity;
+}
+
+/* Animation wrapper for smooth transitions */
+.sidebar-animation-wrapper {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Enhanced sidebar group styling */
+.sidebar-group-header {
+  position: relative;
+  overflow: hidden;
+}
+
+.sidebar-group-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    135deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent 100%
+  );
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.sidebar-group-header:hover::before {
+  opacity: 1;
+}
+
+/* Enhanced chevron animation for sidebar groups */
+.sidebar-group button svg {
+  transform-origin: center;
+  will-change: transform;
+}
+
+/* Smooth expand/collapse animation with easing */
+.sidebar-group .transition-all {
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Enhanced hover effects for group buttons */
+.sidebar-group button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px oklch(0 0 0 / 0.06);
+}
+
+.sidebar-group button:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px oklch(0 0 0 / 0.08);
+}
+
+/* Enhanced scrollbar styling for sidebar - Apple-style minimal design */
+.sidebar-container::-webkit-scrollbar {
+  width: 6px;
+  background: transparent;
+}
+
+.sidebar-container::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 4px;
+}
+
+.sidebar-container::-webkit-scrollbar-thumb {
+  background: oklch(0 0 0 / 0.08);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  min-height: 40px;
+}
+
+.sidebar-container::-webkit-scrollbar-thumb:hover {
+  background: oklch(0 0 0 / 0.15);
+  background-clip: content-box;
+}
+
+.sidebar-container::-webkit-scrollbar-thumb:active {
+  background: oklch(0 0 0 / 0.25);
+  background-clip: content-box;
+}
+
+/* Dark mode scrollbar */
+.dark .sidebar-container::-webkit-scrollbar-thumb {
+  background: oklch(1 1 1 / 0.08);
+  background-clip: content-box;
+}
+
+.dark .sidebar-container::-webkit-scrollbar-thumb:hover {
+  background: oklch(1 1 1 / 0.15);
+  background-clip: content-box;
+}
+
+.dark .sidebar-container::-webkit-scrollbar-thumb:active {
+  background: oklch(1 1 1 / 0.25);
+  background-clip: content-box;
+}
+
+/* Firefox scrollbar styling */
+.sidebar-container {
+  scrollbar-width: thin;
+  scrollbar-color: oklch(0 0 0 / 0.08) transparent;
+}
+
+.dark .sidebar-container {
+  scrollbar-color: oklch(1 1 1 / 0.08) transparent;
+}
+
+/* Hide scrollbar when not needed */
+.sidebar-container:not(:hover)::-webkit-scrollbar-thumb {
+  background: oklch(0 0 0 / 0.04);
+  background-clip: content-box;
+}
+
+.dark .sidebar-container:not(:hover)::-webkit-scrollbar-thumb {
+  background: oklch(1 1 1 / 0.04);
+  background-clip: content-box;
+}
+
+/* Generic scrollable container - Apple-style scrollbar design */
+.scrollable-container::-webkit-scrollbar {
+  width: 6px;
+  background: transparent;
+}
+
+.scrollable-container::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 4px;
+}
+
+.scrollable-container::-webkit-scrollbar-thumb {
+  background: oklch(0 0 0 / 0.08);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  min-height: 40px;
+}
+
+.scrollable-container::-webkit-scrollbar-thumb:hover {
+  background: oklch(0 0 0 / 0.15);
+  background-clip: content-box;
+}
+
+.scrollable-container::-webkit-scrollbar-thumb:active {
+  background: oklch(0 0 0 / 0.25);
+  background-clip: content-box;
+}
+
+/* Dark mode scrollbar for generic containers */
+.dark .scrollable-container::-webkit-scrollbar-thumb {
+  background: oklch(1 1 1 / 0.08);
+  background-clip: content-box;
+}
+
+.dark .scrollable-container::-webkit-scrollbar-thumb:hover {
+  background: oklch(1 1 1 / 0.15);
+  background-clip: content-box;
+}
+
+.dark .scrollable-container::-webkit-scrollbar-thumb:active {
+  background: oklch(1 1 1 / 0.25);
+  background-clip: content-box;
+}
+
+/* Firefox scrollbar styling for generic containers */
+.scrollable-container {
+  scrollbar-width: thin;
+  scrollbar-color: oklch(0 0 0 / 0.08) transparent;
+}
+
+.dark .scrollable-container {
+  scrollbar-color: oklch(1 1 1 / 0.08) transparent;
+}
+
+/* Hide scrollbar when not needed for generic containers */
+.scrollable-container:not(:hover)::-webkit-scrollbar-thumb {
+  background: oklch(0 0 0 / 0.04);
+  background-clip: content-box;
+}
+
+.dark .scrollable-container:not(:hover)::-webkit-scrollbar-thumb {
+  background: oklch(1 1 1 / 0.04);
+  background-clip: content-box;
+}
+
+/* Mobile optimization for generic scrollable containers */
+@media (max-width: 768px) {
+  .scrollable-container::-webkit-scrollbar {
+    width: 0;
+  }
+  
+  .scrollable-container {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+}
+
+/* Touch device optimization for generic scrollable containers */
+@media (pointer: coarse) {
+  .scrollable-container::-webkit-scrollbar {
+    width: 8px;
+  }
 }

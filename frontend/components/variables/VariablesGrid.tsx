@@ -117,10 +117,7 @@ export const VariablesGrid = memo(function VariablesGrid({
       
       <div 
         ref={gridRef}
-        className="variables-grid grid gap-3"
-        style={{
-          gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))'
-        }}
+        className="variables-grid"
         role="grid"
         aria-label="Dataset variables"
       >

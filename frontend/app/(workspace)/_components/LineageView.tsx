@@ -19,7 +19,6 @@ export function LineageView({
   dataset, 
   variable, 
   onBack, 
-  mode = 'variables',
   backButtonText,
   initialLineage 
 }: LineageViewProps) {

@@ -144,9 +144,9 @@ describe('Sidebar Accessibility Tests', () => {
       const options = screen.getAllByRole('option')
       options.forEach(option => {
         // Check that focus-visible utility classes are present
-        // Note: focus-visible:outline might be optimized away by Tailwind if not used
-        expect(option).toHaveClass('focus-visible:outline-2')
-        expect(option).toHaveClass('focus-visible:outline-[var(--focus)]')
+        // Note: focus-visible:ring is used instead of outline for modern design
+        expect(option).toHaveClass('focus-visible:ring-2')
+        expect(option).toHaveClass('focus-visible:ring-[var(--focus)]/50')
       })
     })
 
@@ -164,12 +164,17 @@ describe('Sidebar Accessibility Tests', () => {
     it('should have proper labels and descriptions', () => {
       renderSidebar()
       
-      // Check group labeling
-      const groupLabel = screen.getByText('Test Group')
-      expect(groupLabel).toHaveAttribute('id', 'sidebar-group-test-group')
+      // Check group labeling - the ID is on the div wrapper, not the button
+      const groupDiv = screen.getByRole('group')
+      expect(groupDiv).toHaveAttribute('aria-labelledby', 'sidebar-group-test-group')
+      
+      // Check that the ID exists on the wrapper div
+      const wrapperDiv = groupDiv.querySelector('#sidebar-group-test-group')
+      expect(wrapperDiv).toBeInTheDocument()
       
       // Check that decorative elements are hidden
-      const decorativeSpan = groupLabel.querySelector('span[aria-hidden="true"]')
+      const groupButton = screen.getByRole('button', { name: /Test Group/i })
+      const decorativeSpan = groupButton.querySelector('span[aria-hidden="true"]')
       expect(decorativeSpan).toBeInTheDocument()
     })
 
