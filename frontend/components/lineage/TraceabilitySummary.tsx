@@ -13,9 +13,8 @@ export function TraceabilitySummary({ lineage }: TraceabilitySummaryProps) {
   const [nodesExpanded, setNodesExpanded] = useState(true)
   const [connectionsExpanded, setConnectionsExpanded] = useState(false)
 
-  // Debug: Log API response and lineage data
+  // Debug: Log lineage data
   useEffect(() => {
-    console.log('🔍 Debug - Raw API Response:', lineage)
     console.log('🔍 Debug - Full lineage object:', lineage)
   }, [lineage])
 
