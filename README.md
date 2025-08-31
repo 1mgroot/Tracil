@@ -8,9 +8,10 @@ Tracil is an AI-powered clinical data lineage platform that connects Protocol/SA
 
 ### Key Features
 
-- **Source‑agnostic ingestion**: Ingests XPT/SAS7BDAT, define.xml/html, ARD/ARS JSON, PDF/RTF/DOCX across Protocol/SAP, CRF, SDTM, ADaM, and TLF.
+- **Source‑agnostic ingestion**: Ingests XPT/SAS7BDAT/JSON (SDTM/ADaM datasets), define.xml (metadata), ARD/ARS JSON (TLF context), PDF/RTF/DOCX (Protocol/CRF/TLF documents) across all CDISC standards.
+- **Specification support**: Accepts ADaM/SDTM specifications (e.g., XLSX/CSV) and define.xml. For this open-source study, we use define.xml because spec sheets are not publicly accessible.
 - **CDISC‑first organization**: Normalizes inputs into a unified structure by standard (not by file), enabling consistent UI and APIs.
-- **AI‑powered lineage analysis**: Explains variable lineage (source → transformation → target) with confidence and gap detection; supports freeform queries.
+- **AI‑powered lineage analysis**: Explains variable lineage (source → transformation → target) with evidence tags on nodes/edges — [direct], [reasoned], [general] — and explicit gap notes when links can’t be supported; supports freeform queries.
 - **TLF cell normalization**: Converts natural‑language table requests into concrete cell specs and builds a TLF index from ARD/ARS.
 - **USDM study design support**: Parses USDM JSON, auto‑labels objectives/endpoints, filters placeholders, and exposes a clean design view.
 - **Accessibility & UX**: WCAG 2.2 AA compliant, full keyboard navigation, screen reader support, strong error handling and user feedback.
@@ -51,8 +52,7 @@ Tracil is an AI-powered clinical data lineage platform that connects Protocol/SA
 1) Upload mixed files (define.xml, SDTM/ADaM XPT/SAS7BDAT, aCRF PDF, Protocol PDF, ARD/ARS JSON).
 2) Browse the unified left pane (SDTM/ADaM/CRF/Protocol/TLF); select a dataset to view variables.
 3) Click a variable → get AI lineage (sources, transformations, gaps) with an interactive graph.
-4) Try a freeform query (e.g., “table vs_t01 week 4 mean placebo”) → normalized cell spec and lineage context.
-5) View USDM study design (objectives/endpoints) and how it relates to datasets and displays.
+4) Try a natural language query (e.g., “Show the derivation of max week 4 baseline pulse rate for patients that received Xanomeline low dose treatment in table ARS_VS_T01”) → normalized cell and lineage context.
 
 ### Prerequisites
 - Node 18+ and npm (for frontend)
@@ -118,17 +118,6 @@ cp backend/.env.example backend/.env
   - `OPENAI_API_KEY` = Optional, enables LLM features
   - `USDM_SUMMARY_MODEL`, `CELL_NORMALIZER_MODEL`, `FREEFORM_ROUTER_MODEL` = Optional model overrides
 
-### Team Roles
-
-**Frontend Developer:**
-- Owns `frontend/` folder completely
-- Builds UI with mock API responses initially
-- Later connects to Python backend via API calls
-
-**AI Developer:**
-- Owns `backend/` folder completely
-- Complete freedom over Python code organization
-- Only requirement: expose 2 API endpoints (see `backend/AI_DEV_GUIDE.md`)
 
 ### Development Scripts
 ```bash
@@ -207,10 +196,6 @@ Tracil is built with **accessibility-first** principles, ensuring the platform i
 - `Arrow Keys`: Navigate within data grids and lists
 
 For accessibility feedback or support requests, please open an issue with the `accessibility` label.
-
-### Deploy
-- Frontend: Vercel (environment variables in project settings)
-- Backend: AI Developer's choice of Python deployment platform
 
 ### Ephemeral Processing and Privacy
 
