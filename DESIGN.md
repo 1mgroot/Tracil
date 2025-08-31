@@ -65,6 +65,7 @@ Note: Free tiers/quotas change; verify before demos or releases and adjust defau
 - **Features**: Request validation, error handling, streaming responses, timeout management
 - **Security**: API key management, request sanitization, CORS configuration
 - **Privacy**: PII/PHI redaction before forwarding to AI backend
+- **Environment**: `NEXT_PUBLIC_API_BASE_URL`, `NEXT_PUBLIC_API_TIMEOUT_MS`
 
 **Python AI Backend (FastAPI)**
 - **Framework**: FastAPI 0.116.1 with CORS middleware for cross-origin requests
@@ -76,14 +77,15 @@ Note: Free tiers/quotas change; verify before demos or releases and adjust defau
   - aCRF preprocessing with variable index extraction
   - Protocol text extraction and TLF title extraction
 - **Features**: Session-based ephemeral processing, source-agnostic data organization, comprehensive error handling
-- **Privacy**: Ephemeral processing, no file persistence, session-based temporary storage only
+- **Privacy**: Ephemeral processing, no long-term persistence; development may write transient session artifacts under `backend/output/` for debugging
 - **Deployment**: Python 3.8+ compatible, pip-based dependency management
+- **Health**: Optional `GET /health` endpoint for readiness checks; frontend degrades gracefully if absent
 
 **Data Processing Pipeline**
 - **File Upload**: Frontend → Next.js API → Python backend (streaming)
 - **AI Analysis**: Python backend with provider abstraction and fallback
 - **Response**: Streaming JSON responses for real-time progress updates
-- **Privacy**: All processing ephemeral, files discarded immediately after processing
+- **Privacy**: All processing ephemeral; development writes transient session artifacts (e.g., `session_summary.json`) to `backend/output/` to aid debugging and are not retained long-term
 
 ---
 
@@ -431,7 +433,7 @@ Note (implementation detail as of current branch):
 
 **Development Environment Setup:**
 - **Frontend**: Standard Next.js development server (`npm run dev`)
-- **Backend**: FastAPI with hot reload (`uvicorn app.main:app --reload`)
+- **Backend**: FastAPI with hot reload (`uvicorn main:app --reload`)
 - **Integration**: Docker Compose for local full-stack development
 - **API Documentation**: Auto-generated OpenAPI docs at `/docs` endpoint
 
@@ -701,7 +703,7 @@ Layout constraint (main screen)
 **Architecture Compliance:**
 - Clean separation between UI and business logic
 - No direct AI provider imports in UI components
-- All state management through established patterns (Zustand/Context)
+- All state management with React hooks and custom hooks (no Zustand)
 - Consistent error handling and user feedback patterns
 - Performance optimization built into component design
 

@@ -2,9 +2,61 @@
 
 Next.js frontend + Python AI backend in a single repository. See `DESIGN.md` and `backend/AI_DEV_GUIDE.md` for details.
 
+### What is Tracil?
+
+Tracil is an AI-powered clinical data lineage platform that connects Protocol/SAP, CRF, SDTM, ADaM, and TLF artifacts into a clear, standards-aligned traceability graph. It is source-agnostic (works with define.xml, specs, raw datasets, PDFs/RTFs) and CDISC-first, with privacy-by-design: no long-term server-side persistence.
+
+### Key Features
+
+- **Source‑agnostic ingestion**: Ingests XPT/SAS7BDAT/JSON (SDTM/ADaM datasets), define.xml (metadata), ARD/ARS JSON (TLF context), PDF/RTF/DOCX (Protocol/CRF/TLF documents) across all CDISC standards.
+- **Specification support**: Accepts ADaM/SDTM specifications (e.g., XLSX/CSV) and define.xml. For this open-source study, we use define.xml because spec sheets are not publicly accessible.
+- **CDISC‑first organization**: Normalizes inputs into a unified structure by standard (not by file), enabling consistent UI and APIs.
+- **AI‑powered lineage analysis**: Explains variable lineage (source → transformation → target) with evidence tags on nodes/edges — [direct], [reasoned], [general] — and explicit gap notes when links can’t be supported; supports freeform queries.
+- **TLF cell normalization**: Converts natural‑language table requests into concrete cell specs and builds a TLF index from ARD/ARS.
+- **USDM study design support**: Parses USDM JSON, auto‑labels objectives/endpoints, filters placeholders, and exposes a clean design view.
+- **Accessibility & UX**: WCAG 2.2 AA compliant, full keyboard navigation, screen reader support, strong error handling and user feedback.
+- **Performance & privacy**: Ephemeral sessions, metadata‑only LLM usage, strict timeouts, and streaming where applicable.
+- **Developer experience**: Typed API responses, strict TypeScript, 136 passing tests including accessibility checks.
+
+### Architecture Overview
+
+- **Frontend (Next.js 15 + React 19 + TypeScript 5.6+)**: Single‑page workspace; components in `frontend/components`; proxy API routes in `frontend/app/api/ai/*`.
+- **Proxy API routes**: `POST /api/ai/process-files` and `POST /api/ai/analyze-variable` forward to Python backend with timeouts and error handling.
+- **Python backend (FastAPI)**: Core endpoints `POST /process-files` and `POST /analyze-variable`; optional `GET /health` for readiness.
+- **Standards & parsing**: SDTM/ADaM via pyreadstat/define.xml; CRF/Protocol/USDM via PDF/JSON parsers; TLF via ARD/ARS/RTF.
+- **Privacy & sessions**: No long‑term persistence; transient session artifacts during development under `backend/output/`.
+
+### Why it’s innovative (Innovation & Relevance)
+
+- **Source‑agnostic CDISC normalization** makes heterogeneous inputs usable immediately across workflows.
+- **Natural‑language to cell‑spec** for TLFs is a fresh, high‑impact accelerator for analysis and review.
+- **USDM integration** promotes adoption of emerging standards with automatic endpoint/objective summarization.
+- **Privacy‑first AI** operationalizes metadata‑only lineage reasoning—no raw data leaves the environment.
+
+### Technical quality & feasibility
+
+- **Reproducible**: Clear setup, strict TypeScript, comprehensive tests, explicit API contracts, environment‑driven configuration.
+- **Sound**: Strong error handling, timeouts, streaming, and deterministic fallbacks when AI is unavailable.
+- **Extensible**: Modular backend services; easy to add new file types or standards; proxy pattern isolates the UI from AI providers.
+- **Adoptable**: Works with define.xml/specs/raw datasets; can be introduced incrementally without data migration.
+
+### Impact & value
+
+- **Efficiency**: Automates lineage discovery and TLF cell identification; reduces manual curation and review cycles.
+- **Conformance**: Encourages standards‑aligned structures (CDISC, USDM) and exposes gaps explicitly.
+- **Transformation**: Accelerates protocol‑to‑analysis traceability, improving auditability and submission readiness.
+- **Interoperability**: Contracts and normalized structures enable integration with existing pipelines and tools.
+
+### Demo flow (suggested)
+
+1) Upload mixed files (define.xml, SDTM/ADaM XPT/SAS7BDAT, aCRF PDF, Protocol PDF, ARD/ARS JSON).
+2) Browse the unified left pane (SDTM/ADaM/CRF/Protocol/TLF); select a dataset to view variables.
+3) Click a variable → get AI lineage (sources, transformations, gaps) with an interactive graph.
+4) Try a natural language query (e.g., “Show the derivation of max week 4 baseline pulse rate for patients that received Xanomeline low dose treatment in table ARS_VS_T01”) → normalized cell and lineage context.
+
 ### Prerequisites
 - Node 18+ and npm (for frontend)
-- Python 3.9+ and pip (for backend)
+- Python 3.8+ and pip (for backend)
 - Optional: Vercel CLI for frontend deploys
 
 ### Quick Start
@@ -21,7 +73,12 @@ npm run frontend:dev
 ```bash
 # Set up Python backend
 cd backend
-# Follow backend/AI_DEV_GUIDE.md for setup
+# Install dependencies and run FastAPI
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn main:app --reload  # serves at http://localhost:8000
+
+# Follow backend/AI_DEV_GUIDE.md for details
 # AI Developer has complete freedom over backend implementation
 ```
 
@@ -51,17 +108,16 @@ cp frontend/.env.example frontend/.env.local
 cp backend/.env.example backend/.env
 ```
 
-### Team Roles
+**Environment variables (commonly used):**
 
-**Frontend Developer:**
-- Owns `frontend/` folder completely
-- Builds UI with mock API responses initially
-- Later connects to Python backend via API calls
+- Frontend (`frontend/.env.local`)
+  - `NEXT_PUBLIC_API_BASE_URL` = Python backend base URL (default `http://localhost:8000`)
+  - `NEXT_PUBLIC_API_TIMEOUT_MS` = API timeout in ms (default `120000`)
+- Backend (`backend/.env`)
+  - `ALLOWED_ORIGINS` = Frontend origin for CORS (default `http://localhost:3000`)
+  - `OPENAI_API_KEY` = Optional, enables LLM features
+  - `USDM_SUMMARY_MODEL`, `CELL_NORMALIZER_MODEL`, `FREEFORM_ROUTER_MODEL` = Optional model overrides
 
-**AI Developer:**
-- Owns `backend/` folder completely
-- Complete freedom over Python code organization
-- Only requirement: expose 2 API endpoints (see `backend/AI_DEV_GUIDE.md`)
 
 ### Development Scripts
 ```bash
@@ -73,6 +129,17 @@ npm run frontend:test   # Run frontend tests
 # Backend (AI Developer sets up their own scripts)
 npm run backend:dev     # Placeholder - AI Developer implements
 ```
+
+### API Endpoints
+
+- Python Backend (FastAPI):
+  - `POST /process-files` — Process uploaded files and return CDISC-organized structure
+  - `POST /analyze-variable` — Generate lineage for a specific variable or freeform query
+  - Optional: `GET /health` — Simple health endpoint (frontend handles absence gracefully)
+- Next.js API proxy (Frontend):
+  - `POST /api/ai/process-files` → proxies to backend `/process-files`
+  - `POST /api/ai/analyze-variable` → proxies to backend `/analyze-variable`
+  - `GET /api/ai/process-files?health=true` → lightweight health probe; reports unhealthy if backend `/health` is missing
 
 ### Integration
 - Phase 1: Both teams develop independently
@@ -130,6 +197,7 @@ Tracil is built with **accessibility-first** principles, ensuring the platform i
 
 For accessibility feedback or support requests, please open an issue with the `accessibility` label.
 
-### Deploy
-- Frontend: Vercel (environment variables in project settings)
-- Backend: AI Developer's choice of Python deployment platform
+### Ephemeral Processing and Privacy
+
+- Tracil is designed for ephemeral processing; no long-term server-side persistence of user files.
+- During development, the backend may write transient session artifacts under `backend/output/session_<timestamp>` to aid debugging. These artifacts should be treated as temporary and cleaned up. No raw data is sent to LLMs; only metadata is used.
