@@ -28,6 +28,8 @@ Tracil is an AI-powered clinical data lineage platform that connects Protocol/SA
 - **Standards & parsing**: SDTM/ADaM via pyreadstat/define.xml; CRF/Protocol/USDM via PDF/JSON parsers; TLF via ARD/ARS/RTF.
 - **Privacy & sessions**: No long‑term persistence; transient session artifacts during development under `backend/output/`.
 
+<img width="376" height="735" alt="image" src="https://github.com/user-attachments/assets/0478c148-9e43-4528-a096-d0d4749b08cd" />
+
 
 ## Technical quality & feasibility
 
