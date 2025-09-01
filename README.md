@@ -43,104 +43,6 @@ Tracil is an AI-powered clinical data lineage platform that connects Protocol/SA
 - **Transformation**: Accelerates protocol‑to‑analysis traceability, improving auditability and submission readiness.
 - **Interoperability**: Contracts and normalized structures enable integration with existing pipelines and tools.
 
-### Demo flow (suggested)
-
-1) Upload mixed files (define.xml, SDTM/ADaM XPT/SAS7BDAT, aCRF PDF, Protocol PDF, ARD/ARS JSON).
-2) Browse the unified left pane (SDTM/ADaM/CRF/Protocol/TLF); select a dataset to view variables.
-3) Click a variable → get AI lineage (sources, transformations, gaps) with an interactive graph.
-4) Try a natural language query (e.g., “Show the derivation of max week 4 baseline pulse rate for patients that received Xanomeline low dose treatment in table ARS_VS_T01”) → normalized cell and lineage context.
-
-### Prerequisites
-- Node 18+ and npm (for frontend)
-- Python 3.8+ and pip (for backend)
-
-### Quick Start
-
-**Frontend Development:**
-```bash
-# Install and run frontend
-npm install
-npm run frontend:dev
-# open http://localhost:3000
-```
-
-**Backend Development (AI Developer):**
-```bash
-# Set up Python backend
-cd backend
-# Install dependencies and run FastAPI
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn main:app --reload  # serves at http://localhost:8000
-
-# Follow backend/AI_DEV_GUIDE.md for details
-# AI Developer has complete freedom over backend implementation
-```
-
-### Monorepo Structure
-```
-/
-├── frontend/           # Next.js Application
-│   ├── app/           # App Router pages
-│   ├── components/    # Shared UI primitives  
-│   ├── features/      # UI-only vertical modules
-│   └── ...
-├── backend/           # Python AI Backend (AI Developer's Domain)
-│   ├── AI_DEV_GUIDE.md # Complete guide for AI developer
-│   └── .env.example   # Backend environment template
-├── .env.example       # Root environment template
-└── DESIGN.md         # Complete architecture documentation
-```
-
-### Environment Setup
-
-**Copy environment templates:**
-```bash
-# Frontend environment
-cp frontend/.env.example frontend/.env.local
-
-# Backend environment (AI Developer)
-cp backend/.env.example backend/.env
-```
-
-**Environment variables (commonly used):**
-
-- Frontend (`frontend/.env.local`)
-  - `NEXT_PUBLIC_API_BASE_URL` = Python backend base URL (default `http://localhost:8000`)
-  - `NEXT_PUBLIC_API_TIMEOUT_MS` = API timeout in ms (default `120000`)
-- Backend (`backend/.env`)
-  - `ALLOWED_ORIGINS` = Frontend origin for CORS (default `http://localhost:3000`)
-  - `OPENAI_API_KEY` = Optional, enables LLM features
-  - `USDM_SUMMARY_MODEL`, `CELL_NORMALIZER_MODEL`, `FREEFORM_ROUTER_MODEL` = Optional model overrides
-
-
-### Development Scripts
-```bash
-# Frontend
-npm run frontend:dev    # Start Next.js dev server
-npm run frontend:build  # Build frontend
-npm run frontend:test   # Run frontend tests
-
-# Backend (AI Developer sets up their own scripts)
-npm run backend:dev     # Placeholder - AI Developer implements
-```
-
-### API Endpoints
-
-- Python Backend (FastAPI):
-  - `POST /process-files` — Process uploaded files and return CDISC-organized structure
-  - `POST /analyze-variable` — Generate lineage for a specific variable or freeform query
-  - Optional: `GET /health` — Simple health endpoint (frontend handles absence gracefully)
-- Next.js API proxy (Frontend):
-  - `POST /api/ai/process-files` → proxies to backend `/process-files`
-  - `POST /api/ai/analyze-variable` → proxies to backend `/analyze-variable`
-  - `GET /api/ai/process-files?health=true` → lightweight health probe; reports unhealthy if backend `/health` is missing
-
-### Integration
-- Phase 1: Both teams develop independently
-- Phase 2: Connect via HTTP API calls (no Docker needed)
-- Phase 3: Optional Docker setup for production
-
 ## Accessibility Support
 
 Tracil is built with **accessibility-first** principles, ensuring the platform is usable by everyone, including users with disabilities.
@@ -196,3 +98,96 @@ For accessibility feedback or support requests, please open an issue with the `a
 
 - Tracil is designed for ephemeral processing; no long-term server-side persistence of user files.
 - During development, the backend may write transient session artifacts under `backend/output/session_<timestamp>` to aid debugging. These artifacts should be treated as temporary and cleaned up. No raw data is sent to LLMs; only metadata is used.
+
+## Demo flow (suggested)
+
+1) Upload mixed files (define.xml, SDTM/ADaM XPT/SAS7BDAT, aCRF PDF, Protocol PDF, ARD/ARS JSON).
+2) Browse the unified left pane (SDTM/ADaM/CRF/Protocol/TLF); select a dataset to view variables.
+3) Click a variable → get AI lineage (sources, transformations, gaps) with an interactive graph.
+4) Try a natural language query (e.g., “Show the derivation of max week 4 baseline pulse rate for patients that received Xanomeline low dose treatment in table ARS_VS_T01”) → normalized cell and lineage context.
+
+### Prerequisites
+- Node 18+ and npm (for frontend)
+- Python 3.8+ and pip (for backend)
+
+### Quick Start
+
+**Frontend Development:**
+```bash
+# Install and run frontend
+npm install
+npm run frontend:dev
+# open http://localhost:3000
+```
+
+**Backend Development (AI Developer):**
+```bash
+# Set up Python backend
+cd backend
+# Install dependencies and run FastAPI
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn main:app --reload  # serves at http://localhost:8000
+
+# Follow backend/AI_DEV_GUIDE.md for details
+# AI Developer has complete freedom over backend implementation
+```
+
+### Environment Setup
+
+**Copy environment templates:**
+```bash
+# Frontend environment
+cp frontend/.env.example frontend/.env.local
+
+# Backend environment (AI Developer)
+cp backend/.env.example backend/.env
+```
+
+**Environment variables (commonly used):**
+
+- Frontend (`frontend/.env.local`)
+  - `NEXT_PUBLIC_API_BASE_URL` = Python backend base URL (default `http://localhost:8000`)
+  - `NEXT_PUBLIC_API_TIMEOUT_MS` = API timeout in ms (default `120000`)
+- Backend (`backend/.env`)
+  - `ALLOWED_ORIGINS` = Frontend origin for CORS (default `http://localhost:3000`)
+  - `OPENAI_API_KEY` = Optional, enables LLM features
+  - `USDM_SUMMARY_MODEL`, `CELL_NORMALIZER_MODEL`, `FREEFORM_ROUTER_MODEL` = Optional model overrides
+
+
+### Development Scripts
+```bash
+# Frontend
+npm run frontend:dev    # Start Next.js dev server
+npm run frontend:build  # Build frontend
+npm run frontend:test   # Run frontend tests
+
+# Backend (AI Developer sets up their own scripts)
+npm run backend:dev     # Placeholder - AI Developer implements
+```
+
+### Monorepo Structure
+```
+/
+├── frontend/           # Next.js Application
+│   ├── app/           # App Router pages
+│   ├── components/    # Shared UI primitives  
+│   ├── features/      # UI-only vertical modules
+│   └── ...
+├── backend/           # Python AI Backend (AI Developer's Domain)
+│   ├── AI_DEV_GUIDE.md # Complete guide for AI developer
+│   └── .env.example   # Backend environment template
+├── .env.example       # Root environment template
+└── DESIGN.md         # Complete architecture documentation
+```
+
+### API Endpoints
+
+- Python Backend (FastAPI):
+  - `POST /process-files` — Process uploaded files and return CDISC-organized structure
+  - `POST /analyze-variable` — Generate lineage for a specific variable or freeform query
+  - Optional: `GET /health` — Simple health endpoint (frontend handles absence gracefully)
+- Next.js API proxy (Frontend):
+  - `POST /api/ai/process-files` → proxies to backend `/process-files`
+  - `POST /api/ai/analyze-variable` → proxies to backend `/analyze-variable`
+  - `GET /api/ai/process-files?health=true` → lightweight health probe; reports unhealthy if backend `/health` is missing
