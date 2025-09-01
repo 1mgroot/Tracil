@@ -1,15 +1,17 @@
-### Tracil — Developer Quickstart (Monorepo)
+# Tracil
 
-Next.js frontend + Python AI backend in a single repository. See `DESIGN.md` and `backend/AI_DEV_GUIDE.md` for details.
-
-### What is Tracil?
+## What is Tracil?
 
 Tracil is an AI-powered clinical data lineage platform that connects Protocol/SAP, CRF, SDTM, ADaM, and TLF artifacts into a clear, standards-aligned traceability graph. It is source-agnostic (works with define.xml, specs, raw datasets, PDFs/RTFs) and CDISC-first, with privacy-by-design: no long-term server-side persistence.
 
-### Key Features
+<img width="1920" height="990" alt="image" src="https://github.com/user-attachments/assets/cb0d9675-81d5-4a29-9eb6-c996e843d9ad" />
+<img width="1920" height="990" alt="image" src="https://github.com/user-attachments/assets/b5ea855e-3d48-4a78-84c9-176b7ac6f11c" />
 
-- **Source‑agnostic ingestion**: Ingests XPT/SAS7BDAT/JSON (SDTM/ADaM datasets), define.xml (metadata), ARD/ARS JSON (TLF context), PDF/RTF/DOCX (Protocol/CRF/TLF documents) across all CDISC standards.
-- **Specification support**: Accepts ADaM/SDTM specifications (e.g., XLSX/CSV) and define.xml. For this open-source study, we use define.xml because spec sheets are not publicly accessible.
+
+## Key Features
+
+- **Source‑agnostic ingestion**: Ingests XPT/SAS7BDAT/JSON (SDTM/ADaM datasets), define.xml, ARD, ARS, PDF/RTF/DOCX (Protocol/CRF/TLF documents) across all CDISC standards.
+- **Specification support**: Accepts ADaM/SDTM specifications (e.g., XLSX/CSV) and define.xml.
 - **CDISC‑first organization**: Normalizes inputs into a unified structure by standard (not by file), enabling consistent UI and APIs.
 - **AI‑powered lineage analysis**: Explains variable lineage (source → transformation → target) with evidence tags on nodes/edges — [direct], [reasoned], [general] — and explicit gap notes when links can’t be supported; supports freeform queries.
 - **TLF cell normalization**: Converts natural‑language table requests into concrete cell specs and builds a TLF index from ARD/ARS.
@@ -18,7 +20,7 @@ Tracil is an AI-powered clinical data lineage platform that connects Protocol/SA
 - **Performance & privacy**: Ephemeral sessions, metadata‑only LLM usage, strict timeouts, and streaming where applicable.
 - **Developer experience**: Typed API responses, strict TypeScript, 136 passing tests including accessibility checks.
 
-### Architecture Overview
+## Architecture Overview
 
 - **Frontend (Next.js 15 + React 19 + TypeScript 5.6+)**: Single‑page workspace; components in `frontend/components`; proxy API routes in `frontend/app/api/ai/*`.
 - **Proxy API routes**: `POST /api/ai/process-files` and `POST /api/ai/analyze-variable` forward to Python backend with timeouts and error handling.
@@ -26,24 +28,18 @@ Tracil is an AI-powered clinical data lineage platform that connects Protocol/SA
 - **Standards & parsing**: SDTM/ADaM via pyreadstat/define.xml; CRF/Protocol/USDM via PDF/JSON parsers; TLF via ARD/ARS/RTF.
 - **Privacy & sessions**: No long‑term persistence; transient session artifacts during development under `backend/output/`.
 
-### Why it’s innovative (Innovation & Relevance)
 
-- **Source‑agnostic CDISC normalization** makes heterogeneous inputs usable immediately across workflows.
-- **Natural‑language to cell‑spec** for TLFs is a fresh, high‑impact accelerator for analysis and review.
-- **USDM integration** promotes adoption of emerging standards with automatic endpoint/objective summarization.
-- **Privacy‑first AI** operationalizes metadata‑only lineage reasoning—no raw data leaves the environment.
-
-### Technical quality & feasibility
+## Technical quality & feasibility
 
 - **Reproducible**: Clear setup, strict TypeScript, comprehensive tests, explicit API contracts, environment‑driven configuration.
 - **Sound**: Strong error handling, timeouts, streaming, and deterministic fallbacks when AI is unavailable.
 - **Extensible**: Modular backend services; easy to add new file types or standards; proxy pattern isolates the UI from AI providers.
 - **Adoptable**: Works with define.xml/specs/raw datasets; can be introduced incrementally without data migration.
 
-### Impact & value
+## Impact & value
 
 - **Efficiency**: Automates lineage discovery and TLF cell identification; reduces manual curation and review cycles.
-- **Conformance**: Encourages standards‑aligned structures (CDISC, USDM) and exposes gaps explicitly.
+- **Conformance**: Encourages CDISC standards‑aligned structures and exposes gaps explicitly.
 - **Transformation**: Accelerates protocol‑to‑analysis traceability, improving auditability and submission readiness.
 - **Interoperability**: Contracts and normalized structures enable integration with existing pipelines and tools.
 
@@ -57,7 +53,6 @@ Tracil is an AI-powered clinical data lineage platform that connects Protocol/SA
 ### Prerequisites
 - Node 18+ and npm (for frontend)
 - Python 3.8+ and pip (for backend)
-- Optional: Vercel CLI for frontend deploys
 
 ### Quick Start
 
@@ -146,7 +141,7 @@ npm run backend:dev     # Placeholder - AI Developer implements
 - Phase 2: Connect via HTTP API calls (no Docker needed)
 - Phase 3: Optional Docker setup for production
 
-### Accessibility Support
+## Accessibility Support
 
 Tracil is built with **accessibility-first** principles, ensuring the platform is usable by everyone, including users with disabilities.
 
