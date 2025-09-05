@@ -7,6 +7,13 @@ Tracil is an AI-powered clinical data lineage platform that connects Protocol/SA
 <img width="1920" height="990" alt="image" src="https://github.com/user-attachments/assets/cb0d9675-81d5-4a29-9eb6-c996e843d9ad" />
 <img width="1920" height="990" alt="image" src="https://github.com/user-attachments/assets/b5ea855e-3d48-4a78-84c9-176b7ac6f11c" />
 
+## Project Owners  
+
+- Junze Zhang  
+- Kexin Guan  
+- Anthony Chow  
+
+*All project owners contributed significantly; ordering is not intended to reflect contribution levels.*
 
 ## Key Features
 
