@@ -19,8 +19,11 @@ from services.tlf_index import build_tlf_index_from_uploads
 from services.usdm_extract import sniff_and_extract_usdm  # NEW
 from services.llm_lineage_define import (
     build_lineage_with_llm_from_session,
-    build_endpoint_lineage_with_llm_from_session
+    build_endpoint_lineage_with_llm_from_session,
+    build_table_lineage_from_session,
 )
+
+from services.lineage_workflow import create_lineage_workflow, invoke_lineage_workflow
 
 try:
     import pyreadstat
@@ -953,44 +956,28 @@ class AnalyzeVariableIn(BaseModel):
     dataset: str
     files: List[Dict[str, Any]] = []
 
+# Services are assembled once; request data is supplied only at invocation time.
+lineage_workflow = create_lineage_workflow(
+    normalize_freeform=_normalize_freeform_request,
+    normalize_cell=_normalize_freeform_to_cell_spec,
+    latest_session=_latest_session_dir,
+    variable_builder=build_lineage_with_llm_from_session,
+    endpoint_builder=build_endpoint_lineage_with_llm_from_session,
+    table_builder=build_table_lineage_from_session,
+    prune=prune_orphan_near_duplicates,
+)
+
 @app.post("/analyze-variable")
 def analyze_variable(payload: AnalyzeVariableIn):
     try:
-        # If dataset is empty → freeform router
-        ds = (payload.dataset or "").strip()
-        var = (payload.variable or "").strip()
-
-        if not ds:
-            routed = _normalize_freeform_request(var)
-            if routed:
-                ds, var = routed
-            else:
-                # last resort: if it looks like a table mention, try cell normalizer
-                maybe = _normalize_freeform_to_cell_spec(var, _latest_session_dir())
-                if maybe:
-                    ds, var = maybe
-                else:
-                    return {
-                        "variable": payload.variable,
-                        "dataset": payload.dataset,
-                        "summary": "",
-                        "lineage": {
-                            "nodes": [ {"id": f"{(payload.dataset or '').strip()}.{(payload.variable or '').strip()}".lower() or "target",
-                                        "type":"target",
-                                        "explanation":"[general] Could not classify the freeform request into a dataset/variable."} ],
-                            "edges": [],
-                            "gaps":  ["Freeform router could not determine dataset/variable; please reference a table id (e.g., 'table ars_vs_t01'), an ADaM/SDTM variable (e.g., 'ADSL.AGE' or 'DM.BRTHDTC'), or an endpoint description."]
-                        }
-                    }
-
-        # Route and then prune orphan near-duplicates in the final graph
-        if (ds or "").lower() in {"endpoint", "soa"}:
-            result = build_endpoint_lineage_with_llm_from_session(endpoint_term=var, files_ctx=payload.files)
-        else:
-            result = build_lineage_with_llm_from_session(dataset=ds, variable=var, files_ctx=payload.files)
-
-        result = prune_orphan_near_duplicates(result)
-        return result
+        return invoke_lineage_workflow(
+            lineage_workflow,
+            {
+                "dataset": payload.dataset,
+                "variable": payload.variable,
+                "files": payload.files,
+            },
+        )
 
     except Exception as e:
         return {

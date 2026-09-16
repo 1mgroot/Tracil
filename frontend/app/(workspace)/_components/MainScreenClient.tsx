@@ -401,6 +401,19 @@ export function MainScreenClient(): ReactNode {
 								</SidebarItem>
 							))}
 						</SidebarGroup>
+						<SidebarGroup label="CRF" accentVar="--accent-crf">
+							{groupedDatasets.CRF.map((dataset, i) => (
+								<SidebarItem
+									key={dataset.id}
+									active={selectedId === dataset.id}
+									onClick={() => handleDatasetSelect(dataset.id)}
+									tone={toneFor(i, groupedDatasets.CRF.length)}
+									itemId={dataset.id}
+								>
+									{dataset.name}
+								</SidebarItem>
+							))}
+						</SidebarGroup>
 
 						<SidebarGroup label="TLFs" accentVar="--accent-tlf">
 							{groupedDatasets.TLF.map((dataset, i) => (

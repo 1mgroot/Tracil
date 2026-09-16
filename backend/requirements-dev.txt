@@ -9,6 +9,8 @@ annotated-types==0.7.0
 anyio==4.10.0
     # via
     #   httpx
+    #   httpx2
+    #   langsmith
     #   openai
     #   starlette
     #   watchfiles
@@ -18,12 +20,17 @@ certifi==2025.8.3
     # via
     #   httpcore
     #   httpx
+    #   requests
+charset-normalizer==3.5.1
+    # via requests
 click==8.2.1
     # via
     #   black
     #   uvicorn
 distro==1.9.0
-    # via openai
+    # via
+    #   langsmith
+    #   openai
 fastapi==0.116.1
     # via tracil-backend (pyproject.toml)
 flake8==7.3.0
@@ -31,23 +38,59 @@ flake8==7.3.0
 h11==0.16.0
     # via
     #   httpcore
+    #   httpcore2
     #   uvicorn
 httpcore==1.0.9
     # via httpx
+httpcore2==2.3.0
+    # via httpx2
 httptools==0.6.4
     # via uvicorn
 httpx==0.28.1
-    # via openai
+    # via
+    #   langchain-core
+    #   langgraph-sdk
+    #   openai
+httpx2==2.3.0
+    # via langsmith
 idna==3.10
     # via
     #   anyio
     #   httpx
+    #   httpx2
+    #   requests
 iniconfig==2.1.0
     # via pytest
 isort==6.0.1
     # via tracil-backend (pyproject.toml)
 jiter==0.10.0
     # via openai
+jsonpatch==1.33
+    # via langchain-core
+jsonpointer==3.1.1
+    # via jsonpatch
+langchain-core==1.6.3
+    # via
+    #   langgraph
+    #   langgraph-checkpoint
+    #   langgraph-prebuilt
+    #   langgraph-sdk
+langchain-protocol==0.0.19
+    # via
+    #   langchain-core
+    #   langgraph-sdk
+langgraph==1.2.11
+    # via tracil-backend (pyproject.toml)
+langgraph-checkpoint==4.2.0
+    # via
+    #   langgraph
+    #   langgraph-prebuilt
+langgraph-prebuilt==1.1.0
+    # via langgraph
+langgraph-sdk==0.4.4
+    # via langgraph
+langsmith==0.12.4
+    # via langchain-core
 lxml==6.0.0
     # via
     #   python-docx
@@ -69,9 +112,17 @@ numpy==2.3.2
     #   tracil-backend (pyproject.toml)
 openai==1.101.0
     # via tracil-backend (pyproject.toml)
+orjson==3.12.0
+    # via
+    #   langgraph-sdk
+    #   langsmith
+ormsgpack==1.12.2
+    # via langgraph-checkpoint
 packaging==25.0
     # via
     #   black
+    #   langchain-core
+    #   langsmith
     #   pytest
 pandas==2.3.2
     # via tracil-backend (pyproject.toml)
@@ -88,6 +139,9 @@ pycodestyle==2.14.0
 pydantic==2.11.7
     # via
     #   fastapi
+    #   langchain-core
+    #   langgraph
+    #   langsmith
     #   openai
     #   tracil-backend (pyproject.toml)
 pydantic-core==2.33.2
@@ -117,22 +171,40 @@ python-multipart==0.0.20
 pytz==2025.2
     # via pandas
 pyyaml==6.0.2
-    # via uvicorn
+    # via
+    #   langchain-core
+    #   uvicorn
+requests==2.34.2
+    # via
+    #   langsmith
+    #   requests-toolbelt
+requests-toolbelt==1.0.0
+    # via langsmith
 six==1.17.0
     # via python-dateutil
 sniffio==1.3.1
     # via
     #   anyio
+    #   langsmith
     #   openai
 starlette==0.47.2
     # via fastapi
 striprtf==0.0.29
     # via tracil-backend (pyproject.toml)
+tenacity==9.1.4
+    # via langchain-core
 tqdm==4.67.1
     # via openai
+truststore==0.10.4
+    # via
+    #   httpcore2
+    #   httpx2
 typing-extensions==4.14.1
     # via
     #   fastapi
+    #   langchain-core
+    #   langchain-protocol
+    #   langsmith
     #   mypy
     #   openai
     #   pydantic
@@ -143,6 +215,12 @@ typing-inspection==0.4.1
     # via pydantic
 tzdata==2025.2
     # via pandas
+urllib3==2.7.0
+    # via requests
+uuid-utils==0.17.1
+    # via
+    #   langchain-core
+    #   langsmith
 uvicorn[standard]==0.35.0
     # via tracil-backend (pyproject.toml)
 uvloop==0.21.0
@@ -150,4 +228,13 @@ uvloop==0.21.0
 watchfiles==1.1.0
     # via uvicorn
 websockets==15.0.1
-    # via uvicorn
+    # via
+    #   langgraph-sdk
+    #   langsmith
+    #   uvicorn
+xxhash==4.0.1
+    # via
+    #   langgraph
+    #   langsmith
+zstandard==0.25.0
+    # via langsmith

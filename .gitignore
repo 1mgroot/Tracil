@@ -84,3 +84,6 @@ Thumbs.db
 
 /backend/output/
 /backend/data/
+
+# Local datasets and manual test artifacts (never commit)
+/local-test-data/
