@@ -526,6 +526,22 @@ def build_tlf_index_from_uploads(sess_dir: Path, saved_files: List[Dict[str, Any
             "rowToAnalyses": disp.get("analysisMap", {}).get("rowToAnalyses", {})
         }
 
+    # ARS-only uploads still describe a navigable display. Previously they were
+    # indexed but absent from datasetEntities, which the sidebar consumes.
+    for dk, disp in displays.items():
+        if disp["arsFiles"] and not disp["ardFiles"]:
+            tlf_entities[dk] = {
+                "name": dk,
+                "label": disp.get("title") or dk,
+                "type": "tlf_item",
+                "variables": [],
+                "sourceFiles": [
+                    {"fileId": filename, "role": "primary", "extractedData": ["metadata", "analyses"]}
+                    for filename in disp["arsFiles"]
+                ],
+                "metadata": {"structure": "display", "validationStatus": "unknown"},
+            }
+
     tlf_index = {"displays": [displays[k] for k in sorted(displays.keys())]}
     return tlf_entities, tlf_index
 

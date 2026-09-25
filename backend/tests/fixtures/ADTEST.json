@@ -1,0 +1,10 @@
+{
+  "name": "ADTEST",
+  "label": "SYNTHETIC UI TEST DATASET — no clinical observations",
+  "records": 0,
+  "columns": [
+    {"name": "SYNTHETIC_VALUE", "label": "Synthetic numeric test field", "dataType": "number"},
+    {"name": "TEST_LABEL", "label": "Synthetic text test field", "dataType": "string", "length": 40}
+  ],
+  "data": []
+}

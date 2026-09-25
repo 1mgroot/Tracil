@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { MainScreenClient } from '@/app/(workspace)/_components/MainScreenClient'
 import { useVariablesBrowser } from '@/hooks/useVariablesBrowser'
 import { mockSourceAgnosticResponse } from '@/features/variables/mockSourceAgnostic'
@@ -292,5 +292,25 @@ describe('MainScreenClient - Protocol Section', () => {
     // Should only show the standard item
     expect(screen.getByText('Endpoints')).toBeInTheDocument()
     expect(screen.queryByText('NonStandardItem')).not.toBeInTheDocument()
+  })
+})
+
+
+describe('MainScreenClient - CRF sources', () => {
+  it('shows an uploaded CRF source alongside ADaM and SDTM datasets', () => {
+    mockUseVariablesBrowser.mockReturnValue({
+      datasets: [
+        { id: 'ADaM-ADAE', name: 'ADAE', group: 'ADaM', fileId: 'adam', variables: [] },
+        { id: 'SDTM-AE', name: 'AE', group: 'SDTM', fileId: 'sdtm', variables: [] },
+        { id: 'CRF-aCRF', name: 'aCRF', group: 'CRF', fileId: 'crf', variables: [] },
+      ],
+      getDatasetById: jest.fn(), loading: false, error: null, refresh: jest.fn(),
+      hasUploadedFiles: true, setHasUploadedFiles: jest.fn(), setDataDirectly: jest.fn(),
+      data: mockSourceAgnosticResponse,
+    })
+    render(<MainScreenClient />)
+    expect(within(screen.getByTestId('sidebar-group-ADaM')).getByText('ADAE')).toBeInTheDocument()
+    expect(within(screen.getByTestId('sidebar-group-SDTM')).getByText('AE')).toBeInTheDocument()
+    expect(within(screen.getByTestId('sidebar-group-CRF')).getByText('aCRF')).toBeInTheDocument()
   })
 })

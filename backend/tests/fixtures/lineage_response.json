@@ -1,0 +1,33 @@
+{
+  "variable": "SYNTHETIC_VALUE",
+  "dataset": "SYNTHETIC_DATASET",
+  "summary": "[OFFLINE FIXTURE] Synthetic UI/contract test only. No model ran; no clinical lineage is asserted.",
+  "lineage": {
+    "nodes": [
+      {
+        "id": "synthetic.source",
+        "type": "protocol section",
+        "label": "[SYNTHETIC] Test source",
+        "explanation": "[general] Invented test node for rendering and wiring checks only."
+      },
+      {
+        "id": "synthetic.target",
+        "type": "adam variable",
+        "label": "[SYNTHETIC] Test target",
+        "explanation": "[general] Invented test target; not extracted from uploaded evidence."
+      }
+    ],
+    "edges": [
+      {
+        "from": "synthetic.source",
+        "to": "synthetic.target",
+        "label": "Synthetic test connection",
+        "explanation": "[general] This edge tests graph rendering, not a clinical relationship."
+      }
+    ],
+    "gaps": [
+      {"explanation": "OFFLINE FIXTURE: real evidence retrieval and model generation were not tested."},
+      "Synthetic string gap for legacy wire-format coverage."
+    ]
+  }
+}

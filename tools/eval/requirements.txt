@@ -1,0 +1,4 @@
+# Reuse backend dependency pins for shared packages.
+-c constraints.txt
+pypdf==6.10.0
+langsmith==0.12.4
