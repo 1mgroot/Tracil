@@ -90,10 +90,13 @@ def run():
            'metadata':{'coverage':'required_edges_only','not_scored':'conditions, provenance, unsupported extra edges'}} for cid,spec in SPECS.items()]
     folder=ROOT/'local-test-data/test-results/langsmith-lineage-3'/(datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')+'-'+uuid4().hex[:6])
     folder.mkdir(parents=True)
+    sys.path.insert(0,str(ROOT/'backend'))
+    from services import llm_lineage_define as builder
     metadata={'git_commit':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),
         'source_hashes':sources,'harness_sha256':data.digest(Path(__file__)),
         'code_hashes':{p:data.digest(ROOT/p) for p in ['backend/main.py','backend/services/lineage_workflow.py','backend/services/llm_lineage_define.py']},
-        'configured_primary':'gpt-4o','configured_fallback':'gpt-4o-mini','coverage':'required_edges_only',
+        'configured_primary':builder.DEFAULT_MODEL,'configured_fallback':builder.FALLBACK_MODEL,
+        'chat_parameters':builder._chat_options(builder.DEFAULT_MODEL),'coverage':'required_edges_only',
         'isolation':'Per-case legacy output roots in serial test process; no product isolation claim'}
     client=Client()
     try:
@@ -105,7 +108,7 @@ def run():
             ds=client.create_dataset(dataset_name=name,description='Live API lineage baseline, three targets. Edge recall only; extra edges need review. Raw evidence stays local.')
             client.create_examples(dataset_id=ds.id,examples=rows)
         exp=evaluate(make_target(folder),data=name,evaluators=[score_edges],client=client,
-            upload_results=True,max_concurrency=0,experiment_prefix='lineage-gpt4o-baseline',metadata=metadata)
+            upload_results=True,max_concurrency=0,experiment_prefix='lineage-'+builder.DEFAULT_MODEL,metadata=metadata)
         results=[{'case_id':r['example'].inputs['case_id'],'error':r['run'].error,
             'outputs':r['run'].outputs,'scores':{s.key:s.score for s in r['evaluation_results']['results']}} for r in exp]
         report={'experiment_name':exp.experiment_name,'dataset_name':name,'metadata':metadata,'results':results}

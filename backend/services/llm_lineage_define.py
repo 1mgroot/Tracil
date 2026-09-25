@@ -74,7 +74,7 @@ except Exception:
     pd = None
 
 # ---------------- params ----------------
-DEFAULT_MODEL   = "gpt-4o"
+DEFAULT_MODEL   = "gpt-6-sol"
 FALLBACK_MODEL  = "gpt-4o-mini"
 EMBED_MODEL     = "text-embedding-3-small"
 
@@ -367,6 +367,13 @@ def _retrieve(client: OpenAI, chunks: List[Dict[str,str]], query: str, k:int=TOP
 
 def _norm(s: str) -> str:
     return re.sub(r"[^a-z0-9]+", " ", (s or "").lower()).strip()
+
+def _chat_options(model: str) -> Dict[str, Any]:
+    if model.startswith("gpt-6-sol"):
+        return {"temperature": 0.0, "reasoning_effort": "none",
+                "max_completion_tokens": MAX_TOKENS}
+    return {"temperature": 0.0, "max_tokens": MAX_TOKENS}
+
 
 # --------------- evidence assembly ----------------
 
@@ -810,9 +817,9 @@ def _ensure_ars_connectivity(graph: Dict[str, Any], *, model: str, embed_model: 
             retrieved=top_chunks
         )
         def _chat_call(m: str):
-            resp = _retry(client.chat.completions.create, model=m, temperature=0.0,
+            resp = _retry(client.chat.completions.create, model=m, **_chat_options(m),
                           response_format={"type":"json_object"},
-                          messages=messages, max_tokens=MAX_TOKENS)
+                          messages=messages)
             return _parse_llm_json(resp.choices[0].message.content)
         try:
             aug_raw = _chat_call(model)
@@ -1278,9 +1285,9 @@ def _augment_backtrace_if_missing_sdtm(base_graph: Dict[str, Any], *, model: str
     )
 
     def _chat_call(m: str):
-        resp = _retry(client.chat.completions.create, model=m, temperature=0.0,
+        resp = _retry(client.chat.completions.create, model=m, **_chat_options(m),
                       response_format={"type":"json_object"},
-                      messages=messages, max_tokens=MAX_TOKENS)
+                      messages=messages)
         return _parse_llm_json(resp.choices[0].message.content)
 
     try:
@@ -1357,9 +1364,9 @@ def build_lineage_with_llm_from_session(
     messages = _build_messages_for_variable(dataset.upper(), variable.upper(), top_chunks)
 
     def _chat_call(m: str):
-        resp = _retry(client.chat.completions.create, model=m, temperature=0.0,
+        resp = _retry(client.chat.completions.create, model=m, **_chat_options(m),
                       response_format={"type":"json_object"},
-                      messages=messages, max_tokens=MAX_TOKENS)
+                      messages=messages)
         return _parse_llm_json(resp.choices[0].message.content)
 
     try:
@@ -1451,9 +1458,9 @@ def build_endpoint_lineage_with_llm_from_session(
     messages = _build_messages_for_endpoint(endpoint_term, top_chunks)
 
     def _chat_call(m: str):
-        resp = _retry(client.chat.completions.create, model=m, temperature=0.0,
+        resp = _retry(client.chat.completions.create, model=m, **_chat_options(m),
                       response_format={"type":"json_object"},
-                      messages=messages, max_tokens=MAX_TOKENS)
+                      messages=messages)
         return _parse_llm_json(resp.choices[0].message.content)
 
     try:
@@ -1531,9 +1538,9 @@ def _build_ars_cell_base_graph_llm(cell_spec: str, *, model: str, embed_model: s
     messages = _build_messages_for_ars_cell(cell_spec, top)
 
     def _chat(m: str):
-        resp = _retry(client.chat.completions.create, model=m, temperature=0.0,
+        resp = _retry(client.chat.completions.create, model=m, **_chat_options(m),
                       response_format={"type": "json_object"},
-                      messages=messages, max_tokens=MAX_TOKENS)
+                      messages=messages)
         return _parse_llm_json(resp.choices[0].message.content)
 
     try:
@@ -1622,9 +1629,9 @@ def build_table_lineage_from_session(
     messages = _build_messages_for_table(display_id, mode, top_chunks)
 
     def _chat_call(m: str):
-        resp = _retry(client.chat.completions.create, model=m, temperature=0.0,
+        resp = _retry(client.chat.completions.create, model=m, **_chat_options(m),
                       response_format={"type":"json_object"},
-                      messages=messages, max_tokens=MAX_TOKENS)
+                      messages=messages)
         return _parse_llm_json(resp.choices[0].message.content)
 
     try:
